@@ -1416,7 +1416,7 @@
     }
     var wallet = readWallet();
     var addresses = collectAddresses(wallet);
-    if (hasBuiltInReceiveList && (!wallet || !addresses.length || !builtInReceiveMissingGeneratedChains(addresses))) {
+    if (hasBuiltInReceiveList) {
       document.documentElement.setAttribute("data-dochain-receive-route", "builtin");
       removeMountedReceiveRoot();
       return;
