@@ -63,7 +63,7 @@ textarea {
   color: #fff !important;
   font-size: 18px !important;
   line-height: 1.1 !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
 }
 
 .do-stake-snapshot-head small,
@@ -78,7 +78,7 @@ textarea {
   color: #fff !important;
   font-size: 18px !important;
   line-height: 1.1 !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   white-space: nowrap !important;
 }
 
@@ -125,7 +125,7 @@ textarea {
   background: #2b2241 !important;
   color: #fff !important;
   font-size: 10px !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   position: static !important;
   transform: none !important;
 }
@@ -137,7 +137,7 @@ textarea {
   color: #fff !important;
   font-size: 16px !important;
   line-height: 1.05 !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
@@ -163,7 +163,7 @@ textarea {
   color: #fff !important;
   font-size: 16px !important;
   line-height: 1.05 !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   white-space: nowrap !important;
 }
 

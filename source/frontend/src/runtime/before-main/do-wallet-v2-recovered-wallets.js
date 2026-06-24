@@ -349,18 +349,18 @@
     style.id = "do-recovered-wallets-style";
     style.textContent = [
       ".do-recovered-wallets{margin:18px 0 8px;border-top:1px solid rgba(160,80,255,.28);border-bottom:1px solid rgba(160,80,255,.28);padding:12px 0 6px;color:#fff;font-family:inherit}",
-      ".do-recovered-wallets__title{font-size:15px;font-weight:800;color:#fff;margin:0 0 10px}",
+      ".do-recovered-wallets__title{font-size:15px;font-weight: 700;color:#fff;margin:0 0 10px}",
       ".do-recovered-wallets__row{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;border:0;background:rgba(143,60,255,.08);color:#fff;border-radius:8px;padding:12px 14px;margin:8px 0;text-align:left;font-family:inherit;cursor:pointer}",
       ".do-recovered-wallets__row:hover,.do-recovered-wallets__row:focus{background:rgba(160,80,255,.18);outline:1px solid rgba(196,151,255,.55)}",
-      ".do-recovered-wallets__name{display:block;font-size:16px;font-weight:800;line-height:1.2;color:#fff}",
+      ".do-recovered-wallets__name{display:block;font-size:16px;font-weight: 700;line-height:1.2;color:#fff}",
       ".do-recovered-wallets__meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;font-size:12px;color:#c9b8df}",
       ".do-recovered-wallets__badge{border:1px solid rgba(160,80,255,.45);border-radius:999px;padding:2px 7px;color:#d9c8ff}",
-      ".do-recovered-wallets__select{font-size:13px;font-weight:800;color:#ad62ff;white-space:nowrap}",
+      ".do-recovered-wallets__select{font-size:13px;font-weight: 700;color:#ad62ff;white-space:nowrap}",
       ".do-recovered-wallets--recover{max-width:760px;margin:20px auto 8px;padding:14px 0 4px}",
       ".do-recovered-wallets--recover .do-recovered-wallets__row{padding:14px 16px}",
       ".do-recovered-wallets__empty{margin:14px 0 0;border:1px solid rgba(160,80,255,.28);border-radius:8px;padding:14px 16px;color:#c9b8df;background:rgba(143,60,255,.06)}",
       ".do-recovered-wallets__actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}",
-      ".do-recovered-wallets__button{border:0;border-radius:8px;background:#9d3cff;color:#fff;font:800 13px/1.2 inherit;padding:10px 14px;cursor:pointer}",
+      ".do-recovered-wallets__button{border:0;border-radius:8px;background:#9d3cff;color:#fff;font:700 13px/1.2 inherit;padding:10px 14px;cursor:pointer}",
       ".do-recovered-wallets__button.secondary{background:rgba(143,60,255,.14);border:1px solid rgba(160,80,255,.45)}",
       ".do-recovered-wallets-hide-broken{display:none!important}"
     ].join("");

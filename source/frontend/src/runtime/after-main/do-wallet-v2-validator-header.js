@@ -268,7 +268,7 @@
     style.id = "do-wallet-validator-header-style";
     style.textContent = [
       ".do-wallet-validator-actions{display:inline-flex;align-items:center;gap:12px;margin:0 12px;flex-wrap:wrap;vertical-align:middle}",
-      ".do-wallet-validator-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 26px;border:2px solid rgba(255,255,255,.88);border-radius:999px;color:#fff;text-decoration:none;font-weight:800;font-size:18px;line-height:1;white-space:nowrap;background:rgba(20,15,32,.18)}",
+      ".do-wallet-validator-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 26px;border:2px solid rgba(255,255,255,.88);border-radius:999px;color:#fff;text-decoration:none;font-weight: 700;font-size:18px;line-height:1;white-space:nowrap;background:rgba(20,15,32,.18)}",
       ".do-wallet-validator-actions a:hover{background:rgba(154,65,255,.18);border-color:#fff}",
       "@media(max-width:760px){.do-wallet-validator-actions{gap:8px;margin:8px 0}.do-wallet-validator-actions a{min-height:36px;padding:0 14px;font-size:14px}}"
     ].join("\n");

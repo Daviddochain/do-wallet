@@ -219,15 +219,15 @@
     style.textContent = [
       "." + HIDDEN_CLASS + "{display:none!important;}",
       "." + WRAPPER_CLASS + "{display:flex;align-items:center;gap:14px;padding:26px 40px;border-bottom:1px solid rgba(120,55,165,.45);}",
-      "." + WRAPPER_CLASS + "__label{font-weight:800;color:#fff;font-size:16px;}",
-      "." + WRAPPER_CLASS + "__select{min-width:280px;max-width:min(520px,100%);height:48px;border-radius:13px;border:1px solid rgba(158,67,255,.75);background:#1d142a;color:#fff;font-size:16px;font-weight:800;padding:0 44px 0 16px;outline:none;box-shadow:none;}",
+      "." + WRAPPER_CLASS + "__label{font-weight: 700;color:#fff;font-size:16px;}",
+      "." + WRAPPER_CLASS + "__select{min-width:280px;max-width:min(520px,100%);height:48px;border-radius:13px;border:1px solid rgba(158,67,255,.75);background:#1d142a;color:#fff;font-size:16px;font-weight: 700;padding:0 44px 0 16px;outline:none;box-shadow:none;}",
       "." + WRAPPER_CLASS + "__select:focus{border-color:#a845ff;box-shadow:0 0 0 2px rgba(168,69,255,.18);}",
       "." + ALL_PROPOSALS_ACTIVE_CLASS + ">:not(." + ALL_PROPOSALS_CLASS + "){display:none!important;}",
       "." + ALL_PROPOSALS_CLASS + "{display:grid;gap:16px;padding:20px;color:inherit;}",
-      "." + ALL_PROPOSALS_CLASS + "__status{color:var(--text-muted,#aba3c2);font-size:14px;font-weight:800;padding:18px 10px;}",
+      "." + ALL_PROPOSALS_CLASS + "__status{color:var(--text-muted,#aba3c2);font-size:14px;font-weight: 700;padding:18px 10px;}",
       "." + ALL_PROPOSALS_CLASS + "__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;}",
       "." + ALL_PROPOSALS_CLASS + "__card{border:1px solid rgba(120,55,165,.55);border-radius:8px;background:#151122;padding:24px 28px;min-height:164px;color:#fff;}",
-      "." + ALL_PROPOSALS_CLASS + "__meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:26px;font-size:12px;font-weight:800;color:#cfc4ee;}",
+      "." + ALL_PROPOSALS_CLASS + "__meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:26px;font-size:12px;font-weight: 700;color:#cfc4ee;}",
       "." + ALL_PROPOSALS_CLASS + "__chain{display:inline-flex;align-items:center;gap:7px;color:#fff;}",
       "." + ALL_PROPOSALS_CLASS + "__chain img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#2c2140;}",
       "." + ALL_PROPOSALS_CLASS + "__pill{border:1px solid rgba(158,67,255,.45);border-radius:5px;background:rgba(158,67,255,.14);padding:3px 7px;}",
@@ -235,7 +235,7 @@
       "." + ALL_PROPOSALS_CLASS + "__state.is-failed{color:#ff4b55;}",
       "." + ALL_PROPOSALS_CLASS + "__state.is-deposit{color:#ffbf35;}",
       "." + ALL_PROPOSALS_CLASS + "__state.is-voting{color:#8f45ff;}",
-      "." + ALL_PROPOSALS_CLASS + "__title{display:block;font-size:19px;line-height:1.25;font-weight:900;margin-bottom:14px;}",
+      "." + ALL_PROPOSALS_CLASS + "__title{display:block;font-size:19px;line-height:1.25;font-weight: 700;margin-bottom:14px;}",
       "." + ALL_PROPOSALS_CLASS + "__submitted{color:#cfc4ee;font-size:12px;font-weight:700;}"
     ].join("\n");
     document.head.appendChild(style);
