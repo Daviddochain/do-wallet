@@ -1,7 +1,7 @@
 (function () {
   "use strict";
-  if (window.__dochainGovernanceRouteGuard20260617) return;
-  window.__dochainGovernanceRouteGuard20260617 = true;
+  if (window.__dochainGovernanceRouteGuard20260624AllChains1) return;
+  window.__dochainGovernanceRouteGuard20260624AllChains1 = true;
 
   var RECOVERY_KEY = "dochain-governance-route-recovery-count";
   var GOV_HASH = "#DOCHAIN_VALIDATOR_STAGE";
@@ -61,10 +61,8 @@
     }
   }
 
-  function shouldShortCircuitProposalRequest(value) {
-    var chain = proposalChainFromUrl(value);
-    if (!chain) return false;
-    return chain !== "Do-Chain";
+  function isProposalRequest(value) {
+    return !!proposalChainFromUrl(value);
   }
 
   function proposalResponseText() {
@@ -79,14 +77,24 @@
     if (typeof originalFetch === "function") {
       window.fetch = function (input, init) {
         var url = typeof input === "string" ? input : input && input.url;
-        if (shouldShortCircuitProposalRequest(url)) {
-          return Promise.resolve(new Response(proposalResponseText(), {
+        var requestIsProposal = isProposalRequest(url);
+        return originalFetch.apply(this, arguments).then(function (response) {
+          if (requestIsProposal && response && !response.ok) {
+            return new Response(proposalResponseText(), {
+              status: 200,
+              statusText: "OK",
+              headers: { "content-type": "application/json" },
+            });
+          }
+          return response;
+        }).catch(function (error) {
+          if (!requestIsProposal) throw error;
+          return new Response(proposalResponseText(), {
             status: 200,
             statusText: "OK",
             headers: { "content-type": "application/json" },
-          }));
-        }
-        return originalFetch.apply(this, arguments);
+          });
+        });
       };
     }
 
@@ -99,30 +107,7 @@
         return originalOpen.apply(this, arguments);
       };
       XHR.prototype.send = function () {
-        if (!shouldShortCircuitProposalRequest(this.__dochainGovGuardUrl)) {
-          return originalSend.apply(this, arguments);
-        }
-        var xhr = this;
-        var text = proposalResponseText();
-        try {
-          Object.defineProperty(xhr, "readyState", { configurable: true, get: function () { return 4; } });
-          Object.defineProperty(xhr, "status", { configurable: true, get: function () { return 200; } });
-          Object.defineProperty(xhr, "statusText", { configurable: true, get: function () { return "OK"; } });
-          Object.defineProperty(xhr, "responseText", { configurable: true, get: function () { return text; } });
-          Object.defineProperty(xhr, "response", {
-            configurable: true,
-            get: function () { return xhr.responseType === "json" ? EMPTY_PROPOSALS : text; },
-          });
-        } catch (error) {}
-        window.setTimeout(function () {
-          try { if (typeof xhr.onreadystatechange === "function") xhr.onreadystatechange(); } catch (error) {}
-          try { xhr.dispatchEvent(new Event("readystatechange")); } catch (error) {}
-          try { if (typeof xhr.onload === "function") xhr.onload(); } catch (error) {}
-          try { xhr.dispatchEvent(new Event("load")); } catch (error) {}
-          try { if (typeof xhr.onloadend === "function") xhr.onloadend(); } catch (error) {}
-          try { xhr.dispatchEvent(new Event("loadend")); } catch (error) {}
-        }, 0);
-        return undefined;
+        return originalSend.apply(this, arguments);
       };
     }
   }
