@@ -10450,8 +10450,8 @@ runModule("do-wallet-v2-stake-snapshot.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletStakeSnapshot20260619) return;
-  window.__doWalletStakeSnapshot20260619 = true;
+  if (window.__doWalletStakeSnapshot20260624Compact1) return;
+  window.__doWalletStakeSnapshot20260624Compact1 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -10470,15 +10470,6 @@ runModule("do-wallet-v2-stake-snapshot.js", function(){
   var RENDER_DEBOUNCE_MS = 1000;
   var MIN_RENDER_INTERVAL_MS = 2000;
   var MUTATION_SUPPRESS_MS = 1400;
-  var CHAIN_COLORS = [
-    "#7893f5",
-    "#a243ff",
-    "#ffd85d",
-    "#35d0a6",
-    "#ff7a3d",
-    "#7bdcff",
-    "#ff6fae",
-  ];
   var lastSignature = "";
   var renderTimer = 0;
   var observer = null;
@@ -11123,35 +11114,6 @@ runModule("do-wallet-v2-stake-snapshot.js", function(){
     ].join("");
   }
 
-  function conicGradient(stakingGroups) {
-    var total = stakingGroups.reduce(function (sum, group) { return sum + Math.max(0, group.value || group.amount); }, 0);
-    if (total <= 0) return "conic-gradient(#7893f5 0deg 360deg)";
-    var cursor = 0;
-    var parts = [];
-    stakingGroups.forEach(function (group, index) {
-      var weight = Math.max(0, group.value || group.amount);
-      if (weight <= 0) return;
-      var start = cursor;
-      var end = cursor + (weight / total) * 360;
-      cursor = end;
-      parts.push(CHAIN_COLORS[index % CHAIN_COLORS.length] + " " + start.toFixed(2) + "deg " + end.toFixed(2) + "deg");
-    });
-    return "conic-gradient(" + (parts.length ? parts.join(",") : "#7893f5 0deg 360deg") + ")";
-  }
-
-  function legendHTML(stakingGroups) {
-    return stakingGroups.slice(0, 6).map(function (group, index) {
-      return [
-        '<div class="do-wallet-stake-live-legend-row">',
-          '<span class="do-wallet-stake-live-dot" style="background:' + CHAIN_COLORS[index % CHAIN_COLORS.length] + '"></span>',
-          '<span class="do-wallet-stake-live-legend-symbol">' + escapeHTML(group.symbol) + '</span>',
-          '<span class="do-wallet-stake-live-legend-chain">' + escapeHTML(shortLabel(group.chainName, 24)) + '</span>',
-          '<strong>' + escapeHTML(amountText(group.amount) + " " + group.symbol) + '</strong>',
-        '</div>',
-      ].join("");
-    }).join("");
-  }
-
   function positionRowsHTML(groups) {
     return groups.slice(0, 12).map(function (group) {
       var label =
@@ -11198,7 +11160,7 @@ runModule("do-wallet-v2-stake-snapshot.js", function(){
         '<div class="do-wallet-stake-live-head">',
           '<div>',
             '<h2>Staked funds</h2>',
-            '<p>Live positions across wallet addresses</p>',
+            '<p>Delegations, unbonding, and rewards across wallet addresses</p>',
           '</div>',
           '<strong>' + escapeHTML(money(totalsRow.staked + totalsRow.rewards + totalsRow.unbonding)) + '</strong>',
         '</div>',
@@ -11206,20 +11168,14 @@ runModule("do-wallet-v2-stake-snapshot.js", function(){
           '<span class="do-wallet-stake-live-chip all">All</span>',
           chips,
         '</div>',
-        '<div class="do-wallet-stake-live-body">',
-          '<div class="do-wallet-stake-live-chart-wrap">',
-            '<div class="do-wallet-stake-live-donut" style="background:' + escapeHTML(conicGradient(stakeGroups)) + '">',
-              '<span><strong>' + escapeHTML(money(totalsRow.staked)) + '</strong><small>Delegated</small></span>',
-            '</div>',
-            '<div class="do-wallet-stake-live-legend">',
-              legendHTML(stakeGroups),
-            '</div>',
-          '</div>',
-          '<div class="do-wallet-stake-live-metrics">',
-            metricHTML("Delegations", totalsRow.staked, stakedAmount, stakedAmountSymbol, ""),
-            metricHTML("Undelegations", totalsRow.unbonding, totalsRow.unbondingAmount, unbondingGroup ? unbondingGroup.symbol : "", "0 releases"),
-            metricHTML("Staking rewards", totalsRow.rewards, totalsRow.rewardAmount, rewardGroup ? rewardGroup.symbol : "", ""),
-          '</div>',
+        '<div class="do-wallet-stake-live-summary">',
+          metricHTML("Delegations", totalsRow.staked, stakedAmount, stakedAmountSymbol, ""),
+          metricHTML("Undelegations", totalsRow.unbonding, totalsRow.unbondingAmount, unbondingGroup ? unbondingGroup.symbol : "", "0 releases"),
+          metricHTML("Staking rewards", totalsRow.rewards, totalsRow.rewardAmount, rewardGroup ? rewardGroup.symbol : "", ""),
+        '</div>',
+        '<div class="do-wallet-stake-live-section-title">',
+          '<strong>Positions</strong>',
+          '<span>' + escapeHTML(String(sorted.length) + " position" + (sorted.length === 1 ? "" : "s")) + '</span>',
         '</div>',
         '<div class="do-wallet-stake-live-positions">',
           positionRowsHTML(sorted),
@@ -11239,36 +11195,26 @@ runModule("do-wallet-v2-stake-snapshot.js", function(){
       ".do-wallet-stake-live-host-title{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:0 0 18px}",
       ".do-wallet-stake-live-host-title h1{margin:0;color:#fff;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:0}",
       ".do-wallet-stake-live-host .do-wallet-stake-live{margin-top:0}",
-      ".do-wallet-stake-live-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:22px 28px 14px;border-bottom:1px solid rgba(159,70,255,.26)}",
+      ".do-wallet-stake-live-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:22px 28px 16px;border-bottom:1px solid rgba(159,70,255,.26)}",
       ".do-wallet-stake-live-head h2{margin:0 0 4px;font-size:22px;line-height:1.1;font-weight:700;letter-spacing:0}",
       ".do-wallet-stake-live-head p{margin:0;color:#c7b9ef;font-size:13px;line-height:1.35;font-weight:500}",
       ".do-wallet-stake-live-head>strong{font-size:28px;line-height:1;font-weight:800;white-space:nowrap}",
-      ".do-wallet-stake-live-chips{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 28px;border-bottom:1px solid rgba(159,70,255,.26)}",
+      ".do-wallet-stake-live-chips{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 28px;border-bottom:1px solid rgba(159,70,255,.26)}",
       ".do-wallet-stake-live-chip{display:inline-flex;align-items:center;gap:7px;min-height:28px;padding:4px 14px;border:1px solid rgba(159,70,255,.48);border-radius:999px;color:#c8bddf;background:#251b39;font-size:13px;font-weight:700;white-space:nowrap}",
       ".do-wallet-stake-live-chip.all,.do-wallet-stake-live-chip.is-do{color:#fff;background:#9b3cff;border-color:#9b3cff}",
       ".do-wallet-stake-live-chip.more{background:transparent;color:#aa9dc6}",
       ".do-wallet-stake-live-chip .do-wallet-stake-live-icon,.do-wallet-stake-live-chip .do-wallet-stake-live-icon-fallback{width:18px;height:18px;font-size:8px}",
-      ".do-wallet-stake-live-body{display:grid;grid-template-columns:minmax(380px,1fr) 360px;gap:28px;align-items:center;padding:24px 28px}",
-      ".do-wallet-stake-live-chart-wrap{display:grid;grid-template-columns:240px minmax(0,1fr);gap:28px;align-items:center;min-height:270px}",
-      ".do-wallet-stake-live-donut{width:230px;height:230px;border-radius:50%;display:grid;place-items:center;box-shadow:inset 0 0 0 999px rgba(0,0,0,0)}",
-      ".do-wallet-stake-live-donut:before{content:'';position:absolute}",
-      ".do-wallet-stake-live-donut span{width:116px;height:116px;border-radius:50%;display:grid;place-items:center;text-align:center;background:#191327;box-shadow:0 0 0 1px rgba(159,70,255,.28)}",
-      ".do-wallet-stake-live-donut strong{display:block;font-size:26px;line-height:1;font-weight:800}",
-      ".do-wallet-stake-live-donut small{display:block;margin-top:4px;color:#cabfff;font-size:12px;font-weight:700}",
-      ".do-wallet-stake-live-legend{display:flex;flex-direction:column;gap:12px;min-width:0}",
-      ".do-wallet-stake-live-legend-row{display:grid;grid-template-columns:14px auto minmax(80px,1fr) auto;gap:8px;align-items:center;min-width:0;color:#cfc6e8;font-size:14px;font-weight:600}",
-      ".do-wallet-stake-live-dot{width:12px;height:12px;border-radius:50%}",
-      ".do-wallet-stake-live-legend-symbol{color:#fff;font-weight:900}",
-      ".do-wallet-stake-live-legend-chain{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b9afd2}",
-      ".do-wallet-stake-live-legend-row strong{color:#fff;font-weight:900;white-space:nowrap}",
-      ".do-wallet-stake-live-metrics{display:grid;grid-template-columns:1fr;gap:14px}",
-      ".do-wallet-stake-live-metric{min-height:112px;padding:22px 24px;border:1px solid rgba(159,70,255,.36);border-radius:8px;background:#171225}",
+      ".do-wallet-stake-live-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:18px 28px;border-bottom:1px solid rgba(159,70,255,.26)}",
+      ".do-wallet-stake-live-metric{min-height:96px;padding:18px 20px;border:1px solid rgba(159,70,255,.36);border-radius:8px;background:#171225}",
       ".do-wallet-stake-live-metric span{display:block;color:#fff;font-size:16px;font-weight:700}",
-      ".do-wallet-stake-live-metric strong{display:block;margin-top:12px;color:#fff;font-size:30px;line-height:1;font-weight:800}",
+      ".do-wallet-stake-live-metric strong{display:block;margin-top:10px;color:#fff;font-size:25px;line-height:1;font-weight:800}",
       ".do-wallet-stake-live-metric small{display:block;margin-top:8px;color:#bdb2da;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
-      ".do-wallet-stake-live-positions{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid rgba(159,70,255,.26)}",
+      ".do-wallet-stake-live-section-title{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 28px 12px}",
+      ".do-wallet-stake-live-section-title strong{font-size:16px;font-weight:900;color:#fff}",
+      ".do-wallet-stake-live-section-title span{font-size:12px;font-weight:800;color:#bdb2da}",
+      ".do-wallet-stake-live-positions{display:grid;grid-template-columns:1fr;gap:0;border-top:1px solid rgba(159,70,255,.18)}",
       ".do-wallet-stake-live-position{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:82px;padding:16px 28px;border-top:1px solid rgba(159,70,255,.18)}",
-      ".do-wallet-stake-live-position:nth-child(1),.do-wallet-stake-live-position:nth-child(2){border-top:0}",
+      ".do-wallet-stake-live-position:nth-child(1){border-top:0}",
       ".do-wallet-stake-live-position.is-do{background:rgba(155,60,255,.08)}",
       ".do-wallet-stake-live-position-left{display:flex;align-items:center;gap:14px;min-width:0}",
       ".do-wallet-stake-live-position-left span{min-width:0}",
@@ -11279,8 +11225,8 @@ runModule("do-wallet-v2-stake-snapshot.js", function(){
       ".do-wallet-stake-live-position-right small{display:block;margin-top:5px;color:#c8c0ef;font-size:12px;font-weight:800;white-space:nowrap}",
       ".do-wallet-stake-live-icon{width:42px;height:42px;border-radius:50%;object-fit:cover;flex:0 0 auto}",
       ".do-wallet-stake-live-icon-fallback{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:#34264d;color:#fff;font-size:12px;font-weight:900;flex:0 0 auto}",
-      "@media (max-width:980px){.do-wallet-stake-live-body{grid-template-columns:1fr}.do-wallet-stake-live-chart-wrap{grid-template-columns:1fr}.do-wallet-stake-live-donut{margin:0 auto}.do-wallet-stake-live-positions{grid-template-columns:1fr}.do-wallet-stake-live-position:nth-child(2){border-top:1px solid rgba(159,70,255,.18)}}",
-      "@media (max-width:560px){.do-wallet-stake-live-head,.do-wallet-stake-live-chips,.do-wallet-stake-live-body,.do-wallet-stake-live-position{padding-left:18px;padding-right:18px}.do-wallet-stake-live-chart-wrap{min-height:auto}.do-wallet-stake-live-donut{width:220px;height:220px}.do-wallet-stake-live-donut span{width:112px;height:112px}.do-wallet-stake-live-legend-row{grid-template-columns:14px auto 1fr}.do-wallet-stake-live-legend-row strong{grid-column:3;text-align:right}.do-wallet-stake-live-head>strong{font-size:22px}}",
+      "@media (max-width:980px){.do-wallet-stake-live-summary{grid-template-columns:1fr}.do-wallet-stake-live-position{min-height:74px}}",
+      "@media (max-width:560px){.do-wallet-stake-live-head,.do-wallet-stake-live-chips,.do-wallet-stake-live-summary,.do-wallet-stake-live-section-title,.do-wallet-stake-live-position{padding-left:18px;padding-right:18px}.do-wallet-stake-live-head{display:grid}.do-wallet-stake-live-head>strong{font-size:22px}.do-wallet-stake-live-position{align-items:flex-start;flex-direction:column}.do-wallet-stake-live-position-right{text-align:left;min-width:0}}",
     ].join("\n");
     document.head.appendChild(style);
   }
