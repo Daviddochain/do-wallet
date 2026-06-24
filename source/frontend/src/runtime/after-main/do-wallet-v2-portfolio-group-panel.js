@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260624SideL1DetailCoins1) return;
-  window.__doWalletPortfolioGroupPanel20260624SideL1DetailCoins1 = true;
+  if (window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins2) return;
+  window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins2 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
@@ -17,7 +17,7 @@
   var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
   var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
   var SIDE_STABLE_DELAY = 1000;
-  var VERSION = "20260624SideL1DetailCoins1";
+  var VERSION = "20260625SideL1DetailCoins2";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
@@ -845,8 +845,8 @@
       if (!isVisibleElement(node) || node === pane) return;
       var content = lowerText(node.textContent || "");
       if (content.indexOf("send") < 0 || content.indexOf("receive") < 0) return;
-      if (content.indexOf("buy / sell") < 0 && content.indexOf("burn do") < 0) return;
       var rect = node.getBoundingClientRect();
+      if (rect.height < 40 || rect.width < 160) return;
       var area = rect.width * rect.height;
       if (area < bestArea) {
         best = node;
@@ -854,6 +854,49 @@
       }
     });
     return best;
+  }
+
+  function findDetailChainsBlock(pane) {
+    var best = null;
+    var bestArea = Infinity;
+    Array.prototype.slice.call(pane.querySelectorAll("section, article, div")).forEach(function (node) {
+      if (!isVisibleElement(node) || node === pane) return;
+      if (node.querySelector && node.querySelector("[" + DETAIL_PANEL_ATTR + '="1"]')) return;
+      var content = lowerText(node.textContent || "");
+      if (content.indexOf("chains") < 0) return;
+      if (content.indexOf("search for a chain") >= 0) return;
+      if (content.indexOf("send") >= 0 && content.indexOf("receive") >= 0) return;
+      var rect = node.getBoundingClientRect();
+      if (rect.height < 50 || rect.width < 180) return;
+      var area = rect.width * rect.height;
+      if (area < bestArea) {
+        best = node;
+        bestArea = area;
+      }
+    });
+    return best;
+  }
+
+  function detailPanelAnchor(pane) {
+    var actionBar = findDetailActionBar(pane);
+    if (actionBar && actionBar.parentElement) return { mode: "before", node: actionBar };
+    var chainsBlock = findDetailChainsBlock(pane);
+    if (chainsBlock && chainsBlock.parentElement) return { mode: "after", node: chainsBlock };
+    return null;
+  }
+
+  function placeDetailPanel(pane, panel, anchor) {
+    if (!panel) return false;
+    if (anchor && anchor.node && anchor.node.parentElement) {
+      if (anchor.mode === "before") {
+        anchor.node.parentElement.insertBefore(panel, anchor.node);
+        return true;
+      }
+      anchor.node.parentElement.insertBefore(panel, anchor.node.nextSibling);
+      return true;
+    }
+    pane.appendChild(panel);
+    return true;
   }
 
   function selectedDetailGroup(groups, pane) {
@@ -898,7 +941,14 @@
     }
 
     var signature = detailSignature(group, children);
-    if (existing && existing.getAttribute("data-do-wallet-l1-detail-signature") === signature) return false;
+    var anchor = detailPanelAnchor(pane);
+    if (existing && existing.getAttribute("data-do-wallet-l1-detail-signature") === signature) {
+      if (anchor && anchor.node && anchor.node.parentElement) {
+        if (anchor.mode === "before" && existing.nextElementSibling !== anchor.node) return placeDetailPanel(pane, existing, anchor);
+        if (anchor.mode === "after" && anchor.node.nextElementSibling !== existing) return placeDetailPanel(pane, existing, anchor);
+      }
+      return false;
+    }
 
     var wrapper = document.createElement("div");
     wrapper.innerHTML = detailPanelHTML(group, children);
@@ -906,16 +956,12 @@
     if (!panel) return false;
 
     if (existing) {
-      existing.parentElement.replaceChild(panel, existing);
+      existing.parentElement.removeChild(existing);
+      placeDetailPanel(pane, panel, anchor);
       return true;
     }
 
-    var actionBar = findDetailActionBar(pane);
-    if (actionBar && actionBar.parentElement) {
-      actionBar.parentElement.insertBefore(panel, actionBar);
-    } else {
-      pane.appendChild(panel);
-    }
+    placeDetailPanel(pane, panel, anchor);
     return true;
   }
 

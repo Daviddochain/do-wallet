@@ -248,6 +248,16 @@
 }
 
 @media (max-width: 760px) {
+  [class*="Wallet_wallet__"] {
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  [class*="Wallet_wallet__"] > * {
+    min-width: 0 !important;
+  }
+
   [class*="AssetList_assetlist__list"] {
     box-sizing: border-box !important;
     width: 100% !important;
@@ -319,7 +329,11 @@
   }
 
   .do-wallet-detail-l1-assets {
+    box-sizing: border-box !important;
     margin: 12px 14px 96px !important;
+    max-width: calc(100% - 28px) !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
   }
 
   .do-wallet-detail-l1-coin {
