@@ -41,13 +41,6 @@
     }, details || {});
   }
 
-  function clearHydrating() {
-    try {
-      document.documentElement.removeAttribute("data-do-wallet-assets-hydrating");
-      document.documentElement.setAttribute("data-do-wallet-asset-runtime-ready", VERSION);
-    } catch (error) {}
-  }
-
   function readJSON(key, fallback) {
     try {
       var raw = window.localStorage && window.localStorage.getItem(key);
@@ -971,8 +964,8 @@
     style.textContent = [
       ".do-wallet-grouped-panel{width:100%;height:100%;box-sizing:border-box;padding:0;color:inherit;background:transparent;font-family:inherit;overflow:auto;}",
       ".do-wallet-grouped-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}",
-      ".do-wallet-grouped-header h3{margin:0;font-size:18px;line-height:1.1;font-weight: 700;letter-spacing:0;}",
-      ".do-wallet-grouped-manage{border:0;background:transparent;color:#a33cff;font:inherit;font-size:15px;font-weight: 700;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px;}",
+      ".do-wallet-grouped-header h3{margin:0;font-size:18px;line-height:1.1;font-weight:var(--bold,500);letter-spacing:0;}",
+      ".do-wallet-grouped-manage{border:0;background:transparent;color:#a33cff;font:inherit;font-size:15px;font-weight:var(--bold,500);cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px;}",
       ".do-wallet-grouped-list{display:flex;flex-direction:column;gap:14px;}",
       ".do-wallet-grouped-chain-block{border-bottom:1px solid rgba(135,57,190,.28);padding-bottom:10px;}",
       ".do-wallet-grouped-chain-block:last-child{border-bottom:0;}",
@@ -983,21 +976,21 @@
       ".do-wallet-grouped-icon,.do-wallet-grouped-child-icon{display:block;flex:0 0 auto;border-radius:50%;object-fit:cover;background:#2c2140;}",
       ".do-wallet-grouped-icon{width:42px;height:42px;}",
       ".do-wallet-grouped-child-icon{width:26px;height:26px;}",
-      ".do-wallet-grouped-fallback-icon{place-items:center;color:#fff;font-weight: 700;font-size:11px;}",
+      ".do-wallet-grouped-fallback-icon{place-items:center;color:#fff;font-weight:var(--bold,500);font-size:11px;}",
       ".do-wallet-grouped-meta{min-width:0;}",
       ".do-wallet-grouped-title{display:flex;align-items:baseline;gap:8px;min-width:0;}",
-      ".do-wallet-grouped-title span{font-size:20px;font-weight: 700;line-height:1;white-space:nowrap;}",
+      ".do-wallet-grouped-title span{font-size:20px;font-weight:var(--bold,500);line-height:1;white-space:nowrap;}",
       ".do-wallet-grouped-row.is-child .do-wallet-grouped-title span{font-size:15px;}",
       ".do-wallet-grouped-title small{color:var(--text-muted,#7f7a8f);font-size:12px;font-weight:600;white-space:nowrap;}",
-      ".do-wallet-grouped-chain{margin-top:4px;color:var(--text-muted,#7f7a8f);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:185px;}",
+      ".do-wallet-grouped-chain{margin-top:4px;color:var(--text-muted,#7f7a8f);font-size:13px;font-weight:var(--bold,500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:185px;}",
       ".do-wallet-grouped-row.is-child .do-wallet-grouped-chain{font-size:12px;}",
-      ".do-wallet-grouped-change{margin-top:4px;font-size:13px;font-weight: 700;}",
+      ".do-wallet-grouped-change{margin-top:4px;font-size:13px;font-weight:var(--bold,500);}",
       ".do-wallet-grouped-change.negative{color:#ff4b55;}",
       ".do-wallet-grouped-change.positive{color:#2f83ff;}",
       ".do-wallet-grouped-right{text-align:right;min-width:92px;}",
-      ".do-wallet-grouped-right strong{display:block;font-size:18px;line-height:1.1;font-weight: 700;white-space:nowrap;}",
+      ".do-wallet-grouped-right strong{display:block;font-size:18px;line-height:1.1;font-weight:var(--bold,500);white-space:nowrap;}",
       ".do-wallet-grouped-row.is-child .do-wallet-grouped-right strong{font-size:14px;}",
-      ".do-wallet-grouped-right span{display:block;margin-top:5px;color:var(--text-muted,#7f7a8f);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;}",
+      ".do-wallet-grouped-right span{display:block;margin-top:5px;color:var(--text-muted,#7f7a8f);font-size:13px;font-weight:var(--bold,500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;}",
       ".DoPortfolioAssetRow20260528.do-wallet-l1-parent-row{border-top:1px solid rgba(135,57,190,.22);}",
       ".DoPortfolioAssetRow20260528.do-wallet-l1-parent-row:first-child{border-top:0;}",
       ".DoPortfolioAssetRow20260528.do-wallet-l1-child-row{opacity:.9;}",
@@ -1015,28 +1008,28 @@
       ".do-wallet-side-l1-synthetic-left{display:flex;align-items:center;gap:12px;min-width:0;}",
       ".do-wallet-side-l1-synthetic-icon,.do-wallet-side-l1-synthetic-fallback{width:28px;height:28px;border-radius:50%;background:#2c2140;flex:0 0 auto;}",
       ".do-wallet-side-l1-synthetic-icon{object-fit:cover;display:block;}",
-      ".do-wallet-side-l1-synthetic-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight: 700;}",
-      ".do-wallet-side-l1-synthetic-title{display:block;font-size:15px;font-weight: 700;line-height:1.1;color:inherit;white-space:normal;}",
-      ".do-wallet-side-l1-synthetic-chain{display:block;margin-top:4px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight: 700;}",
-      ".do-wallet-side-l1-synthetic-count{color:var(--text-muted,#aba3c2);font-size:12px;font-weight: 700;white-space:nowrap;}",
+      ".do-wallet-side-l1-synthetic-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
+      ".do-wallet-side-l1-synthetic-title{display:block;font-size:15px;font-weight:var(--bold,500);line-height:1.1;color:inherit;white-space:normal;}",
+      ".do-wallet-side-l1-synthetic-chain{display:block;margin-top:4px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight:var(--bold,500);}",
+      ".do-wallet-side-l1-synthetic-count{color:var(--text-muted,#aba3c2);font-size:12px;font-weight:var(--bold,500);white-space:nowrap;}",
       ".do-wallet-detail-l1-assets{box-sizing:border-box;margin:18px 20px 108px;color:inherit;font-family:inherit;}",
-      ".do-wallet-detail-l1-assets-title{margin:0 0 12px;font-size:16px;line-height:1.1;font-weight: 700;letter-spacing:0;}",
+      ".do-wallet-detail-l1-assets-title{margin:0 0 12px;font-size:16px;line-height:1.1;font-weight:var(--bold,500);letter-spacing:0;}",
       ".do-wallet-detail-l1-assets-list{display:flex;flex-direction:column;border-top:1px solid rgba(135,57,190,.32);}",
       ".do-wallet-detail-l1-coin{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:12px 0;border-bottom:1px solid rgba(135,57,190,.32);}",
       ".do-wallet-detail-l1-coin-left{display:flex;align-items:center;gap:12px;min-width:0;}",
       ".do-wallet-detail-l1-coin-icon{width:30px;height:30px;border-radius:50%;object-fit:cover;background:#2c2140;flex:0 0 auto;}",
-      ".do-wallet-detail-l1-coin-icon.do-wallet-grouped-fallback-icon{display:grid;place-items:center;color:#fff;font-size:10px;font-weight: 700;}",
+      ".do-wallet-detail-l1-coin-icon.do-wallet-grouped-fallback-icon{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
       ".do-wallet-detail-l1-coin-meta{min-width:0;}",
       ".do-wallet-detail-l1-coin-title{display:flex;align-items:baseline;gap:7px;min-width:0;}",
-      ".do-wallet-detail-l1-coin-title span{font-size:15px;font-weight: 700;line-height:1;white-space:nowrap;}",
-      ".do-wallet-detail-l1-coin-title small{color:var(--text-muted,#aba3c2);font-size:11px;font-weight:700;white-space:nowrap;}",
-      ".do-wallet-detail-l1-coin-chain,.do-wallet-detail-l1-coin-change{margin-top:4px;font-size:12px;font-weight: 700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;}",
+      ".do-wallet-detail-l1-coin-title span{font-size:15px;font-weight:var(--bold,500);line-height:1;white-space:nowrap;}",
+      ".do-wallet-detail-l1-coin-title small{color:var(--text-muted,#aba3c2);font-size:11px;font-weight:var(--bold,500);white-space:nowrap;}",
+      ".do-wallet-detail-l1-coin-chain,.do-wallet-detail-l1-coin-change{margin-top:4px;font-size:12px;font-weight:var(--bold,500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;}",
       ".do-wallet-detail-l1-coin-chain{color:var(--text-muted,#aba3c2);}",
       ".do-wallet-detail-l1-coin-change.negative{color:#ff4b55;}",
       ".do-wallet-detail-l1-coin-change.positive{color:#2f83ff;}",
       ".do-wallet-detail-l1-coin-right{text-align:right;min-width:86px;}",
-      ".do-wallet-detail-l1-coin-right strong{display:block;font-size:14px;line-height:1.1;font-weight: 700;white-space:nowrap;}",
-      ".do-wallet-detail-l1-coin-right span{display:block;margin-top:5px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:126px;}",
+      ".do-wallet-detail-l1-coin-right strong{display:block;font-size:14px;line-height:1.1;font-weight:var(--bold,500);white-space:nowrap;}",
+      ".do-wallet-detail-l1-coin-right span{display:block;margin-top:5px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight:var(--bold,500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:126px;}",
       "@media(max-width:680px){.do-wallet-grouped-panel{padding:22px 18px}.do-wallet-grouped-row.is-child{margin-left:30px}.do-wallet-grouped-title span{font-size:18px}.do-wallet-grouped-right strong{font-size:16px}}"
     ].join("\n");
     document.head.appendChild(style);
@@ -1603,7 +1596,6 @@
       document.documentElement.setAttribute("data-do-wallet-portfolio-groups", VERSION);
     } finally {
       rendering = false;
-      clearHydrating();
     }
   }
 
@@ -1762,5 +1754,4 @@
 
   schedule(500);
   scheduleTableGrouping(700);
-  window.setTimeout(clearHydrating, 3200);
 })();

@@ -308,7 +308,7 @@
   color: #fff !important;
   font-size: 14px !important;
   line-height: 1.05 !important;
-  font-weight: 700 !important;
+  font-weight: var(--bold, 500) !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -363,7 +363,7 @@
   color: #fff !important;
   font-size: 14px !important;
   line-height: 1.05 !important;
-  font-weight: 700 !important;
+  font-weight: var(--bold, 500) !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
@@ -391,11 +391,6 @@
   The left Networks list is still rendered by the Station bundle. Custom chains
   can arrive with the icon after the text, so keep the row order stable here.
 */
-[data-do-wallet-assets-hydrating="1"] [class*="Wallet_wallet__"] [class*="AssetList_assetlist__list"] {
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
 [class*="Nav_networkLink__"] {
   display: flex !important;
   align-items: center !important;
@@ -480,83 +475,6 @@
 }
 
 @media (max-width: 760px) {
-  html,
-  body,
-  #station,
-  #do-wallet {
-    max-width: 100vw !important;
-    overflow-x: hidden !important;
-  }
-
-  [class*="Layout_layout__"] {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    min-width: 0 !important;
-    overflow-x: hidden !important;
-  }
-
-  [class*="Layout_sidebar__"] {
-    width: 68px !important;
-    min-width: 68px !important;
-    max-width: 68px !important;
-    overflow: hidden !important;
-  }
-
-  [class*="Layout_header__"],
-  [class*="Layout_main__"] {
-    left: 68px !important;
-    width: calc(100vw - 68px) !important;
-    max-width: calc(100vw - 68px) !important;
-    min-width: 0 !important;
-    overflow-x: hidden !important;
-  }
-
-  [class*="Layout_wrapper__"],
-  [class*="Layout_maincontainer__"],
-  [class*="Page_page__"],
-  [class*="Dashboard_portfolio__"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    overflow-x: hidden !important;
-  }
-
-  [class*="Layout_wrapper__"] {
-    padding-inline: 12px !important;
-  }
-
-  [class*="Layout_actions__"] {
-    max-width: 100% !important;
-    gap: 8px !important;
-  }
-
-  [class*="NetworkHeader_component__"],
-  [class*="NetworkHeader_badge__"] {
-    max-width: 112px !important;
-  }
-
-  [class*="Wallet_wallet__"] {
-    right: 0 !important;
-    left: auto !important;
-    width: calc(100vw - 68px) !important;
-    max-width: calc(100vw - 68px) !important;
-    min-width: 0 !important;
-    overflow-x: hidden !important;
-  }
-
-  [class*="Dashboard_metricCard__"],
-  [class*="Dashboard_sectionCard__"],
-  [class*="Dashboard_tableWrap__"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  [class*="Dashboard_metricGrid__"],
-  [class*="Dashboard_detailGrid__"] {
-    grid-template-columns: minmax(0, 1fr) !important;
-  }
-
   [class*="AssetList_assetlist__list"] {
     box-sizing: border-box !important;
     width: 100% !important;

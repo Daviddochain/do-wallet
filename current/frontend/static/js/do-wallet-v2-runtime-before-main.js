@@ -7932,12 +7932,31 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   function clearPortfolioSnapshotsOnceForSchema() {
     if (readJSON(SNAPSHOT_RESET_KEY, "") === SNAPSHOT_SCHEMA_VERSION) return false;
     var changed = false;
-    changed = removeJSON(SNAPSHOT_KEY) || changed;
-    changed = removeJSON(SNAPSHOTS_BY_WALLET_KEY) || changed;
+    var migrated = false;
+    var snapshot = readJSON(SNAPSHOT_KEY, null);
+    if (snapshotHasDisplayRows(snapshot)) {
+      snapshot.schemaVersion = SNAPSHOT_SCHEMA_VERSION;
+      changed = writeJSON(SNAPSHOT_KEY, snapshot) || changed;
+      migrated = true;
+    }
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) {
+      Object.keys(byWallet).forEach(function (key) {
+        if (!snapshotHasDisplayRows(byWallet[key])) return;
+        byWallet[key].schemaVersion = SNAPSHOT_SCHEMA_VERSION;
+        migrated = true;
+      });
+      if (migrated) changed = writeJSON(SNAPSHOTS_BY_WALLET_KEY, byWallet) || changed;
+    }
+    if (!migrated) {
+      changed = removeJSON(SNAPSHOT_KEY) || changed;
+      changed = removeJSON(SNAPSHOTS_BY_WALLET_KEY) || changed;
+    }
     writeJSON(SNAPSHOT_RESET_KEY, SNAPSHOT_SCHEMA_VERSION);
     markStatus("portfolio-cache-cleared-for-schema", {
       schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-      removedKeys: changed ? 2 : 0,
+      migrated: migrated,
+      removedKeys: !migrated && changed ? 2 : 0,
     });
     return changed;
   }
@@ -9299,11 +9318,11 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     var snapshot = previousSnapshotForWallet(wallet);
     if (!snapshotHasDisplayRows(snapshot)) return false;
     if (snapshot.schemaVersion !== SNAPSHOT_SCHEMA_VERSION) {
+      snapshot.schemaVersion = SNAPSHOT_SCHEMA_VERSION;
+      writeJSON(SNAPSHOT_KEY, snapshot);
       markStatus("portfolio-cache-skipped-version", {
-        cachedVersion: clean(snapshot.schemaVersion || "legacy").slice(0, 40),
+        cachedVersion: "migrated",
       });
-      removeJSON(SNAPSHOT_KEY);
-      return false;
     }
     markStatus("portfolio-cache-retained-without-paint", {
       balanceAssets: spendableRowsFromSnapshot(snapshot).length,
@@ -9769,7 +9788,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       groupedSpendableAssets: groupedSpendableAssets.length ? groupedSpendableAssets : sidePanelAssets,
       groupedPortfolioAssets: sidePanelAssets,
       chainGroupedAssets: sidePanelAssets,
-      detailPortfolioAssets: displayPortfolioAssets,
+      detailPortfolioAssets: sourcePortfolioAssets,
       rawPortfolioAssets: sourcePortfolioAssets,
       flatPortfolioAssets: sourcePortfolioAssets,
       unGroupedPortfolioAssets: sourcePortfolioAssets,
