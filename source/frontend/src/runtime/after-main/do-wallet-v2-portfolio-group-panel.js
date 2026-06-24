@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260624SideL1Groups1) return;
-  window.__doWalletPortfolioGroupPanel20260624SideL1Groups1 = true;
+  if (window.__doWalletPortfolioGroupPanel20260624SideL1DetailGroups1) return;
+  window.__doWalletPortfolioGroupPanel20260624SideL1DetailGroups1 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
@@ -14,8 +14,10 @@
   var SIDE_SIGNATURE_ATTR = "data-do-wallet-l1-side-signature";
   var SIDE_PENDING_SIGNATURE_ATTR = "data-do-wallet-l1-side-pending-signature";
   var SIDE_PENDING_AT_ATTR = "data-do-wallet-l1-side-pending-at";
-  var SIDE_STABLE_DELAY = 3500;
-  var VERSION = "20260624SideL1Groups1";
+  var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
+  var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
+  var SIDE_STABLE_DELAY = 1000;
+  var VERSION = "20260624SideL1DetailGroups1";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
@@ -478,6 +480,230 @@
     ].join("");
   }
 
+  function assetIdentity(asset) {
+    return [
+      upperSymbol(asset),
+      normalizeGroupKey(chainIdOf(asset) || chainNameOf(asset)),
+      amountOf(asset),
+      valueOf(asset)
+    ].join("|");
+  }
+
+  function sameDisplayedAsset(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    if (assetIdentity(a) === assetIdentity(b)) return true;
+    return upperSymbol(a) === upperSymbol(b) &&
+      normalizeGroupKey(chainIdOf(a) || chainNameOf(a)) === normalizeGroupKey(chainIdOf(b) || chainNameOf(b)) &&
+      amountOf(a) === amountOf(b);
+  }
+
+  function detailChildrenFor(group) {
+    var children = [];
+    var seen = {};
+    (group.children || []).forEach(function (child) {
+      if (!child || sameDisplayedAsset(group.parent, child)) return;
+      var key = assetIdentity(child);
+      if (seen[key]) return;
+      seen[key] = true;
+      children.push(child);
+    });
+    return children;
+  }
+
+  function detailGroupKey(group) {
+    return normalizeGroupKey([
+      group && (group.chainId || chainIdOf(group.parent)),
+      group && (group.chainName || chainNameOf(group.parent)),
+      group && upperSymbol(group.parent)
+    ].join("|"));
+  }
+
+  function detailSignature(group, children) {
+    return [
+      detailGroupKey(group),
+      children.map(function (child) { return assetIdentity(child); }).join(">")
+    ].join("::");
+  }
+
+  function detailCoinHTML(asset) {
+    var symbol = symbolOf(asset);
+    var chain = chainNameOf(asset);
+    var price = priceOf(asset);
+    var pct = percentOf(asset);
+    var amount = amountOf(asset);
+    var value = valueOf(asset);
+    return [
+      '<div class="do-wallet-detail-l1-coin">',
+      '  <div class="do-wallet-detail-l1-coin-left">',
+      renderIcon(asset, "do-wallet-detail-l1-coin-icon"),
+      '    <div class="do-wallet-detail-l1-coin-meta">',
+      '      <div class="do-wallet-detail-l1-coin-title"><span>' + escapeHTML(symbol) + '</span>' + (price ? '<small>' + escapeHTML(price) + "</small>" : "") + "</div>",
+      pct ? '      <div class="do-wallet-detail-l1-coin-change ' + (pct.indexOf("-") >= 0 ? "negative" : "positive") + '">' + escapeHTML(pct) + "</div>" : '      <div class="do-wallet-detail-l1-coin-chain">' + escapeHTML(chain || symbol) + "</div>",
+      "    </div>",
+      "  </div>",
+      '  <div class="do-wallet-detail-l1-coin-right">',
+      '    <strong>' + escapeHTML(value) + "</strong>",
+      '    <span>' + escapeHTML(amount ? amount + " " + symbol : "") + "</span>",
+      "  </div>",
+      "</div>"
+    ].join("");
+  }
+
+  function detailPanelHTML(group, children) {
+    return [
+      '<div class="do-wallet-detail-l1-assets" ' + DETAIL_PANEL_ATTR + '="1" ' + DETAIL_GROUP_ATTR + '="' + escapeHTML(detailGroupKey(group)) + '" data-do-wallet-l1-detail-signature="' + escapeHTML(detailSignature(group, children)) + '">',
+      '  <div class="do-wallet-detail-l1-assets-title">Coins</div>',
+      '  <div class="do-wallet-detail-l1-assets-list">' + children.map(detailCoinHTML).join("") + "</div>",
+      "</div>"
+    ].join("");
+  }
+
+  function findDetailPanes() {
+    var candidates = [];
+    Array.prototype.slice.call(document.querySelectorAll("aside, section, main, div")).forEach(function (node) {
+      if (!isVisibleElement(node)) return;
+      var rect = node.getBoundingClientRect();
+      if (rect.width < 260 || rect.height < 300) return;
+      var content = lowerText(node.textContent || "");
+      if (content.indexOf("chains") < 0) return;
+      if (content.indexOf("search for a chain") >= 0) return;
+      var score = 0;
+      if (content.indexOf("chains") >= 0) score += 10;
+      if (content.indexOf("send") >= 0 && content.indexOf("receive") >= 0) score += 5;
+      if (content.indexOf("buy / sell") >= 0 || content.indexOf("burn do") >= 0) score += 3;
+      if (rect.width <= 620) score += 5;
+      if (content.indexOf("portfolio value") >= 0) score -= 4;
+      score -= Math.abs(rect.right - window.innerWidth) / 220;
+      score -= Math.max(0, rect.width - 620) / 80;
+      if (score > 8) candidates.push({ node: node, score: score });
+    });
+    candidates.sort(function (a, b) {
+      if (b.score !== a.score) return b.score - a.score;
+      var ar = a.node.getBoundingClientRect();
+      var br = b.node.getBoundingClientRect();
+      return (ar.width * ar.height) - (br.width * br.height);
+    });
+    return candidates.length ? [candidates[0].node] : [];
+  }
+
+  function findDetailActionBar(pane) {
+    var best = null;
+    var bestArea = Infinity;
+    Array.prototype.slice.call(pane.querySelectorAll("footer, section, div")).forEach(function (node) {
+      if (!isVisibleElement(node) || node === pane) return;
+      var content = lowerText(node.textContent || "");
+      if (content.indexOf("send") < 0 || content.indexOf("receive") < 0) return;
+      if (content.indexOf("buy / sell") < 0 && content.indexOf("burn do") < 0) return;
+      var rect = node.getBoundingClientRect();
+      var area = rect.width * rect.height;
+      if (area < bestArea) {
+        best = node;
+        bestArea = area;
+      }
+    });
+    return best;
+  }
+
+  function selectedDetailGroup(groups, pane) {
+    var content = lowerText(pane.textContent || "");
+    var best = null;
+    var bestScore = -1;
+    groups.forEach(function (group) {
+      var children = detailChildrenFor(group);
+      if (!children.length) return;
+      var parent = group.parent;
+      var symbol = lowerText(symbolOf(parent));
+      var upper = upperSymbol(parent);
+      var chainName = lowerText(chainNameOf(parent) || group.chainName);
+      var chainId = lowerText(chainIdOf(parent) || group.chainId);
+      var amount = lowerText(amountOf(parent));
+      var value = lowerText(valueOf(parent));
+      var score = 0;
+      if (chainName && content.indexOf(chainName) >= 0) score += 12;
+      if (chainId && content.indexOf(chainId) >= 0) score += 8;
+      if (symbol && content.indexOf(symbol) >= 0) score += 5;
+      if (upper && content.indexOf((" " + upper).toLowerCase()) >= 0) score += 3;
+      if (amount && content.indexOf(amount) >= 0) score += 6;
+      if (value && value !== "$-" && content.indexOf(value.toLowerCase()) >= 0) score += 4;
+      if (score > bestScore) {
+        best = group;
+        bestScore = score;
+      }
+    });
+    return bestScore >= 9 ? best : null;
+  }
+
+  function renderDetailPanel(pane, group) {
+    var children = detailChildrenFor(group);
+    var existing = pane.querySelector("[" + DETAIL_PANEL_ATTR + '="1"]');
+    if (!children.length) {
+      if (existing) existing.remove();
+      return false;
+    }
+
+    var signature = detailSignature(group, children);
+    if (existing && existing.getAttribute("data-do-wallet-l1-detail-signature") === signature) return false;
+
+    var wrapper = document.createElement("div");
+    wrapper.innerHTML = detailPanelHTML(group, children);
+    var panel = wrapper.firstElementChild;
+    if (!panel) return false;
+
+    if (existing) {
+      existing.parentElement.replaceChild(panel, existing);
+      return true;
+    }
+
+    var actionBar = findDetailActionBar(pane);
+    if (actionBar && actionBar.parentElement) {
+      actionBar.parentElement.insertBefore(panel, actionBar);
+    } else {
+      pane.appendChild(panel);
+    }
+    return true;
+  }
+
+  function applyDetailPanelGrouping() {
+    var snapshot = readJSON(SNAPSHOT_KEY, null);
+    if (!snapshot) {
+      Array.prototype.slice.call(document.querySelectorAll("[" + DETAIL_PANEL_ATTR + '="1"]')).forEach(function (node) { node.remove(); });
+      window.__doWalletDetailAssetGroupDebug = { version: VERSION, reason: "no-snapshot", checkedAt: new Date().toISOString() };
+      return { panes: 0, rendered: 0 };
+    }
+    var groups = mergeGroupRows(assetArrays(snapshot)).filter(function (group) {
+      return detailChildrenFor(group).length > 0;
+    });
+    var panes = findDetailPanes();
+    var rendered = 0;
+    var matched = 0;
+
+    panes.forEach(function (pane) {
+      var group = selectedDetailGroup(groups, pane);
+      if (!group) return;
+      matched += 1;
+      injectStyle();
+      if (renderDetailPanel(pane, group)) rendered += 1;
+    });
+
+    Array.prototype.slice.call(document.querySelectorAll("[" + DETAIL_PANEL_ATTR + '="1"]')).forEach(function (node) {
+      var keep = panes.some(function (pane) { return pane.contains(node); });
+      if (!keep) node.remove();
+    });
+
+    if (matched) document.documentElement.setAttribute("data-do-wallet-detail-asset-groups", VERSION);
+    window.__doWalletDetailAssetGroupDebug = {
+      version: VERSION,
+      reason: matched ? "rendered" : (panes.length ? "no-selected-group" : "no-detail-pane"),
+      checkedAt: new Date().toISOString(),
+      panes: panes.length,
+      groups: groups.length,
+      matched: matched,
+      rendered: rendered
+    };
+    return { panes: panes.length, groups: groups.length, matched: matched, rendered: rendered };
+  }
+
   function injectStyle() {
     if (document.getElementById(STYLE_ID)) return;
     var style = document.createElement("style");
@@ -523,8 +749,8 @@
       ".do-wallet-side-l1-group:last-child{border-bottom:0;}",
       ".do-wallet-side-l1-group>article{width:100%;}",
       ".do-wallet-side-l1-parent-row{background:rgba(163,60,255,.045);}",
-      ".do-wallet-side-l1-child-row{padding-left:34px!important;position:relative;opacity:.93;}",
-      ".do-wallet-side-l1-child-row:before{content:'';position:absolute;left:16px;top:50%;width:12px;border-top:1px solid rgba(163,60,255,.48);}",
+      ".do-wallet-side-l1-parent-row[data-do-wallet-l1-child-count]:not([data-do-wallet-l1-child-count='0']){cursor:pointer;}",
+      ".do-wallet-side-l1-child-row{display:none!important;}",
       ".do-wallet-side-l1-synthetic-parent{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:14px 0;background:rgba(163,60,255,.045);}",
       ".do-wallet-side-l1-synthetic-left{display:flex;align-items:center;gap:12px;min-width:0;}",
       ".do-wallet-side-l1-synthetic-icon,.do-wallet-side-l1-synthetic-fallback{width:28px;height:28px;border-radius:50%;background:#2c2140;flex:0 0 auto;}",
@@ -533,6 +759,24 @@
       ".do-wallet-side-l1-synthetic-title{display:block;font-size:15px;font-weight:900;line-height:1.1;color:inherit;white-space:normal;}",
       ".do-wallet-side-l1-synthetic-chain{display:block;margin-top:4px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight:800;}",
       ".do-wallet-side-l1-synthetic-count{color:var(--text-muted,#aba3c2);font-size:12px;font-weight:800;white-space:nowrap;}",
+      ".do-wallet-detail-l1-assets{box-sizing:border-box;margin:18px 20px 108px;color:inherit;font-family:inherit;}",
+      ".do-wallet-detail-l1-assets-title{margin:0 0 12px;font-size:16px;line-height:1.1;font-weight:900;letter-spacing:0;}",
+      ".do-wallet-detail-l1-assets-list{display:flex;flex-direction:column;border-top:1px solid rgba(135,57,190,.32);}",
+      ".do-wallet-detail-l1-coin{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:12px 0;border-bottom:1px solid rgba(135,57,190,.32);}",
+      ".do-wallet-detail-l1-coin-left{display:flex;align-items:center;gap:12px;min-width:0;}",
+      ".do-wallet-detail-l1-coin-icon{width:30px;height:30px;border-radius:50%;object-fit:cover;background:#2c2140;flex:0 0 auto;}",
+      ".do-wallet-detail-l1-coin-icon.do-wallet-grouped-fallback-icon{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:900;}",
+      ".do-wallet-detail-l1-coin-meta{min-width:0;}",
+      ".do-wallet-detail-l1-coin-title{display:flex;align-items:baseline;gap:7px;min-width:0;}",
+      ".do-wallet-detail-l1-coin-title span{font-size:15px;font-weight:900;line-height:1;white-space:nowrap;}",
+      ".do-wallet-detail-l1-coin-title small{color:var(--text-muted,#aba3c2);font-size:11px;font-weight:700;white-space:nowrap;}",
+      ".do-wallet-detail-l1-coin-chain,.do-wallet-detail-l1-coin-change{margin-top:4px;font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;}",
+      ".do-wallet-detail-l1-coin-chain{color:var(--text-muted,#aba3c2);}",
+      ".do-wallet-detail-l1-coin-change.negative{color:#ff4b55;}",
+      ".do-wallet-detail-l1-coin-change.positive{color:#2f83ff;}",
+      ".do-wallet-detail-l1-coin-right{text-align:right;min-width:86px;}",
+      ".do-wallet-detail-l1-coin-right strong{display:block;font-size:14px;line-height:1.1;font-weight:900;white-space:nowrap;}",
+      ".do-wallet-detail-l1-coin-right span{display:block;margin-top:5px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:126px;}",
       "@media(max-width:680px){.do-wallet-grouped-panel{padding:22px 18px}.do-wallet-grouped-row.is-child{margin-left:30px}.do-wallet-grouped-title span{font-size:18px}.do-wallet-grouped-right strong{font-size:16px}}"
     ].join("\n");
     document.head.appendChild(style);
@@ -748,14 +992,18 @@
     info.row.classList.remove("do-wallet-side-l1-parent-row", "do-wallet-side-l1-child-row");
     info.row.setAttribute(SIDE_GROUP_ATTR, VERSION);
     info.row.setAttribute("data-do-wallet-l1-group", group.chainName || group.key);
+    info.row.setAttribute("data-do-wallet-l1-native-symbol", group.nativeSymbol || "");
     if (parent && hasChildren) {
       info.row.classList.add("do-wallet-side-l1-parent-row");
+      info.row.setAttribute("data-do-wallet-l1-child-count", String((group.children || []).length));
       info.row.removeAttribute("data-do-wallet-l1-parent-symbol");
     } else if (!parent) {
       info.row.classList.add("do-wallet-side-l1-child-row");
       info.row.setAttribute("data-do-wallet-l1-parent-symbol", group.nativeSymbol || "");
+      info.row.removeAttribute("data-do-wallet-l1-child-count");
     } else {
       info.row.removeAttribute("data-do-wallet-l1-parent-symbol");
+      info.row.setAttribute("data-do-wallet-l1-child-count", "0");
     }
   }
 
@@ -782,7 +1030,13 @@
       injectStyle();
       lists.forEach(function (list) {
         var rows = sideRowsInList(list);
-        if (rows.length < 2) return;
+        if (rows.length < 2) {
+          if (list.getAttribute(SIDE_GROUP_ATTR) === VERSION) {
+            panelCount += 1;
+            rowCount += rows.length;
+          }
+          return;
+        }
         var infos = rows.map(sideRowInfo);
         var signature = sideSignatureForInfos(infos);
         if (list.getAttribute(SIDE_GROUP_ATTR) === VERSION && list.getAttribute(SIDE_SIGNATURE_ATTR) === signature) {
@@ -822,7 +1076,6 @@
           }
           group.children.forEach(function (child) {
             markSideRow(child, group, false, true);
-            block.appendChild(child.row);
             childCount += 1;
           });
           shell.appendChild(block);
@@ -1037,13 +1290,14 @@
     rendering = true;
     try {
       var sideResult = applyNativeSidePanelGrouping();
+      var detailResult = applyDetailPanelGrouping();
       if (sideResult && sideResult.panels > 0) {
-        setDebug("native-side-rendered", sideResult);
+        setDebug("native-side-rendered", { side: sideResult, detail: detailResult });
         return;
       }
       var snapshot = readJSON(SNAPSHOT_KEY, null);
       if (!snapshot) {
-        setDebug("no-snapshot", { side: sideResult });
+        setDebug("no-snapshot", { side: sideResult, detail: detailResult });
         return;
       }
       var rows = assetArrays(snapshot);
@@ -1166,7 +1420,9 @@
     scheduleTableGrouping(80);
   });
   document.addEventListener("click", function () {
-    schedule(350);
+    schedule(180);
+    window.setTimeout(function () { schedule(0); }, 750);
+    window.setTimeout(function () { schedule(0); }, 1500);
     scheduleTableGrouping(400);
   }, true);
 
