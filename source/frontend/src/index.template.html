@@ -16,10 +16,14 @@
     <link rel="icon" id="favicon" href="/do-logo.jpg" />
     <title>Do-Wallet</title>
     <script>
+      window.__DO_WALLET_BUILD__ = "__BUILD__";
+      try {
+        document.documentElement.setAttribute("data-do-wallet-assets-hydrating", "1");
+      } catch (error) {}
       window.__DO_WALLET_SINGLE_PORTFOLIO_WRITER__ = "do-wallet-v2-multichain-assets";
       window.__DO_WALLET_RECEIVE_CONTROLLER__ = "do-wallet-v2-receive-addresses";
       (function () {
-        var resetVersion = "__BUILD__";
+        var resetVersion = window.__DO_WALLET_BUILD__ || "__BUILD__";
         var resetKey = "do-wallet-browser-display-reset-version";
         var explicitClear = {};
         var protectedKeys = {
@@ -75,6 +79,7 @@
       })();
       if ("serviceWorker" in navigator) {
         (function () {
+          var resetVersion = window.__DO_WALLET_BUILD__ || "__BUILD__";
           var cacheResetKey = "do-wallet-cache-reset-version";
           try {
             if (window.localStorage && window.localStorage.getItem(cacheResetKey) === resetVersion) return;

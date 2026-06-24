@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletMultichainAssets20260624L1DashboardGroup1) return;
-  window.__doWalletMultichainAssets20260624L1DashboardGroup1 = true;
+  if (window.__doWalletMultichainAssets20260624L1DashboardGroup2) return;
+  window.__doWalletMultichainAssets20260624L1DashboardGroup2 = true;
   window.__doWalletMultichainAssets20260615 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
@@ -12,7 +12,7 @@
   var AUTH_KEY = "do-wallet-extension-authority.v1";
   var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
   var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
-  var SNAPSHOT_SCHEMA_VERSION = "20260624L1DashboardGroup1";
+  var SNAPSHOT_SCHEMA_VERSION = "20260624L1DashboardGroup2";
   var PAGE_TARGET = "do-wallet-page";
   var CONTENT_TARGET = "do-wallet-content";
   var PORTFOLIO_REFRESH_MS = 120000;

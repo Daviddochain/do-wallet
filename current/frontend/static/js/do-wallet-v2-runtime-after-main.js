@@ -2542,8 +2542,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260624SideL1PerfMobile1) return;
-  window.__doWalletPortfolioGroupPanel20260624SideL1PerfMobile1 = true;
+  if (window.__doWalletPortfolioGroupPanel20260624SideL1DetailCoins1) return;
+  window.__doWalletPortfolioGroupPanel20260624SideL1DetailCoins1 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
@@ -2558,7 +2558,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
   var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
   var SIDE_STABLE_DELAY = 1000;
-  var VERSION = "20260624SideL1PerfMobile1";
+  var VERSION = "20260624SideL1DetailCoins1";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
@@ -2580,6 +2580,13 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       reason: reason,
       checkedAt: new Date().toISOString()
     }, details || {});
+  }
+
+  function clearHydrating() {
+    try {
+      document.documentElement.removeAttribute("data-do-wallet-assets-hydrating");
+      document.documentElement.setAttribute("data-do-wallet-asset-runtime-ready", VERSION);
+    } catch (error) {}
   }
 
   function readJSON(key, fallback) {
@@ -2948,10 +2955,99 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     return groupRowsCacheValue;
   }
 
+  function rawDetailRowsFromSnapshot(snapshot) {
+    if (!snapshot) return [];
+    var keys = [
+      "rawPortfolioAssets",
+      "flatPortfolioAssets",
+      "unGroupedPortfolioAssets",
+      "sourcePortfolioAssets",
+      "rawTokenPortfolioAssets",
+      "rawSpendableAssets",
+      "flatSpendableAssets",
+      "unGroupedSpendableAssets",
+      "sourceSpendableAssets",
+      "rawTokenSpendableAssets",
+      "staking"
+    ];
+    var rows = [];
+    var seen = {};
+    keys.forEach(function (key) {
+      if (!Array.isArray(snapshot[key])) return;
+      snapshot[key].forEach(function (asset) {
+        if (!asset) return;
+        var rowKey = [
+          upperSymbol(asset),
+          lowerText(chainIdOf(asset)),
+          lowerText(chainNameOf(asset)),
+          lowerText(denomOf(asset)),
+          amountOf(asset),
+          valueOf(asset)
+        ].join("|");
+        if (seen[rowKey]) return;
+        seen[rowKey] = true;
+        rows.push(asset);
+      });
+    });
+    return rows;
+  }
+
+  function syntheticTerraClassicDetailGroup(snapshot) {
+    var rows = rawDetailRowsFromSnapshot(snapshot).filter(terraClassicDetailContext);
+    if (rows.length < 2) return null;
+    rows.sort(function (a, b) {
+      var as = upperSymbol(a);
+      var bs = upperSymbol(b);
+      if (as === "LUNC") return -1;
+      if (bs === "LUNC") return 1;
+      return (Number(b && (b.valueUsd || b.value || b.usdValue || 0)) - Number(a && (a.valueUsd || a.value || a.usdValue || 0))) ||
+        as.localeCompare(bs);
+    });
+    var parent = rows.filter(function (asset) {
+      var symbol = upperSymbol(asset);
+      var denom = lowerText(denomOf(asset));
+      return symbol === "LUNC" || denom === "uluna";
+    })[0] || rows[0];
+    parent = Object.assign({}, parent, {
+      chainID: "columbus-5",
+      chainName: "Terra Classic (LUNC)",
+      symbol: "LUNC",
+      name: "Terra Classic (LUNC)",
+      icon: iconOf(parent, "/station-assets/img/chains/TerraClassic.svg") || "/station-assets/img/chains/TerraClassic.svg",
+      childAssets: rows,
+      expandedAssets: rows,
+      subAssets: rows,
+      tokens: rows,
+      children: rows
+    });
+    return {
+      parent: parent,
+      children: rows,
+      chainId: "columbus-5",
+      chainName: "Terra Classic (LUNC)",
+      icon: iconOf(parent, "/station-assets/img/chains/TerraClassic.svg")
+    };
+  }
+
   function detailGroupsFromSnapshot(snapshot) {
     if (!snapshot) return [];
     if (snapshotCacheRaw && detailGroupsCacheRaw === snapshotCacheRaw) return detailGroupsCacheValue;
-    detailGroupsCacheValue = groupedRowsFromSnapshot(snapshot).filter(function (group) {
+    var groups = groupedRowsFromSnapshot(snapshot).slice();
+    var terraGroup = syntheticTerraClassicDetailGroup(snapshot);
+    if (terraGroup && detailChildrenFor(terraGroup).length) {
+      var replaced = false;
+      groups = groups.map(function (group) {
+        var key = lowerText(group && (group.chainId || chainGroupKeyOf(group.parent)));
+        var symbol = upperSymbol(group && group.parent);
+        if (key === "columbus-5" || symbol === "LUNC") {
+          replaced = true;
+          return terraGroup;
+        }
+        return group;
+      });
+      if (!replaced) groups.push(terraGroup);
+    }
+    detailGroupsCacheValue = groups.filter(function (group) {
       return detailChildrenFor(group).length > 0;
     });
     detailGroupsCacheRaw = snapshotCacheRaw || signatureOf(detailGroupsCacheValue);
@@ -3324,6 +3420,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       var amount = lowerText(amountOf(parent));
       var value = lowerText(valueOf(parent));
       var score = 0;
+      if ((content.indexOf("terra classic") >= 0 || content.indexOf("lunc") >= 0) && (chainId === "columbus-5" || symbol === "lunc")) score += 30;
+      if ((content.indexOf("do chain") >= 0 || content.indexOf(" do") >= 0) && (chainId === "do-chain" || symbol === "do")) score += 30;
       if (chainName && content.indexOf(chainName) >= 0) score += 12;
       if (chainId && content.indexOf(chainId) >= 0) score += 8;
       if (parentName && content.indexOf(parentName) >= 0) score += 12;
@@ -4046,6 +4144,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       document.documentElement.setAttribute("data-do-wallet-portfolio-groups", VERSION);
     } finally {
       rendering = false;
+      clearHydrating();
     }
   }
 
@@ -4198,11 +4297,13 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   document.addEventListener("click", function () {
     schedule(120);
     window.setTimeout(function () { schedule(0); }, 650);
+    window.setTimeout(function () { schedule(0); }, 1300);
     scheduleTableGrouping(400);
   }, true);
 
   schedule(500);
   scheduleTableGrouping(700);
+  window.setTimeout(clearHydrating, 3200);
 })();
 });
 

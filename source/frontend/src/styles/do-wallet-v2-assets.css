@@ -164,6 +164,11 @@
   The left Networks list is still rendered by the Station bundle. Custom chains
   can arrive with the icon after the text, so keep the row order stable here.
 */
+[data-do-wallet-assets-hydrating="1"] [class*="Wallet_wallet__"] [class*="AssetList_assetlist__list"] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 [class*="Nav_networkLink__"] {
   display: flex !important;
   align-items: center !important;
