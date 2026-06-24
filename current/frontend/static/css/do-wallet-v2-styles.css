@@ -474,6 +474,203 @@
   }
 }
 
+@media (max-width: 760px) {
+  html,
+  body,
+  #station,
+  #do-wallet {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  [class*="Layout_layout__"] {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  [class*="Layout_sidebar__"] {
+    width: 68px !important;
+    min-width: 68px !important;
+    max-width: 68px !important;
+    overflow: hidden !important;
+  }
+
+  [class*="Layout_header__"],
+  [class*="Layout_main__"] {
+    left: 68px !important;
+    width: calc(100vw - 68px) !important;
+    max-width: calc(100vw - 68px) !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  [class*="Layout_wrapper__"],
+  [class*="Layout_maincontainer__"],
+  [class*="Page_page__"],
+  [class*="Dashboard_portfolio__"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  [class*="Layout_wrapper__"] {
+    padding-inline: 12px !important;
+  }
+
+  [class*="Layout_actions__"] {
+    max-width: 100% !important;
+    gap: 8px !important;
+  }
+
+  [class*="NetworkHeader_component__"],
+  [class*="NetworkHeader_badge__"] {
+    max-width: 112px !important;
+  }
+
+  [class*="Wallet_wallet__"] {
+    right: 0 !important;
+    left: auto !important;
+    width: calc(100vw - 68px) !important;
+    max-width: calc(100vw - 68px) !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  [class*="Dashboard_metricCard__"],
+  [class*="Dashboard_sectionCard__"],
+  [class*="Dashboard_tableWrap__"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  [class*="Dashboard_metricGrid__"],
+  [class*="Dashboard_detailGrid__"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  [class*="AssetList_assetlist__list"] {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  [class*="AssetList_assetlist__list"] article,
+  [class*="Asset_asset__"],
+  [class*="Asset_details__"],
+  [class*="Asset_details__container__"],
+  [class*="Asset_top__row__"],
+  [class*="Asset_bottom__row__"] {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  [class*="Asset_asset__"] {
+    padding-inline: 8px !important;
+  }
+
+  [class*="Asset_details__"] {
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  [class*="Asset_details__container__"] {
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+  }
+
+  [class*="Asset_symbol__"],
+  [class*="Asset_price__"],
+  [class*="Asset_change__"],
+  [class*="Asset_amount__"] {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  [class*="Asset_price__"],
+  [class*="Asset_amount__"] {
+    max-width: 46% !important;
+    text-align: right !important;
+  }
+
+  [class*="Asset_symbol__"],
+  [class*="Asset_change__"] {
+    max-width: 50% !important;
+  }
+
+  .do-wallet-side-l1-synthetic-parent {
+    gap: 10px !important;
+    padding: 12px 8px !important;
+  }
+
+  .do-wallet-side-l1-synthetic-left {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .do-wallet-side-l1-synthetic-title,
+  .do-wallet-side-l1-synthetic-chain,
+  .do-wallet-side-l1-synthetic-count {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .do-wallet-detail-l1-assets {
+    margin: 12px 14px 96px !important;
+  }
+
+  .do-wallet-detail-l1-coin {
+    gap: 10px !important;
+    min-height: 52px !important;
+    padding: 10px 0 !important;
+  }
+
+  .do-wallet-detail-l1-coin-left,
+  .do-wallet-detail-l1-coin-meta {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .do-wallet-detail-l1-coin-title {
+    display: block !important;
+    min-width: 0 !important;
+  }
+
+  .do-wallet-detail-l1-coin-title span,
+  .do-wallet-detail-l1-coin-title small,
+  .do-wallet-detail-l1-coin-chain,
+  .do-wallet-detail-l1-coin-change {
+    display: block !important;
+    max-width: 145px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .do-wallet-detail-l1-coin-title small {
+    margin-top: 3px !important;
+  }
+
+  .do-wallet-detail-l1-coin-right {
+    min-width: 76px !important;
+    max-width: 42% !important;
+  }
+
+  .do-wallet-detail-l1-coin-right strong,
+  .do-wallet-detail-l1-coin-right span {
+    max-width: 112px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
 /*! do-wallet-v2-burn.css */
 html[data-dochain-burn-route-modal="true"] #do-wallet {
   display: block;

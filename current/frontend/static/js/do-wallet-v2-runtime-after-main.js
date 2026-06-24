@@ -2542,8 +2542,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260624SideL1DetailGroups2) return;
-  window.__doWalletPortfolioGroupPanel20260624SideL1DetailGroups2 = true;
+  if (window.__doWalletPortfolioGroupPanel20260624SideL1PerfMobile1) return;
+  window.__doWalletPortfolioGroupPanel20260624SideL1PerfMobile1 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
@@ -2558,7 +2558,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
   var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
   var SIDE_STABLE_DELAY = 1000;
-  var VERSION = "20260624SideL1DetailGroups2";
+  var VERSION = "20260624SideL1PerfMobile1";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
@@ -2567,6 +2567,12 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   var sideApplying = false;
   var observer = null;
   var tableObserver = null;
+  var snapshotCacheRaw = "";
+  var snapshotCacheValue = null;
+  var groupRowsCacheRaw = "";
+  var groupRowsCacheValue = [];
+  var detailGroupsCacheRaw = "";
+  var detailGroupsCacheValue = [];
 
   function setDebug(reason, details) {
     window.__doWalletPortfolioGroupPanelDebug = Object.assign({
@@ -2582,6 +2588,25 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       return raw ? JSON.parse(raw) : fallback;
     } catch (error) {
       return fallback;
+    }
+  }
+
+  function readSnapshot() {
+    try {
+      var raw = window.localStorage && window.localStorage.getItem(SNAPSHOT_KEY);
+      if (!raw) {
+        snapshotCacheRaw = "";
+        snapshotCacheValue = null;
+        return null;
+      }
+      if (raw === snapshotCacheRaw) return snapshotCacheValue;
+      snapshotCacheRaw = raw;
+      snapshotCacheValue = JSON.parse(raw);
+      groupRowsCacheRaw = "";
+      detailGroupsCacheRaw = "";
+      return snapshotCacheValue;
+    } catch (error) {
+      return null;
     }
   }
 
@@ -2913,6 +2938,24 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     });
 
     return groups;
+  }
+
+  function groupedRowsFromSnapshot(snapshot) {
+    if (!snapshot) return [];
+    if (snapshotCacheRaw && groupRowsCacheRaw === snapshotCacheRaw) return groupRowsCacheValue;
+    groupRowsCacheValue = mergeGroupRows(assetArrays(snapshot));
+    groupRowsCacheRaw = snapshotCacheRaw || signatureOf(groupRowsCacheValue);
+    return groupRowsCacheValue;
+  }
+
+  function detailGroupsFromSnapshot(snapshot) {
+    if (!snapshot) return [];
+    if (snapshotCacheRaw && detailGroupsCacheRaw === snapshotCacheRaw) return detailGroupsCacheValue;
+    detailGroupsCacheValue = groupedRowsFromSnapshot(snapshot).filter(function (group) {
+      return detailChildrenFor(group).length > 0;
+    });
+    detailGroupsCacheRaw = snapshotCacheRaw || signatureOf(detailGroupsCacheValue);
+    return detailGroupsCacheValue;
   }
 
   function findRightPane() {
@@ -3327,15 +3370,13 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   }
 
   function applyDetailPanelGrouping() {
-    var snapshot = readJSON(SNAPSHOT_KEY, null);
+    var snapshot = readSnapshot();
     if (!snapshot) {
       Array.prototype.slice.call(document.querySelectorAll("[" + DETAIL_PANEL_ATTR + '="1"]')).forEach(function (node) { node.remove(); });
       window.__doWalletDetailAssetGroupDebug = { version: VERSION, reason: "no-snapshot", checkedAt: new Date().toISOString() };
       return { panes: 0, rendered: 0 };
     }
-    var groups = mergeGroupRows(assetArrays(snapshot)).filter(function (group) {
-      return detailChildrenFor(group).length > 0;
-    });
+    var groups = detailGroupsFromSnapshot(snapshot);
     var panes = findDetailPanes();
     var rendered = 0;
     var matched = 0;
@@ -3949,29 +3990,32 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 
   function render() {
     if (rendering) return;
+    var startedAt = Date.now();
+    function debug(reason, details) {
+      setDebug(reason, Object.assign({ elapsedMs: Date.now() - startedAt }, details || {}));
+    }
     rendering = true;
     try {
       var sideResult = applyNativeSidePanelGrouping();
       var detailResult = applyDetailPanelGrouping();
       if (sideResult && sideResult.panels > 0) {
-        setDebug("native-side-rendered", { side: sideResult, detail: detailResult });
+        debug("native-side-rendered", { side: sideResult, detail: detailResult });
         return;
       }
-      var snapshot = readJSON(SNAPSHOT_KEY, null);
+      var snapshot = readSnapshot();
       if (!snapshot) {
-        setDebug("no-snapshot", { side: sideResult, detail: detailResult });
+        debug("no-snapshot", { side: sideResult, detail: detailResult });
         return;
       }
-      var rows = assetArrays(snapshot);
-      var groups = mergeGroupRows(rows);
+      var groups = groupedRowsFromSnapshot(snapshot);
       if (!groups.length) {
-        setDebug("no-groups", { rows: rows.length, snapshotKeys: Object.keys(snapshot || {}) });
+        debug("no-groups", { rows: assetArrays(snapshot).length, snapshotKeys: Object.keys(snapshot || {}) });
         return;
       }
       var signature = signatureOf(groups);
       var sections = findAssetsSections();
       if (!sections.length) {
-        setDebug("no-pane", { groups: groups.length });
+        debug("no-pane", { groups: groups.length });
         return;
       }
       if (signature === lastSignature && document.querySelectorAll("[" + RENDER_ATTR + '="1"]').length >= sections.length) return;
@@ -3998,7 +4042,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
         renderedPanels: sections.length,
         signature: signature
       };
-      setDebug("rendered", { groups: groups.length, renderedPanels: sections.length });
+      debug("rendered", { groups: groups.length, renderedPanels: sections.length });
       document.documentElement.setAttribute("data-do-wallet-portfolio-groups", VERSION);
     } finally {
       rendering = false;
@@ -4006,19 +4050,89 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   }
 
   function hasSnapshot() {
-    return !!readJSON(SNAPSHOT_KEY, null);
+    return !!readSnapshot();
+  }
+
+  function isOwnInjectedNode(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.id === STYLE_ID) return true;
+    if (node.getAttribute && (
+      node.getAttribute(RENDER_ATTR) === "1" ||
+      node.getAttribute(DETAIL_PANEL_ATTR) === "1" ||
+      node.getAttribute(SIDE_GROUP_ATTR) === VERSION
+    )) return true;
+    var className = text(node.className);
+    if (
+      className.indexOf("do-wallet-grouped-") >= 0 ||
+      className.indexOf("do-wallet-side-l1-") >= 0 ||
+      className.indexOf("do-wallet-detail-l1-") >= 0
+    ) return true;
+    if (node.closest && (
+      node.closest("[" + RENDER_ATTR + '="1"]') ||
+      node.closest("[" + DETAIL_PANEL_ATTR + '="1"]') ||
+      node.closest(".do-wallet-side-l1-shell")
+    )) return true;
+    return false;
+  }
+
+  function nodeTouchesPortfolioSurface(node) {
+    if (!node || node.nodeType !== 1 || isOwnInjectedNode(node)) return false;
+    var selectors = [
+      SIDE_LIST_SELECTOR,
+      TABLE_ROW_SELECTOR,
+      "[class*='AssetList_']",
+      "[class*='Asset_']",
+      "[class*='Dashboard_']",
+      "[class*='Portfolio']",
+      "[class*='Wallet']",
+      "[class*='Receive']",
+      "[class*='Staking']",
+      "[class*='Stake']",
+      "aside",
+      "main"
+    ];
+    for (var i = 0; i < selectors.length; i += 1) {
+      var selector = selectors[i];
+      try {
+        if (node.matches && node.matches(selector)) return true;
+        if (node.querySelector && node.querySelector(selector)) return true;
+      } catch (error) {}
+    }
+    var content = lowerText(node.textContent || "");
+    if (content.length > 12000) return false;
+    return (
+      content.indexOf("portfolio value") >= 0 ||
+      content.indexOf("do-wallet overview") >= 0 ||
+      content.indexOf("all spendable balances") >= 0 ||
+      content.indexOf("search for a chain") >= 0 ||
+      content.indexOf("chains") >= 0
+    );
+  }
+
+  function mutationTouchesPortfolioSurface(mutations) {
+    for (var i = 0; i < mutations.length; i += 1) {
+      var mutation = mutations[i];
+      var nodes = Array.prototype.slice.call(mutation.addedNodes || []).concat(Array.prototype.slice.call(mutation.removedNodes || []));
+      for (var j = 0; j < nodes.length; j += 1) {
+        if (nodeTouchesPortfolioSurface(nodes[j])) return true;
+      }
+    }
+    return false;
   }
 
   function ensureObserver() {
     if (observer) return;
     try {
-      observer = new MutationObserver(function () { schedule(250); });
-      observer.observe(document.documentElement, { childList: true, subtree: true });
+      observer = new MutationObserver(function (mutations) {
+        if (rendering || sideApplying) return;
+        if (mutationTouchesPortfolioSurface(mutations)) schedule(320);
+      });
+      observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
       window.setTimeout(function () {
         if (!observer) return;
         observer.disconnect();
         observer = null;
-      }, 30000);
+      }, 12000);
     } catch (error) {}
   }
 
@@ -4082,9 +4196,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     scheduleTableGrouping(80);
   });
   document.addEventListener("click", function () {
-    schedule(180);
-    window.setTimeout(function () { schedule(0); }, 750);
-    window.setTimeout(function () { schedule(0); }, 1500);
+    schedule(120);
+    window.setTimeout(function () { schedule(0); }, 650);
     scheduleTableGrouping(400);
   }, true);
 
