@@ -5703,8 +5703,8 @@ runModule("do-wallet-v2-markets-priority.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletMarketsPriority20260611) return;
-  window.__doWalletMarketsPriority20260611 = true;
+  if (window.__doWalletMarketsPriority20260624Percent1) return;
+  window.__doWalletMarketsPriority20260624Percent1 = true;
 
   var DO_CHAIN_ID = "Do-Chain";
   var LEGACY_DO_IDS = ["Do-Chain", "do-chain", "dochain"];
@@ -5723,7 +5723,10 @@ runModule("do-wallet-v2-markets-priority.js", function(){
         host.endsWith(".do-wallet.com") ||
         host === "do-chain.com" ||
         host === "www.do-chain.com" ||
-        host.endsWith(".do-chain.com")
+        host.endsWith(".do-chain.com") ||
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host === "::1"
       );
     } catch (error) {
       return false;
@@ -5898,7 +5901,7 @@ runModule("do-wallet-v2-markets-priority.js", function(){
     if (changed) {
       try {
         window.dispatchEvent(new CustomEvent("do_wallet_chain_assets_update", {
-          detail: { source: "dochain-website-markets-priority-20260611", updatedAt: Date.now() }
+          detail: { source: "dochain-website-markets-priority-20260624-percent1", updatedAt: Date.now() }
         }));
       } catch (error) {}
     }
@@ -6005,9 +6008,9 @@ runModule("do-wallet-v2-markets-priority.js", function(){
   }
 
   function ensureStyles() {
-    if (document.getElementById("dochain-markets-priority-20260611-style")) return;
+    if (document.getElementById("dochain-markets-priority-20260624-percent1-style")) return;
     var style = document.createElement("style");
-    style.id = "dochain-markets-priority-20260611-style";
+    style.id = "dochain-markets-priority-20260624-percent1-style";
     style.textContent = [
       ".do-market-chart-card{cursor:pointer;position:relative;overflow:hidden}",
       ".do-market-chart-card:focus{outline:2px solid #facc15;outline-offset:3px}",
@@ -6019,6 +6022,11 @@ runModule("do-wallet-v2-markets-priority.js", function(){
       ".do-market-badge{font-weight:800;font-size:12px;line-height:1;padding:7px 9px;border-radius:999px;background:#131017;color:#d8c9ff;border:1px solid rgba(255,255,255,.12)}",
       ".do-market-badge.positive{color:#55f2a3;border-color:rgba(85,242,163,.35);background:rgba(85,242,163,.08)}",
       ".do-market-badge.negative{color:#ff7a8b;border-color:rgba(255,122,139,.35);background:rgba(255,122,139,.08)}",
+      ".do-market-percent-cell{display:inline-flex;align-items:center;justify-content:flex-end;gap:5px;min-width:72px;font-weight:800;white-space:nowrap}",
+      ".do-market-percent-cell.positive{color:#00d09c}",
+      ".do-market-percent-cell.negative{color:#ff4058}",
+      ".do-market-percent-cell.neutral{color:#c8bddf}",
+      ".do-market-percent-arrow{font-size:11px;line-height:1;transform:translateY(-1px)}",
       ".do-market-modal{position:fixed;inset:0;z-index:2147482200;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(4,2,10,.72)}",
       ".do-market-modal[hidden]{display:none}",
       ".do-market-dialog{width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;background:#120a1f;color:#fff;border:1px solid rgba(250,204,21,.5);border-radius:8px;box-shadow:0 24px 72px rgba(0,0,0,.55)}",
@@ -6053,7 +6061,8 @@ runModule("do-wallet-v2-markets-priority.js", function(){
   }
 
   function parsePercent(value) {
-    var number = Number(clean(value).replace(/[%+,]/g, ""));
+    var match = clean(value).replace(/,/g, "").match(/[+-]?\d+(?:\.\d+)?/);
+    var number = match ? Number(match[0]) : NaN;
     return Number.isFinite(number) ? number : 0;
   }
 
@@ -6088,7 +6097,9 @@ runModule("do-wallet-v2-markets-priority.js", function(){
       var current = node.parentElement;
       while (current && current !== document.body) {
         var rect = current.getBoundingClientRect();
-        if (rect.width >= 120 && rect.width <= 520 && rect.height >= 55 && rect.height <= 220 && current.querySelector("strong")) {
+        var cardText = clean(current.innerText || current.textContent);
+        var hasValue = /[$]?\d/.test(cardText.replace(clean(node.textContent), ""));
+        if (rect.width >= 120 && rect.width <= 560 && rect.height >= 55 && rect.height <= 240 && hasValue) {
           return current;
         }
         current = current.parentElement;
@@ -6120,6 +6131,38 @@ runModule("do-wallet-v2-markets-priority.js", function(){
       });
     }
     return [];
+  }
+
+  function decorateMarketPercentCells() {
+    var tables = Array.prototype.slice.call(document.querySelectorAll("table"));
+    tables.forEach(function (table) {
+      var headers = Array.prototype.slice.call(table.querySelectorAll("thead th")).map(function (th) {
+        return clean(th.textContent).toLowerCase();
+      });
+      var percentIndexes = ["1h", "24h", "7d"].map(function (label) {
+        return headers.indexOf(label);
+      }).filter(function (index) {
+        return index >= 0;
+      });
+      if (!percentIndexes.length) return;
+      Array.prototype.forEach.call(table.querySelectorAll("tbody tr"), function (row) {
+        var cells = Array.prototype.slice.call(row.children);
+        percentIndexes.forEach(function (cellIndex) {
+          var cell = cells[cellIndex];
+          if (!cell || cell.getAttribute("data-do-market-percent-cell") === "1") return;
+          var value = parsePercent(cell.textContent);
+          var state = value > 0 ? "positive" : value < 0 ? "negative" : "neutral";
+          var arrow = value > 0 ? "▲" : value < 0 ? "▼" : "•";
+          cell.setAttribute("data-do-market-percent-cell", "1");
+          cell.innerHTML = [
+            '<span class="do-market-percent-cell ' + state + '">',
+              '<span class="do-market-percent-arrow" aria-hidden="true">' + arrow + '</span>',
+              '<span>' + formatPercent(value) + '</span>',
+            '</span>',
+          ].join("");
+        });
+      });
+    });
   }
 
   var marketRowsPromise = null;
@@ -6326,19 +6369,23 @@ runModule("do-wallet-v2-markets-priority.js", function(){
   function applyMarkets(rows) {
     if (!pageLooksLikeMarkets()) return;
     ensureStyles();
+    decorateMarketPercentCells();
     var volumeCard = findStatCard("Loaded 24h volume");
     var capCard = findStatCard("Loaded market cap");
-    if (!volumeCard || !capCard) return;
 
     var parsedRows = rows && rows.length ? rows : parseMarketRowsFromTable();
     if (!parsedRows.length) return;
 
     var volumeSummary = summarizeRows(parsedRows, "volume");
     var capSummary = summarizeRows(parsedRows, "marketCap");
-    renderSparkline(volumeCard, volumeSummary);
-    renderSparkline(capCard, capSummary);
-    bindCard(volumeCard, "Loaded 24h volume", volumeSummary);
-    bindCard(capCard, "Loaded market cap", capSummary);
+    if (volumeCard) {
+      renderSparkline(volumeCard, volumeSummary);
+      bindCard(volumeCard, "Loaded 24h volume", volumeSummary);
+    }
+    if (capCard) {
+      renderSparkline(capCard, capSummary);
+      bindCard(capCard, "Loaded market cap", capSummary);
+    }
   }
 
   var scheduled = false;
@@ -6391,7 +6438,7 @@ runModule("do-wallet-v2-markets-priority.js", function(){
     if (shouldRunMarketDomPass()) schedule();
   });
   window.addEventListener("do_wallet_chain_assets_update", function (event) {
-    if (event && event.detail && event.detail.source === "dochain-website-markets-priority-20260611") return;
+    if (event && event.detail && event.detail.source === "dochain-website-markets-priority-20260624-percent1") return;
     if (shouldRunMarketDomPass()) schedule(1000);
   });
 
