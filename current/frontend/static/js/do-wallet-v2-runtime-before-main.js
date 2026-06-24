@@ -12539,18 +12539,163 @@ runModule("do-wallet-v2-receive-addresses.js", function(){
     if (label.indexOf("cosmos") >= 0 || key === "cosmoshub-4") return "/station-assets/img/chains/Cosmos.svg";
     if (label.indexOf("crescent") >= 0 || key === "crescent-1") return "/station-assets/img/chains/Crescent.svg";
     if (label.indexOf("decentr") >= 0 || label === "dec" || key === "mainnet-3") return "/station-assets/img/chains/Decentr.svg";
+    if (label.indexOf("andromeda") >= 0 || key === "andromeda-1") return "/station-assets/img/chains/Andromeda.png";
+    if (label.indexOf("celestia") >= 0 || key === "celestia") return "/station-assets/img/chains/Celestia.svg";
+    if (label.indexOf("comdex") >= 0 || key === "comdex-1") return "/station-assets/img/chains/Comdex.svg";
+    if (label.indexOf("injective") >= 0 || key === "injective-1") return "/station-assets/img/chains/Injective.svg";
     if (label.indexOf("juno") >= 0 || key === "juno-1") return "/station-assets/img/chains/Juno.svg";
+    if (label.indexOf("kava") >= 0 || key === "kava_2222-10") return "/station-assets/img/coins/unknown.svg";
     if (label.indexOf("kujira") >= 0 || key === "kaiyo-1") return "/station-assets/img/chains/Kujira.png";
+    if (label.indexOf("migaloo") >= 0 || key === "migaloo-1") return "/station-assets/img/chains/Migaloo.svg";
+    if (label.indexOf("neutron") >= 0 || key === "neutron-1") return "/station-assets/img/chains/Neutron.png";
+    if (label.indexOf("noble") >= 0 || key === "noble-1") return "/station-assets/img/chains/Noble.svg";
+    if (label.indexOf("nolus") >= 0 || key === "pirin-1") return "/station-assets/img/chains/Nolus.svg";
     if (label.indexOf("optimism") >= 0 || key === "optimism-mainnet") return "/station-assets/img/chains/Optimism.svg";
+    if (label.indexOf("oraichain") >= 0 || key === "orai") return "/station-assets/img/chains/orai.svg";
     if (label.indexOf("osmosis") >= 0 || key === "osmosis-1") return "/station-assets/img/chains/Osmosis.svg";
     if (label.indexOf("polygon") >= 0 || key === "polygon-mainnet") return "/station-assets/img/chains/Polygon.svg";
+    if (label.indexOf("pryzm") >= 0 || key === "pryzm-1") return "/station-assets/img/chains/Pryzm.svg";
     if (label.indexOf("secret") >= 0 || key === "secret-4") return "/station-assets/img/chains/Secret.svg";
+    if (label.indexOf("dvpn") >= 0 || key === "sentinelhub-2") return "/station-assets/img/coins/unknown.svg";
     if (label.indexOf("sei") >= 0 || key === "pacific-1") return "/station-assets/img/chains/sei.svg";
     if (label.indexOf("stafi") >= 0 || key === "stafihub-1") return "/station-assets/img/chains/StaFiHub.png";
+    if (label.indexOf("stargaze") >= 0 || key === "stargaze-1") return "/station-assets/img/chains/Stargaze.png";
     if (label.indexOf("stride") >= 0 || key === "stride-1") return "/station-assets/img/chains/Stride.png";
     if (label.indexOf("tron") >= 0 || key === "tron-mainnet") return "/station-assets/img/chains/Tron.svg";
     if (label.indexOf("xrp") >= 0 || key === "xrp-ledger-mainnet") return "/station-assets/img/chains/XRP.svg";
     return "";
+  }
+
+  function nativeReceiveChainFromAddress(address) {
+    var value = lower(address);
+    var matchers = [
+      [/^do1/, "Do Chain", "Do-Chain"],
+      [/^bc1|^[13][a-km-z1-9]/, "Bitcoin", "bitcoin-mainnet"],
+      [/^0x/, "Ethereum", "ethereum-mainnet"],
+      [/^t[a-z0-9]/, "Tron", "tron-mainnet"],
+      [/^addr1/, "Cardano", "cardano-mainnet"],
+      [/^r[a-z0-9]/, "XRP Ledger", "xrp-ledger-mainnet"],
+      [/^terra/, "Terra (LUNA)", "phoenix-1"],
+      [/^secret/, "Secret Network", "secret-4"],
+      [/^dungeo|^dungeon/, "Dungeon Chain", "dungeon-1"],
+      [/^cosmos/, "Cosmos", "cosmoshub-4"],
+      [/^osmo/, "Osmosis", "osmosis-1"],
+      [/^akash/, "Akash", "akashnet-2"],
+      [/^axelar/, "Axelar", "axelar-dojo-1"],
+      [/^migalo|^migaloo/, "Migaloo", "migaloo-1"],
+      [/^stars/, "Stargaze", "stargaze-1"],
+      [/^inj/, "Injective", "injective-1"],
+      [/^noble/, "Noble", "noble-1"],
+      [/^neutro|^neutron/, "Neutron", "neutron-1"],
+      [/^celest|^celestia/, "Celestia", "celestia"],
+      [/^kava/, "Kava", "kava_2222-10"],
+      [/^cre/, "Crescent", "crescent-1"],
+      [/^comdex/, "Comdex", "comdex-1"],
+      [/^andr/, "Andromeda", "andromeda-1"],
+      [/^orai/, "Oraichain", "orai"],
+      [/^pryzm/, "Pryzm", "pryzm-1"],
+      [/^nolus/, "Nolus", "pirin-1"],
+      [/^stafi/, "StaFiHub", "stafihub-1"],
+      [/^swth/, "Carbon", "carbon-1"],
+      [/^sent/, "DVPN", "sentinelhub-2"],
+      [/^decent/, "Decentr", "decentr-mainnet-1"],
+      [/^chihua/, "Chihuahua", "chihuahua-1"],
+      [/^archwa|^archway/, "Archway", "archway-1"],
+      [/^kujira/, "Kujira", "kaiyo-1"],
+      [/^mars/, "Mars", "mars-1"],
+      [/^sei/, "Sei", "pacific-1"],
+      [/^stride/, "Stride", "stride-1"],
+      [/^juno/, "Juno", "juno-1"]
+    ];
+    for (var i = 0; i < matchers.length; i += 1) {
+      if (matchers[i][0].test(value)) {
+        return { label: matchers[i][1], key: matchers[i][2] };
+      }
+    }
+    return null;
+  }
+
+  function nativeReceiveRows() {
+    var table = document.querySelector("[class*='ReceivePage_address__table']");
+    if (!table) {
+      var shell = document.querySelector("section[class*='ReceivePage_receive'],div[class*='ReceivePage_receive']");
+      table = shell && shell.querySelector("table");
+    }
+    return table ? Array.prototype.slice.call(table.querySelectorAll("tr")) : [];
+  }
+
+  function nativeReceiveRowName(row) {
+    return text(row && row.querySelector("[class*='AddressTable_name']") && row.querySelector("[class*='AddressTable_name']").textContent);
+  }
+
+  function nativeReceiveRowAddress(row) {
+    var addressNode = row && row.querySelector("[class*='AddressBox_wrapper'] > div:first-child");
+    return text(addressNode && addressNode.textContent);
+  }
+
+  function hideNativeReceiveRow(row) {
+    if (!row) return;
+    row.hidden = true;
+    row.style.display = "none";
+    row.setAttribute("data-dochain-receive-row-hidden", "true");
+  }
+
+  function repairNativeReceiveIcon(row, item) {
+    var image = row && row.querySelector("td.chainName img,img");
+    var icon = iconPath(item);
+    if (!image || !icon) return;
+    if (image.getAttribute("src") !== icon) image.setAttribute("src", icon);
+    image.setAttribute("alt", item.label || "");
+  }
+
+  function cleanupBuiltInReceiveRows() {
+    var rows = nativeReceiveRows();
+    if (!rows.length) return;
+    var namedAddresses = {};
+    var seen = {};
+    rows.forEach(function (row) {
+      if (row.getAttribute("data-dochain-receive-row-hidden") === "true") return;
+      var name = nativeReceiveRowName(row);
+      var address = nativeReceiveRowAddress(row);
+      if (!address || !name) return;
+      namedAddresses[lower(address)] = true;
+      seen[lower(name) + "|" + lower(address)] = true;
+    });
+    rows.forEach(function (row) {
+      if (row.getAttribute("data-dochain-receive-row-hidden") === "true") return;
+      var address = nativeReceiveRowAddress(row);
+      if (!address) return;
+      var nameNode = row.querySelector("[class*='AddressTable_name']");
+      var currentName = text(nameNode && nameNode.textContent);
+      var currentKey = lower(currentName) + "|" + lower(address);
+      if (currentName) {
+        repairNativeReceiveIcon(row, { label: currentName });
+        if (row.getAttribute("data-dochain-receive-row-seen") === currentKey) return;
+        if (seen[currentKey] && row.getAttribute("data-dochain-receive-row-seen") !== currentKey) {
+          row.setAttribute("data-dochain-receive-row-seen", currentKey);
+          return;
+        }
+        seen[currentKey] = true;
+        row.setAttribute("data-dochain-receive-row-seen", currentKey);
+        return;
+      }
+      if (namedAddresses[lower(address)]) {
+        hideNativeReceiveRow(row);
+        return;
+      }
+      var inferred = nativeReceiveChainFromAddress(address);
+      if (!inferred) return;
+      var key = lower(inferred.label) + "|" + lower(address);
+      if (seen[key]) {
+        hideNativeReceiveRow(row);
+        return;
+      }
+      seen[key] = true;
+      if (nameNode) nameNode.textContent = inferred.label;
+      repairNativeReceiveIcon(row, inferred);
+      row.setAttribute("data-dochain-receive-row-seen", key);
+      row.setAttribute("data-dochain-receive-row-repaired", "true");
+    });
   }
 
   function copyIcon() {
@@ -12878,6 +13023,7 @@ runModule("do-wallet-v2-receive-addresses.js", function(){
     var wallet = readWallet();
     var addresses = collectAddresses(wallet);
     if (hasBuiltInReceiveList) {
+      cleanupBuiltInReceiveRows();
       document.documentElement.setAttribute("data-dochain-receive-route", "builtin");
       removeMountedReceiveRoot();
       return;
@@ -12957,6 +13103,9 @@ runModule("do-wallet-v2-receive-addresses.js", function(){
     schedule();
     window.setTimeout(schedule, 250);
     window.setTimeout(schedule, 900);
+    window.setTimeout(schedule, 1800);
+    window.setTimeout(schedule, 3200);
+    window.setTimeout(schedule, 6000);
   }, true);
 
   function schedule() {
@@ -12988,7 +13137,9 @@ runModule("do-wallet-v2-receive-addresses.js", function(){
     if (
       document.getElementById(ROOT_ID) ||
       window.location.pathname.indexOf("/receive") === 0 ||
-      window.location.hash.indexOf("/receive") >= 0
+      window.location.hash.indexOf("/receive") >= 0 ||
+      document.documentElement.getAttribute("data-dochain-receive-route") === "builtin" ||
+      document.querySelector("[class*='ReceivePage_address__table']")
     ) {
       schedule();
     }
@@ -12997,7 +13148,10 @@ runModule("do-wallet-v2-receive-addresses.js", function(){
     if (
       document.getElementById(ROOT_ID) ||
       window.location.pathname.indexOf("/receive") === 0 ||
-      window.location.hash.indexOf("/receive") >= 0
+      window.location.hash.indexOf("/receive") >= 0 ||
+      hasRecentReceiveIntent() ||
+      document.documentElement.getAttribute("data-dochain-receive-route") === "builtin" ||
+      document.querySelector("[class*='ReceivePage_address__table']")
     ) {
       return true;
     }
