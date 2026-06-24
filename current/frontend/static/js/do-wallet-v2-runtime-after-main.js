@@ -2542,8 +2542,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260624SideL1DetailGroups1) return;
-  window.__doWalletPortfolioGroupPanel20260624SideL1DetailGroups1 = true;
+  if (window.__doWalletPortfolioGroupPanel20260624SideL1DetailGroups2) return;
+  window.__doWalletPortfolioGroupPanel20260624SideL1DetailGroups2 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
@@ -2558,7 +2558,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
   var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
   var SIDE_STABLE_DELAY = 1000;
-  var VERSION = "20260624SideL1DetailGroups1";
+  var VERSION = "20260624SideL1DetailGroups2";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
@@ -2624,6 +2624,10 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     return text(asset && (asset.chainID || asset.chainId || asset.network || asset.chainName || asset.chain)).trim();
   }
 
+  function denomOf(asset) {
+    return text(asset && (asset.denom || asset.token || asset.contract || asset.baseAsset || asset.id)).trim();
+  }
+
   function amountOf(asset) {
     return text(asset && (asset.displayAmount || asset.amountText || asset.amount || asset.balance || asset.quantity || asset.tokenAmount)).trim();
   }
@@ -2677,8 +2681,19 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       "sidePanelAssets",
       "portfolioPanelAssets",
       "portfolioAssets",
+      "detailPortfolioAssets",
       "assets",
-      "spendableAssets"
+      "spendableAssets",
+      "rawPortfolioAssets",
+      "flatPortfolioAssets",
+      "unGroupedPortfolioAssets",
+      "rawTokenPortfolioAssets",
+      "sourcePortfolioAssets",
+      "rawSpendableAssets",
+      "flatSpendableAssets",
+      "unGroupedSpendableAssets",
+      "rawTokenSpendableAssets",
+      "sourceSpendableAssets"
     ];
     var rows = [];
     var seen = {};
@@ -2705,7 +2720,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     var id = text(chainId).toLowerCase();
     var name = text(chainName).toLowerCase();
     if (id === "do-chain" || id.indexOf("dochain") >= 0 || name.indexOf("do chain") >= 0 || name.indexOf("do-chain") >= 0 || name.indexOf("dochain") >= 0) return "DO";
-    if (id === "columbus-5" || name.indexOf("terra classic") >= 0) return "LUNC";
+    if (id === "330" || id === "columbus-5" || id === "terra-classic" || id === "lunc" || name.indexOf("terra classic") >= 0) return "LUNC";
     if (id === "phoenix-1" || name.indexOf("terra (luna)") >= 0) return "LUNA";
     if (id === "osmosis-1" || name.indexOf("osmosis") >= 0) return "OSMO";
     if (id === "secret-4" || name.indexOf("secret") >= 0) return "SCRT";
@@ -2726,6 +2741,106 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     return "";
   }
 
+  var TERRA_CLASSIC_DETAIL_SYMBOLS = {
+    LUNC: true,
+    UST: true,
+    USTC: true,
+    KRT: true,
+    MYT: true,
+    IDT: true,
+    THT: true,
+    JPT: true,
+    EUT: true,
+    GBT: true,
+    SET: true,
+    NOT: true,
+    INT: true,
+    DKT: true,
+    PHT: true,
+    HKT: true,
+    MNT: true,
+    SGT: true,
+    AUT: true,
+    CAT: true,
+    CHT: true,
+    CNT: true,
+    SDT: true
+  };
+
+  var TERRA_CLASSIC_DETAIL_DENOMS = {
+    uluna: true,
+    uusd: true,
+    ukrw: true,
+    umyr: true,
+    uidr: true,
+    uthb: true,
+    ujpy: true,
+    ueur: true,
+    ugbp: true,
+    usek: true,
+    unok: true,
+    uinr: true,
+    udkk: true,
+    uphp: true,
+    uhkd: true,
+    umnt: true,
+    usgd: true,
+    uaud: true,
+    ucad: true,
+    uchf: true,
+    ucny: true,
+    usdr: true
+  };
+
+  function terraClassicDetailContext(asset) {
+    var id = lowerText(chainIdOf(asset));
+    var chainName = lowerText(chainNameOf(asset));
+    var name = lowerText(asset && asset.name);
+    var symbol = upperSymbol(asset);
+    var denom = lowerText(denomOf(asset));
+    if (id === "330" || id === "columbus-5" || id === "terra-classic" || id === "lunc") return true;
+    if (chainName.indexOf("terra classic") >= 0 || name.indexOf("terra classic") >= 0) return true;
+    if (TERRA_CLASSIC_DETAIL_DENOMS[denom] || denom.indexOf("terra1") === 0) return true;
+    if (!TERRA_CLASSIC_DETAIL_SYMBOLS[symbol]) return false;
+    if (!id || id === "terra" || id === "mainnet") return true;
+    return (
+      id === "330" ||
+      id === "columbus-5" ||
+      id === "terra-classic" ||
+      chainName.indexOf("terra") >= 0 ||
+      name.indexOf("terra") >= 0
+    );
+  }
+
+  function doChainDetailContext(asset) {
+    var id = lowerText(chainIdOf(asset));
+    var chainName = lowerText(chainNameOf(asset));
+    var name = lowerText(asset && asset.name);
+    var denom = lowerText(denomOf(asset));
+    return (
+      id === "888" ||
+      id === "do" ||
+      id === "do-chain" ||
+      id.indexOf("dochain") >= 0 ||
+      id.indexOf("do-chain") >= 0 ||
+      chainName.indexOf("do chain") >= 0 ||
+      name.indexOf("do chain") >= 0 ||
+      denom === "udo" ||
+      denom === "udodx" ||
+      denom === "dodx"
+    );
+  }
+
+  function chainGroupKeyOf(asset) {
+    if (terraClassicDetailContext(asset)) return "columbus-5";
+    if (doChainDetailContext(asset)) return "Do-Chain";
+    var chainId = chainIdOf(asset);
+    if (chainId) return chainId;
+    var chainName = chainNameOf(asset);
+    if (chainName) return chainName;
+    return upperSymbol(asset);
+  }
+
   function mergeGroupRows(rows) {
     var groups = [];
     var byKey = {};
@@ -2734,11 +2849,11 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       if (!row) return;
       var children = childrenOf(row);
       if (children.length) {
-        var groupKey = chainIdOf(row) || chainNameOf(row) || upperSymbol(row);
+        var groupKey = chainGroupKeyOf(row);
         byKey[groupKey] = byKey[groupKey] || {
           parent: row,
           children: [],
-          chainId: chainIdOf(row),
+          chainId: groupKey,
           chainName: chainNameOf(row),
           icon: iconOf(row),
         };
@@ -2749,15 +2864,15 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 
       var chainId = chainIdOf(row);
       var chainName = chainNameOf(row);
-      var key = chainId || chainName || upperSymbol(row);
-      var native = nativeSymbolFor(chainId, chainName);
+      var key = chainGroupKeyOf(row);
+      var native = nativeSymbolFor(key || chainId, chainName);
       var symbol = upperSymbol(row);
       var isNative = native && symbol === native;
 
       byKey[key] = byKey[key] || {
         parent: null,
         children: [],
-        chainId: chainId,
+        chainId: key || chainId,
         chainName: chainName,
         icon: iconOf(row),
       };
@@ -3024,7 +3139,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   function assetIdentity(asset) {
     return [
       upperSymbol(asset),
-      normalizeGroupKey(chainIdOf(asset) || chainNameOf(asset)),
+      normalizeGroupKey(chainGroupKeyOf(asset)),
+      normalizeGroupKey(denomOf(asset)),
       amountOf(asset),
       valueOf(asset)
     ].join("|");
@@ -3035,15 +3151,18 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     if (a === b) return true;
     if (assetIdentity(a) === assetIdentity(b)) return true;
     return upperSymbol(a) === upperSymbol(b) &&
-      normalizeGroupKey(chainIdOf(a) || chainNameOf(a)) === normalizeGroupKey(chainIdOf(b) || chainNameOf(b)) &&
+      normalizeGroupKey(chainGroupKeyOf(a)) === normalizeGroupKey(chainGroupKeyOf(b)) &&
       amountOf(a) === amountOf(b);
   }
 
   function detailChildrenFor(group) {
     var children = [];
     var seen = {};
+    var parentSymbol = upperSymbol(group && group.parent);
+    var parentNative = nativeSymbolFor(group && group.chainId, group && group.chainName);
     (group.children || []).forEach(function (child) {
       if (!child || sameDisplayedAsset(group.parent, child)) return;
+      if (parentNative && parentSymbol && upperSymbol(child) === parentSymbol) return;
       var key = assetIdentity(child);
       if (seen[key]) return;
       seen[key] = true;
@@ -3054,7 +3173,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 
   function detailGroupKey(group) {
     return normalizeGroupKey([
-      group && (group.chainId || chainIdOf(group.parent)),
+      group && (group.chainId || chainGroupKeyOf(group.parent)),
       group && (group.chainName || chainNameOf(group.parent)),
       group && upperSymbol(group.parent)
     ].join("|"));
@@ -3158,11 +3277,13 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       var upper = upperSymbol(parent);
       var chainName = lowerText(chainNameOf(parent) || group.chainName);
       var chainId = lowerText(chainIdOf(parent) || group.chainId);
+      var parentName = lowerText(parent && parent.name);
       var amount = lowerText(amountOf(parent));
       var value = lowerText(valueOf(parent));
       var score = 0;
       if (chainName && content.indexOf(chainName) >= 0) score += 12;
       if (chainId && content.indexOf(chainId) >= 0) score += 8;
+      if (parentName && content.indexOf(parentName) >= 0) score += 12;
       if (symbol && content.indexOf(symbol) >= 0) score += 5;
       if (upper && content.indexOf((" " + upper).toLowerCase()) >= 0) score += 3;
       if (amount && content.indexOf(amount) >= 0) score += 6;
