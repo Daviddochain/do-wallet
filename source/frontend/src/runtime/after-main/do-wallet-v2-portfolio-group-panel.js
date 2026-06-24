@@ -1,20 +1,27 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260624ReactTableGroup1) return;
-  window.__doWalletPortfolioGroupPanel20260624ReactTableGroup1 = true;
+  if (window.__doWalletPortfolioGroupPanel20260624SideL1Groups1) return;
+  window.__doWalletPortfolioGroupPanel20260624SideL1Groups1 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
   var RENDER_ATTR = "data-do-wallet-grouped-assets-panel";
   var TABLE_ROW_SELECTOR = ".DoPortfolioAssetRow20260528";
   var TABLE_GROUP_ATTR = "data-do-wallet-l1-table-grouped";
-  var VERSION = "20260624ReactTableGroup1";
+  var SIDE_LIST_SELECTOR = "[class*='AssetList_assetlist__list']";
+  var SIDE_GROUP_ATTR = "data-do-wallet-l1-side-grouped";
+  var SIDE_SIGNATURE_ATTR = "data-do-wallet-l1-side-signature";
+  var SIDE_PENDING_SIGNATURE_ATTR = "data-do-wallet-l1-side-pending-signature";
+  var SIDE_PENDING_AT_ATTR = "data-do-wallet-l1-side-pending-at";
+  var SIDE_STABLE_DELAY = 3500;
+  var VERSION = "20260624SideL1Groups1";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
   var rendering = false;
   var tableApplying = false;
+  var sideApplying = false;
   var observer = null;
   var tableObserver = null;
 
@@ -162,7 +169,17 @@
     if (id === "dungeon-1" || name.indexOf("dungeon") >= 0) return "DGN";
     if (id.indexOf("bitcoin") >= 0 || name.indexOf("bitcoin") >= 0) return "BTC";
     if (id.indexOf("ethereum") >= 0 || name.indexOf("ethereum") >= 0) return "ETH";
+    if (id.indexOf("bnb") >= 0 || name.indexOf("bnb smart") >= 0 || name.indexOf("binance") >= 0) return "BNB";
     if (id.indexOf("solana") >= 0 || name.indexOf("solana") >= 0) return "SOL";
+    if (id.indexOf("xrp") >= 0 || name.indexOf("xrp ledger") >= 0) return "XRP";
+    if (id.indexOf("avalanche") >= 0 || name.indexOf("avalanche") >= 0) return "AVAX";
+    if (id.indexOf("cosmos") >= 0 || name.indexOf("cosmos") >= 0) return "ATOM";
+    if (id.indexOf("akash") >= 0 || name.indexOf("akash") >= 0) return "AKT";
+    if (id.indexOf("polygon") >= 0 || name.indexOf("polygon") >= 0) return "MATIC";
+    if (id.indexOf("cardano") >= 0 || name.indexOf("cardano") >= 0) return "ADA";
+    if (id.indexOf("base") >= 0 || name.indexOf("base") >= 0) return "ETH";
+    if (id.indexOf("arbitrum") >= 0 || name.indexOf("arbitrum") >= 0) return "ETH";
+    if (id.indexOf("optimism") >= 0 || name.indexOf("optimism") >= 0) return "ETH";
     return "";
   }
 
@@ -501,6 +518,21 @@
       ".DoPortfolioAssetRow20260528.do-wallet-l1-child-row td:first-child{padding-left:44px!important;position:relative;}",
       ".DoPortfolioAssetRow20260528.do-wallet-l1-child-row td:first-child:before{content:'';position:absolute;left:22px;top:50%;width:12px;border-top:1px solid rgba(135,57,190,.45);}",
       ".DoPortfolioAssetRow20260528.do-wallet-l1-child-row td:first-child>*{transform:scale(.94);transform-origin:left center;}",
+      ".do-wallet-side-l1-shell{display:flex;flex-direction:column;width:100%;}",
+      ".do-wallet-side-l1-group{border-bottom:1px solid rgba(135,57,190,.28);}",
+      ".do-wallet-side-l1-group:last-child{border-bottom:0;}",
+      ".do-wallet-side-l1-group>article{width:100%;}",
+      ".do-wallet-side-l1-parent-row{background:rgba(163,60,255,.045);}",
+      ".do-wallet-side-l1-child-row{padding-left:34px!important;position:relative;opacity:.93;}",
+      ".do-wallet-side-l1-child-row:before{content:'';position:absolute;left:16px;top:50%;width:12px;border-top:1px solid rgba(163,60,255,.48);}",
+      ".do-wallet-side-l1-synthetic-parent{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:14px 0;background:rgba(163,60,255,.045);}",
+      ".do-wallet-side-l1-synthetic-left{display:flex;align-items:center;gap:12px;min-width:0;}",
+      ".do-wallet-side-l1-synthetic-icon,.do-wallet-side-l1-synthetic-fallback{width:28px;height:28px;border-radius:50%;background:#2c2140;flex:0 0 auto;}",
+      ".do-wallet-side-l1-synthetic-icon{object-fit:cover;display:block;}",
+      ".do-wallet-side-l1-synthetic-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:900;}",
+      ".do-wallet-side-l1-synthetic-title{display:block;font-size:15px;font-weight:900;line-height:1.1;color:inherit;white-space:normal;}",
+      ".do-wallet-side-l1-synthetic-chain{display:block;margin-top:4px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight:800;}",
+      ".do-wallet-side-l1-synthetic-count{color:var(--text-muted,#aba3c2);font-size:12px;font-weight:800;white-space:nowrap;}",
       "@media(max-width:680px){.do-wallet-grouped-panel{padding:22px 18px}.do-wallet-grouped-row.is-child{margin-left:30px}.do-wallet-grouped-title span{font-size:18px}.do-wallet-grouped-right strong{font-size:16px}}"
     ].join("\n");
     document.head.appendChild(style);
@@ -508,6 +540,323 @@
 
   function normalizeGroupKey(value) {
     return lowerText(value).replace(/[^a-z0-9]+/g, " ").trim();
+  }
+
+  function sideFallbackChainForSymbol(symbol) {
+    var upper = text(symbol).toUpperCase();
+    var terraClassic = {
+      LUNC: true,
+      UST: true,
+      USTC: true,
+      KRT: true,
+      MYT: true,
+      IDT: true,
+      THT: true,
+      JPT: true
+    };
+    if (terraClassic[upper]) {
+      return {
+        key: "terra classic",
+        name: "Terra Classic",
+        nativeSymbol: "LUNC",
+        icon: "/station-assets/img/chains/TerraClassic.svg"
+      };
+    }
+    var bySymbol = {
+      DO: ["Do Chain", "DO", "/station-assets/img/chains/DoChain.png"],
+      BTC: ["Bitcoin", "BTC", "/station-assets/img/chains/Bitcoin.svg"],
+      ETH: ["Ethereum", "ETH", "/station-assets/img/chains/Ethereum.svg"],
+      BNB: ["BNB Smart Chain", "BNB", "/station-assets/img/chains/Bnb.svg"],
+      SOL: ["Solana", "SOL", "/station-assets/img/chains/Solana.svg"],
+      XRP: ["XRP Ledger", "XRP", "/station-assets/img/chains/XRP.svg"],
+      AVAX: ["Avalanche C-Chain", "AVAX", "/station-assets/img/chains/Avalanche.svg"],
+      ATOM: ["Cosmos", "ATOM", "/station-assets/img/chains/Cosmos.svg"],
+      OSMO: ["Osmosis", "OSMO", "/station-assets/img/chains/Osmosis.svg"],
+      AKT: ["Akash", "AKT", "/station-assets/img/chains/Akash.svg"],
+      ACT: ["Akash", "AKT", "/station-assets/img/chains/Akash.svg"],
+      MATIC: ["Polygon", "MATIC", "/station-assets/img/chains/Polygon.svg"],
+      ADA: ["Cardano", "ADA", "/station-assets/img/chains/Cardano.svg"],
+      LUNA: ["Terra", "LUNA", "/station-assets/img/chains/Terra.svg"]
+    };
+    if (!bySymbol[upper]) return null;
+    return {
+      key: normalizeGroupKey(bySymbol[upper][0]),
+      name: bySymbol[upper][0],
+      nativeSymbol: bySymbol[upper][1],
+      icon: bySymbol[upper][2]
+    };
+  }
+
+  function sideSymbolOfRow(row) {
+    var symbolNode = row && row.querySelector && row.querySelector("[class*='Asset_symbol__name']");
+    var symbol = normalizedText(symbolNode && symbolNode.textContent || "");
+    if (symbol) return symbol.toUpperCase();
+    var textValue = normalizedText(row && row.textContent || "");
+    return (textValue.match(/^[A-Z0-9]{2,12}/) || [""])[0].toUpperCase();
+  }
+
+  function sideChainMetaOfRow(row, symbol) {
+    var chainIcon = row && row.querySelector && row.querySelector("[class*='Asset_chain__icon']");
+    var tokenIcon = row && row.querySelector && row.querySelector("[class*='TokenIcon_icon']");
+    var fallback = sideFallbackChainForSymbol(symbol) || {};
+    var chainName = normalizedText(chainIcon && (chainIcon.getAttribute("alt") || chainIcon.alt) || "") || fallback.name || symbol;
+    var chainIconSrc = text(chainIcon && chainIcon.getAttribute("src"));
+    var tokenIconSrc = text(tokenIcon && tokenIcon.getAttribute("src"));
+    var nativeSymbol = nativeSymbolFor(chainName, chainName) || fallback.nativeSymbol || symbol;
+    return {
+      key: normalizeGroupKey(chainName || fallback.key || symbol),
+      name: chainName,
+      nativeSymbol: text(nativeSymbol).toUpperCase(),
+      icon: chainIconSrc || fallback.icon || tokenIconSrc
+    };
+  }
+
+  function sideRowInfo(row, index) {
+    var symbol = sideSymbolOfRow(row);
+    var meta = sideChainMetaOfRow(row, symbol);
+    return {
+      row: row,
+      index: index,
+      symbol: symbol,
+      chainKey: meta.key || normalizeGroupKey(symbol),
+      chainName: meta.name || symbol,
+      nativeSymbol: meta.nativeSymbol || symbol,
+      chainIcon: meta.icon || ""
+    };
+  }
+
+  function sideRowSignature(info) {
+    return [
+      info.index,
+      info.chainKey,
+      info.chainName,
+      info.nativeSymbol,
+      info.symbol
+    ].join("|");
+  }
+
+  function sideSignatureForInfos(infos) {
+    return infos.map(sideRowSignature).join("||");
+  }
+
+  function findNativeSideAssetLists() {
+    return Array.prototype.slice.call(document.querySelectorAll(SIDE_LIST_SELECTOR)).filter(function (list) {
+      if (!isVisibleElement(list)) return false;
+      var rows = list.querySelectorAll && list.querySelectorAll("article");
+      if (!rows || !rows.length) return false;
+      var node = list;
+      for (var depth = 0; node && depth < 8; depth += 1) {
+        var content = lowerText(node.textContent || "");
+        if (content.indexOf("portfolio value") >= 0 && content.indexOf("assets") >= 0) return true;
+        node = node.parentElement;
+      }
+      return false;
+    });
+  }
+
+  function sideRowsInList(list) {
+    return Array.prototype.slice.call(list.querySelectorAll("article")).filter(function (row) {
+      return row && row.classList && !row.classList.contains("do-wallet-side-l1-synthetic-parent");
+    });
+  }
+
+  function sideGroupsForInfos(infos) {
+    var byKey = {};
+    infos.forEach(function (info) {
+      var key = info.chainKey || normalizeGroupKey(info.symbol);
+      byKey[key] = byKey[key] || {
+        key: key,
+        chainName: info.chainName,
+        nativeSymbol: info.nativeSymbol,
+        chainIcon: info.chainIcon,
+        rows: [],
+        firstIndex: info.index
+      };
+      byKey[key].rows.push(info);
+      byKey[key].firstIndex = Math.min(byKey[key].firstIndex, info.index);
+      if (!byKey[key].chainIcon && info.chainIcon) byKey[key].chainIcon = info.chainIcon;
+      if (!byKey[key].chainName && info.chainName) byKey[key].chainName = info.chainName;
+      if (!byKey[key].nativeSymbol && info.nativeSymbol) byKey[key].nativeSymbol = info.nativeSymbol;
+    });
+
+    return Object.keys(byKey).map(function (key) {
+      var group = byKey[key];
+      group.parent = group.rows.filter(function (info) {
+        return info.nativeSymbol && info.symbol === info.nativeSymbol;
+      })[0] || null;
+      if (group.parent) {
+        group.children = group.rows.filter(function (info) { return info !== group.parent; });
+      } else {
+        group.children = group.rows.slice();
+      }
+      return group;
+    }).sort(function (a, b) {
+      return a.firstIndex - b.firstIndex;
+    });
+  }
+
+  function createSideFallbackIcon(label) {
+    var fallback = document.createElement("span");
+    fallback.className = "do-wallet-side-l1-synthetic-fallback";
+    fallback.textContent = (label || "?").slice(0, 3).toUpperCase();
+    return fallback;
+  }
+
+  function createSideSyntheticParent(group) {
+    var parent = document.createElement("article");
+    parent.className = "do-wallet-side-l1-synthetic-parent";
+    parent.setAttribute("data-do-wallet-l1-synthetic-parent", "1");
+
+    var left = document.createElement("div");
+    left.className = "do-wallet-side-l1-synthetic-left";
+    if (group.chainIcon) {
+      var icon = document.createElement("img");
+      icon.className = "do-wallet-side-l1-synthetic-icon";
+      icon.src = group.chainIcon;
+      icon.alt = "";
+      icon.loading = "eager";
+      icon.decoding = "async";
+      icon.onerror = function () {
+        if (icon.parentElement) icon.parentElement.replaceChild(createSideFallbackIcon(group.nativeSymbol || group.chainName), icon);
+      };
+      left.appendChild(icon);
+    } else {
+      left.appendChild(createSideFallbackIcon(group.nativeSymbol || group.chainName));
+    }
+
+    var meta = document.createElement("div");
+    var title = document.createElement("strong");
+    title.className = "do-wallet-side-l1-synthetic-title";
+    title.textContent = group.chainName + (group.nativeSymbol && group.chainName.toUpperCase().indexOf(group.nativeSymbol) < 0 ? " (" + group.nativeSymbol + ")" : "");
+    var chain = document.createElement("span");
+    chain.className = "do-wallet-side-l1-synthetic-chain";
+    chain.textContent = group.children.length === 1 ? "1 asset" : group.children.length + " assets";
+    meta.appendChild(title);
+    meta.appendChild(chain);
+    left.appendChild(meta);
+
+    var count = document.createElement("span");
+    count.className = "do-wallet-side-l1-synthetic-count";
+    count.textContent = group.nativeSymbol || "";
+
+    parent.appendChild(left);
+    parent.appendChild(count);
+    return parent;
+  }
+
+  function markSideRow(info, group, parent, hasChildren) {
+    info.row.classList.remove("do-wallet-side-l1-parent-row", "do-wallet-side-l1-child-row");
+    info.row.setAttribute(SIDE_GROUP_ATTR, VERSION);
+    info.row.setAttribute("data-do-wallet-l1-group", group.chainName || group.key);
+    if (parent && hasChildren) {
+      info.row.classList.add("do-wallet-side-l1-parent-row");
+      info.row.removeAttribute("data-do-wallet-l1-parent-symbol");
+    } else if (!parent) {
+      info.row.classList.add("do-wallet-side-l1-child-row");
+      info.row.setAttribute("data-do-wallet-l1-parent-symbol", group.nativeSymbol || "");
+    } else {
+      info.row.removeAttribute("data-do-wallet-l1-parent-symbol");
+    }
+  }
+
+  function applyNativeSidePanelGrouping() {
+    if (sideApplying) return { skipped: true };
+    sideApplying = true;
+    try {
+      var lists = findNativeSideAssetLists();
+      var panelCount = 0;
+      var groupCount = 0;
+      var rowCount = 0;
+      var childCount = 0;
+      var changedCount = 0;
+
+      if (!lists.length) {
+        window.__doWalletSideAssetGroupDebug = {
+          version: VERSION,
+          reason: "no-side-list",
+          checkedAt: new Date().toISOString()
+        };
+        return { panels: 0, groups: 0, rows: 0, changed: 0 };
+      }
+
+      injectStyle();
+      lists.forEach(function (list) {
+        var rows = sideRowsInList(list);
+        if (rows.length < 2) return;
+        var infos = rows.map(sideRowInfo);
+        var signature = sideSignatureForInfos(infos);
+        if (list.getAttribute(SIDE_GROUP_ATTR) === VERSION && list.getAttribute(SIDE_SIGNATURE_ATTR) === signature) {
+          panelCount += 1;
+          rowCount += rows.length;
+          return;
+        }
+        if (list.getAttribute(SIDE_GROUP_ATTR) !== VERSION) {
+          var now = Date.now();
+          var pendingSignature = list.getAttribute(SIDE_PENDING_SIGNATURE_ATTR) || "";
+          var pendingAt = Number(list.getAttribute(SIDE_PENDING_AT_ATTR) || 0);
+          if (pendingSignature !== signature) {
+            list.setAttribute(SIDE_PENDING_SIGNATURE_ATTR, signature);
+            list.setAttribute(SIDE_PENDING_AT_ATTR, String(now));
+            schedule(SIDE_STABLE_DELAY + 100);
+            return;
+          }
+          if (now - pendingAt < SIDE_STABLE_DELAY) {
+            schedule(SIDE_STABLE_DELAY - (now - pendingAt) + 100);
+            return;
+          }
+        }
+
+        var groups = sideGroupsForInfos(infos);
+        var shell = document.createElement("div");
+        shell.className = "do-wallet-side-l1-shell";
+
+        groups.forEach(function (group) {
+          var block = document.createElement("div");
+          block.className = "do-wallet-side-l1-group";
+          block.setAttribute("data-do-wallet-l1-chain", group.chainName || group.key);
+          if (group.parent) {
+            markSideRow(group.parent, group, true, group.children.length > 0);
+            block.appendChild(group.parent.row);
+          } else {
+            block.appendChild(createSideSyntheticParent(group));
+          }
+          group.children.forEach(function (child) {
+            markSideRow(child, group, false, true);
+            block.appendChild(child.row);
+            childCount += 1;
+          });
+          shell.appendChild(block);
+          groupCount += 1;
+        });
+
+        list.innerHTML = "";
+        list.appendChild(shell);
+        list.setAttribute(SIDE_GROUP_ATTR, VERSION);
+        list.setAttribute(SIDE_SIGNATURE_ATTR, signature);
+        list.removeAttribute(SIDE_PENDING_SIGNATURE_ATTR);
+        list.removeAttribute(SIDE_PENDING_AT_ATTR);
+        panelCount += 1;
+        rowCount += rows.length;
+        changedCount += 1;
+      });
+
+      if (panelCount) {
+        document.documentElement.setAttribute("data-do-wallet-side-asset-groups", VERSION);
+      }
+      window.__doWalletSideAssetGroupDebug = {
+        version: VERSION,
+        reason: panelCount ? "rendered" : "no-rows",
+        checkedAt: new Date().toISOString(),
+        panels: panelCount,
+        groups: groupCount,
+        rows: rowCount,
+        children: childCount,
+        changed: changedCount
+      };
+      return { panels: panelCount, groups: groupCount, rows: rowCount, children: childCount, changed: changedCount };
+    } finally {
+      sideApplying = false;
+    }
   }
 
   function setTableDebug(reason, details) {
@@ -687,9 +1036,14 @@
     if (rendering) return;
     rendering = true;
     try {
+      var sideResult = applyNativeSidePanelGrouping();
+      if (sideResult && sideResult.panels > 0) {
+        setDebug("native-side-rendered", sideResult);
+        return;
+      }
       var snapshot = readJSON(SNAPSHOT_KEY, null);
       if (!snapshot) {
-        setDebug("no-snapshot");
+        setDebug("no-snapshot", { side: sideResult });
         return;
       }
       var rows = assetArrays(snapshot);
@@ -740,7 +1094,7 @@
   }
 
   function ensureObserver() {
-    if (observer || !hasSnapshot()) return;
+    if (observer) return;
     try {
       observer = new MutationObserver(function () { schedule(250); });
       observer.observe(document.documentElement, { childList: true, subtree: true });
