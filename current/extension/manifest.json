@@ -1,0 +1,91 @@
+﻿{
+    "manifest_version":  3,
+    "name":  "Do-Wallet",
+    "short_name":  "Do-Wallet",
+    "description":  "A secure browser wallet for Do Chain and supported networks.",
+    "version":  "2.0.22",
+    "background":  {
+                       "service_worker":  "background-router.js",
+                       "type":  "module"
+                   },
+    "content_scripts":  [
+                            {
+                                "matches":  [
+                                                "https://do-wallet.com/*",
+                                                "https://www.do-wallet.com/*"
+                                            ],
+                                "js":  [
+                                           "dochain-firstparty-public-bridge-20260616.js"
+                                       ],
+                                "run_at":  "document_start",
+                                "all_frames":  false
+                            },
+                            {
+                                "matches":  [
+                                                "https://*/*",
+                                                "http://*/*"
+                                            ],
+                                "exclude_matches":  [
+                                                        "https://do-wallet.com/*",
+                                                        "https://www.do-wallet.com/*"
+                                                    ],
+                                "js":  [
+                                           "contentScript-guard.js",
+                                           "browser-polyfill.js",
+                                           "dapp-compat-content.js",
+                                           "contentScript.js",
+                                           "dochain-wallet-priority-20260609.js",
+                                           "dochain-mfa-open-wallet-bridge-20260607.js",
+                                           "dochain-extension-delete-wallet-bridge-20260611.js"
+                                       ],
+                                "run_at":  "document_start",
+                                "all_frames":  true
+                            }
+                        ],
+    "action":  {
+                   "default_popup":  "index.html",
+                   "default_title":  "Do-Wallet",
+                   "default_icon":  {
+                                        "16":  "icon-16.png",
+                                        "32":  "icon-32.png",
+                                        "48":  "icon-48.png",
+                                        "128":  "icon-128.png"
+                                    }
+               },
+    "options_ui":  {
+                       "page":  "index.html"
+                   },
+    "web_accessible_resources":  [
+                                     {
+                                         "resources":  [
+                                                           "dapp-compat-page.js",
+                                                           "inpage.js",
+                                                           "icon-128.png",
+                                                           "index.html"
+                                                       ],
+                                         "matches":  [
+                                                         "https://*/*",
+                                                         "http://*/*"
+                                                     ]
+                                     }
+                                 ],
+    "icons":  {
+                  "16":  "icon-16.png",
+                  "32":  "icon-32.png",
+                  "48":  "icon-48.png",
+                  "128":  "icon-128.png",
+                  "180":  "icon-180.png"
+              },
+    "permissions":  [
+                        "offscreen",
+                        "storage",
+                        "alarms",
+                        "tabs"
+                    ],
+    "host_permissions":  [
+                             "https://do-wallet.com/*",
+                             "https://www.do-wallet.com/*",
+                             "https://do-chain.com/*",
+                             "https://www.do-chain.com/*"
+                         ]
+}

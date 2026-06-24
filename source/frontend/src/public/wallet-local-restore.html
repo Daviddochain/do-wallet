@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Do-Wallet Restore</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #080310;
+        color: #f6f0ff;
+        font: 16px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        width: min(560px, calc(100vw - 32px));
+        border: 1px solid rgba(159, 78, 255, .45);
+        border-radius: 8px;
+        background: #1b102b;
+        padding: 28px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 24px;
+      }
+      p {
+        margin: 0;
+        color: #cdbce6;
+      }
+      .status {
+        margin-top: 18px;
+        color: #fff;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Restoring website wallets</h1>
+      <p>This page only reads the local recovery helper on this computer.</p>
+      <p class="status" id="status">Starting...</p>
+    </main>
+    <script>
+      (function () {
+        "use strict";
+
+        var status = document.getElementById("status");
+
+        function setStatus(message) {
+          status.textContent = message;
+        }
+
+        function query(name) {
+          return new URLSearchParams(window.location.search).get(name) || "";
+        }
+
+        function isObject(value) {
+          return Boolean(value && typeof value === "object" && !Array.isArray(value));
+        }
+
+        function cleanWallet(wallet) {
+          if (!isObject(wallet)) return null;
+          var addresses = isObject(wallet.addresses) ? wallet.addresses : {};
+          var address = String(wallet.address || addresses["Do-Chain"] || addresses["888"] || "").trim();
+          if (!address && !Object.keys(addresses).length) return null;
+          return Object.assign({}, wallet, {
+            name: String(wallet.name || wallet.walletName || "Do-Wallet").trim(),
+            walletName: String(wallet.walletName || wallet.name || "Do-Wallet").trim(),
+            address: address || undefined,
+            addresses: addresses,
+            addressMap: isObject(wallet.addressMap) ? wallet.addressMap : addresses,
+            external: true,
+            source: wallet.source || "do-wallet-local-restore",
+            walletSource: wallet.walletSource || "website-local-restore"
+          });
+        }
+
+        function writeJson(key, value) {
+          window.localStorage.setItem(key, JSON.stringify(value));
+        }
+
+        async function run() {
+          try {
+            var port = query("port") || "23888";
+            if (!/^\d{2,5}$/.test(port)) throw new Error("Missing local recovery port.");
+
+            setStatus("Reading local wallet backup...");
+            var response = await fetch("http://127.0.0.1:" + port + "/do-wallet-local-restore", {
+              cache: "no-store",
+              mode: "cors"
+            });
+            if (!response.ok) throw new Error("Local recovery helper did not respond.");
+            var payload = await response.json();
+            if (!payload || typeof payload.keys !== "string") throw new Error("Wallet backup was not available.");
+
+            var rawWallets = JSON.parse(payload.keys);
+            if (!Array.isArray(rawWallets) || !rawWallets.length) throw new Error("Wallet backup did not contain wallets.");
+            var recovered = Array.isArray(payload.recovered)
+              ? payload.recovered.map(cleanWallet).filter(Boolean)
+              : rawWallets.map(cleanWallet).filter(Boolean);
+
+            setStatus("Writing website wallet storage...");
+            window.localStorage.setItem("keys", payload.keys);
+            writeJson("do-wallet-recovered-wallets.v1", {
+              version: 1,
+              source: "do-wallet-local-restore",
+              updatedAt: Date.now(),
+              wallets: recovered
+            });
+            writeJson("do-wallet-legacy-keys-masked.v1", {
+              restored: true,
+              recoveredWallets: recovered.length,
+              updatedAt: Date.now()
+            });
+            window.localStorage.removeItem("do-wallet-selected-recovered-wallet.v1");
+            window.localStorage.removeItem("do-wallet-bridge-wallet");
+            window.localStorage.removeItem("do-wallet-extension-authority.v1");
+
+            setStatus("Wallet list restored. Opening Do-Wallet...");
+            window.history.replaceState(null, "", "/wallet-local-restore.html");
+            window.setTimeout(function () {
+              window.location.replace("/");
+            }, 500);
+          } catch (error) {
+            setStatus(error && error.message ? error.message : "Restore failed.");
+          }
+        }
+
+        run();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,332 @@
+html[data-dochain-burn-route-modal="true"] #do-wallet {
+  display: block;
+}
+
+.dochain-do-burn-page-host {
+  display: block;
+  width: 100%;
+}
+
+.dochain-do-burn-page {
+  width: min(1040px, 100%);
+  color: #fff;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.dochain-do-burn-page-title h1 {
+  margin: 0 0 28px;
+  color: #fff;
+  font-size: clamp(34px, 4.4vw, 54px);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.dochain-do-burn-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  background: rgba(4, 3, 8, .76);
+  backdrop-filter: blur(8px);
+}
+
+.dochain-do-burn-dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 2147483001;
+  width: min(1040px, calc(100vw - 28px));
+  max-height: min(820px, calc(100vh - 28px));
+  transform: translate(-50%, -50%);
+  overflow: auto;
+  border: 1px solid rgba(250, 204, 21, .42);
+  border-radius: 8px;
+  background: #0d1014;
+  color: #fff;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .48);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.dochain-do-burn-page .dochain-do-burn-dialog {
+  position: static;
+  left: auto;
+  top: auto;
+  z-index: auto;
+  width: 100%;
+  max-height: none;
+  transform: none;
+  overflow: visible;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .22);
+  background: #171220;
+  border-color: rgba(168, 85, 247, .42);
+}
+
+.dochain-do-burn-page .dochain-do-burn-head {
+  background: #20162d;
+  border-bottom-color: rgba(168, 85, 247, .24);
+}
+
+.dochain-do-burn-page .dochain-do-burn-head p {
+  color: #d8b4fe;
+}
+
+.dochain-do-burn-page .dochain-do-burn-panel {
+  background: rgba(7, 2, 15, .34);
+  border-color: rgba(168, 85, 247, .32);
+}
+
+.dochain-do-burn-page .dochain-do-burn-panel input {
+  border-color: rgba(168, 85, 247, .7);
+  background: #07020f;
+  font-weight: 800;
+}
+
+.dochain-do-burn-page .dochain-do-burn-panel input:focus {
+  outline-color: rgba(216, 180, 254, .28);
+  border-color: #d8b4fe;
+}
+
+.dochain-do-burn-page .dochain-do-burn-quote div,
+.dochain-do-burn-page .dochain-do-burn-table-panel th {
+  background: rgba(7, 2, 15, .48);
+}
+
+.dochain-do-burn-close {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .07);
+  color: #fff;
+  cursor: pointer;
+  font: 800 18px/1 system-ui, sans-serif;
+}
+
+.dochain-do-burn-head {
+  padding: 26px 30px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+  background: linear-gradient(135deg, rgba(250, 204, 21, .17), rgba(34, 197, 94, .08) 52%, rgba(99, 102, 241, .12));
+}
+
+.dochain-do-burn-head p {
+  margin: 0 0 8px;
+  color: #facc15;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dochain-do-burn-head h2 {
+  margin: 0;
+  max-width: 720px;
+  color: #fff;
+  font-size: clamp(28px, 4vw, 48px);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.dochain-do-burn-body {
+  padding: 24px;
+}
+
+.dochain-do-burn-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(360px, 1.08fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.dochain-do-burn-panel {
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .035);
+  padding: 18px;
+}
+
+.dochain-do-burn-panel label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 13px;
+}
+
+.dochain-do-burn-panel label span {
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dochain-do-burn-panel input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 46px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 8px;
+  background: #07090c;
+  color: #fff;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+}
+
+.dochain-do-burn-panel input:focus {
+  outline: 2px solid rgba(250, 204, 21, .34);
+  border-color: rgba(250, 204, 21, .72);
+}
+
+.dochain-do-burn-quote {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.dochain-do-burn-quote div {
+  min-height: 74px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .18);
+  padding: 11px;
+}
+
+.dochain-do-burn-quote span {
+  display: block;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dochain-do-burn-quote strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.dochain-do-burn-quote p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dochain-do-burn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.dochain-do-burn-primary,
+.dochain-do-burn-secondary {
+  min-height: 44px;
+  border-radius: 8px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.dochain-do-burn-primary {
+  border: 1px solid #facc15;
+  background: #facc15;
+  color: #171306;
+}
+
+.dochain-do-burn-primary:disabled {
+  opacity: .52;
+  cursor: not-allowed;
+}
+
+.dochain-do-burn-secondary {
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+}
+
+.dochain-do-burn-status {
+  min-height: 20px;
+  margin-top: 13px;
+  color: #dbeafe;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dochain-do-burn-error {
+  color: #fca5a5;
+}
+
+.dochain-do-burn-success {
+  color: #86efac;
+}
+
+.dochain-do-burn-table-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.dochain-do-burn-table-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #fff;
+  font-size: 13px;
+}
+
+.dochain-do-burn-table-panel th,
+.dochain-do-burn-table-panel td {
+  padding: 12px 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+  text-align: left;
+}
+
+.dochain-do-burn-table-panel th {
+  color: #facc15;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, .045);
+}
+
+.dochain-do-burn-table-panel tr.is-active td {
+  background: rgba(250, 204, 21, .13);
+  color: #fff7d6;
+  font-weight: 800;
+}
+
+.dochain-do-burn-launcher {
+  cursor: pointer;
+}
+
+@media (max-width: 820px) {
+  .dochain-do-burn-dialog {
+    width: calc(100vw - 18px);
+    max-height: calc(100vh - 18px);
+  }
+
+  .dochain-do-burn-head,
+  .dochain-do-burn-body {
+    padding: 18px;
+  }
+
+  .dochain-do-burn-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dochain-do-burn-quote {
+    grid-template-columns: 1fr;
+  }
+
+  .dochain-do-burn-table-panel {
+    overflow-x: auto;
+  }
+
+  .dochain-do-burn-table-panel table {
+    min-width: 520px;
+  }
+}

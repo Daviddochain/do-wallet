@@ -1,0 +1,62 @@
+/* Allow the browser extension popup to use more space for asset-heavy pages. */
+:root {
+  --extension-width: min(100%, 760px);
+  --wallet-width: 520px;
+  --wallet-height: 760px;
+}
+
+body,
+html,
+#do-wallet,
+#station {
+  min-width: var(--wallet-width) !important;
+  min-height: var(--wallet-height) !important;
+}
+
+body,
+html {
+  overflow: auto !important;
+}
+
+#do-wallet,
+#station {
+  overflow: auto !important;
+}
+
+.AssetList_assetlist__QkV5t {
+  max-height: clamp(320px, calc(100vh - 300px), 430px) !important;
+  overflow: hidden !important;
+}
+
+.AssetList_assetlist__list__ytuzZ {
+  max-height: calc(100% - 48px) !important;
+  overflow: auto !important;
+  padding-bottom: 12px !important;
+}
+
+.Asset_asset__identifier__qza88 {
+  display: none !important;
+}
+
+.Asset_asset__w-Tbd {
+  padding: 8px 10px !important;
+}
+
+.Asset_details__container__ecc4y {
+  gap: 3px !important;
+}
+
+.Dashboard_detailGrid__yCKlR .Dashboard_tableWrap__ITau0 {
+  max-height: clamp(520px, calc(100vh - 220px), 760px) !important;
+  overflow: auto !important;
+}
+
+@media (max-width: 520px) {
+  body,
+  html,
+  #do-wallet,
+  #station {
+    min-width: 100vw;
+    min-height: 100vh;
+  }
+}

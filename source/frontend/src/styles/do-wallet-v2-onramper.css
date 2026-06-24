@@ -1,0 +1,218 @@
+.do-ramp-inline-launcher {
+  cursor: pointer;
+}
+
+.do-ramp-action-row {
+  gap: 12px !important;
+}
+
+.do-ramp-action-row > * {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+
+.do-ramp-inline-launcher h1,
+.do-ramp-inline-launcher h2,
+.do-ramp-inline-launcher h3,
+.do-ramp-inline-launcher strong,
+.do-ramp-inline-launcher span,
+.do-ramp-inline-launcher p {
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
+}
+
+.do-ramp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(5, 2, 13, 0.74);
+}
+
+.do-ramp-overlay[data-open="true"] {
+  display: flex;
+}
+
+.do-ramp-modal {
+  width: min(460px, calc(100vw - 24px));
+  height: min(760px, calc(100vh - 24px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(171, 89, 255, 0.42);
+  border-radius: 8px;
+  background: #181027;
+  color: #fff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.do-ramp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(171, 89, 255, 0.24);
+}
+
+.do-ramp-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.do-ramp-close {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.do-ramp-close:hover,
+.do-ramp-close:focus-visible {
+  border-color: #b86bff;
+  outline: none;
+}
+
+.do-ramp-body {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.do-ramp-status {
+  display: grid;
+  gap: 6px;
+  margin: 16px;
+  padding: 14px;
+  border: 1px solid rgba(171, 89, 255, 0.34);
+  border-radius: 8px;
+  background: #120b20;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.do-ramp-status strong {
+  color: #fff;
+  font-size: 15px;
+}
+
+.do-ramp-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0 16px 14px;
+}
+
+.do-ramp-steps div {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #0f091a;
+}
+
+.do-ramp-steps b {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #a443ff;
+  color: #fff;
+  font-size: 13px;
+}
+
+.do-ramp-steps span {
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+.do-ramp-wallet {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin: 0 16px 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #0f091a;
+}
+
+.do-ramp-wallet code {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.do-ramp-copy,
+.do-ramp-open {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(171, 89, 255, 0.56);
+  border-radius: 8px;
+  background: #29163d;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.do-ramp-copy:hover,
+.do-ramp-copy:focus-visible,
+.do-ramp-open:hover,
+.do-ramp-open:focus-visible {
+  border-color: #c284ff;
+  background: #362052;
+  outline: none;
+}
+
+.do-ramp-frame {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  border: 0;
+  background: #fff;
+}
+
+.do-ramp-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid rgba(171, 89, 255, 0.2);
+}
+
+@media (max-width: 560px) {
+  .do-ramp-overlay {
+    padding: 0;
+  }
+
+  .do-ramp-modal {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+}

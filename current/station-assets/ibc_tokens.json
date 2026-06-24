@@ -1,0 +1,2120 @@
+{
+  "all": {
+    "ibc/3F649DCB2409455E83CFA6E635DBA801EB85F2759628A942FA7E5771A4465B47": {
+      "token": "stride-1:ustrd",
+      "chainID": "phoenix-1"
+    },
+    "ibc/4138EBA11C09E48EA5254E127C97CC722BDED1C19AC19902E7DC4BB1A04A5B1B": {
+      "token": "stride-1:ustrd",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/1EF239FBE204003F52C42EF5A71F14B0B290BCB1F31AD68199D0861CAF486F49": {
+      "token": "stride-1:ustrd",
+      "chainID": "carbon-1"
+    },
+    "ibc/1047FD9CA9E63DC7E523D2642DA1B3BDCD54B76E302BD5EEE779EF9EF9404602": {
+      "token": "stride-1:ustrd",
+      "chainID": "comdex-1"
+    },
+    "ibc/FF6C2E86490C1C4FBBD24F55032831D2415B9D7882F85C3CC9C2401D79362BEA": {
+      "token": "stride-1:ustrd",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/2569CA24DA8E114C11FB227A4E3F8B32250EDED0DFA30EC57D89331D6E2E0CD5": {
+      "token": "stride-1:ustrd",
+      "chainID": "crescent-1"
+    },
+    "ibc/3A4E549050AE897C854E69EC9F81CE33A8501464E0BD5EBEFD5CDDFE06E545AB": {
+      "token": "stride-1:ustrd",
+      "chainID": "juno-1"
+    },
+    "ibc/68930779653E62D66440AE801EE3394E9A29C4222930CBB20EC3EE179DE69E34": {
+      "token": "stride-1:ustrd",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/F4EF72139CDCF526FFD520402C53FFB7A927B528BDF0C5FF60A4D8B4780D2C6B": {
+      "token": "stride-1:ustrd",
+      "chainID": "osmosis-1"
+    },
+    "ibc/735744846290E99BF225AA4D0E87098AEA0029481E687D855B336E6406D45257": {
+      "token": "stride-1:ustrd",
+      "chainID": "pacific-1"
+    },
+    "ibc/40FA8346E4E856481483A41565D8EBED7292B15199227E24D8D2252789705880": {
+      "token": "stride-1:stuluna",
+      "chainID": "phoenix-1"
+    },
+    "ibc/2E80C28AB673A82A0FA883BB1BEE9241CC7E47195A1F7CDCE029D988DD37E291": {
+      "token": "stride-1:stuluna",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/67B4C2C0304D67C81E67135502E34D4C1024C37E644FBC78EB9603BBDFA8C25B": {
+      "token": "stride-1:stuluna",
+      "chainID": "carbon-1"
+    },
+    "ibc/0B095EAB9A93CB59A750FC8C2648AA4DA28098904DDF18E57A9F01266A168EE9": {
+      "token": "stride-1:stuluna",
+      "chainID": "comdex-1"
+    },
+    "ibc/0E42296D09755A081C28C04A4409998EB4285C6C8BF2A24D50DF266E62A601DD": {
+      "token": "stride-1:stuluna",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/AE0BC208BEFAEBD7AF6A166D0C7975D4AF20BE0E7D87A5EC6FECC66C80648F81": {
+      "token": "stride-1:stuluna",
+      "chainID": "crescent-1"
+    },
+    "ibc/B7990EF682504679B330DE76A52D901C66BC2B3EA458899A267B2DB61EB39DB2": {
+      "token": "stride-1:stuluna",
+      "chainID": "juno-1"
+    },
+    "ibc/0B4DE0CD7444428DA55BA1FBDFD68A108ACE0C77D7C0958EF04E50A281FA8E3C": {
+      "token": "stride-1:stuluna",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/E5FC9A1C4C90C2FD2EF3102047532DCC76901745D116547FF8E540AE8DA2EF84": {
+      "token": "stride-1:stuluna",
+      "chainID": "osmosis-1"
+    },
+    "ibc/4D72377CA90D1959A43873BDA906A2EBDCD1FE1759D7A5A70E3D29D102C0AC6B": {
+      "token": "stride-1:stuluna",
+      "chainID": "pacific-1"
+    },
+    "ibc/C05A4F69DF8C32485FDD3C26776FA60A2BBD47A100B091548429E68B16C246ED": {
+      "token": "stride-1:stuatom",
+      "chainID": "phoenix-1"
+    },
+    "ibc/A6FC3A320A204D98630DF451FC58A0B424918777B0181A1B6B03B35D6B9A5946": {
+      "token": "stride-1:stuatom",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/7774A06890518496AC48D9E3F57D0ED56B1E25BFE5F31AA786ECCBAB6DF971C0": {
+      "token": "stride-1:stuatom",
+      "chainID": "carbon-1"
+    },
+    "ibc/251770896BA44C0C2E206B23E227A1C0B0C8124C957046590CDBF95E0DD05494": {
+      "token": "stride-1:stuatom",
+      "chainID": "comdex-1"
+    },
+    "ibc/054A44EC8D9B68B9A6F0D5708375E00A5569A28F21E0064FF12CADC3FEF1D04F": {
+      "token": "stride-1:stuatom",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/9DC680F4CFD8B7B8AB7B542B9ED42FF232A7686525211A428341E22B237FE6CF": {
+      "token": "stride-1:stuatom",
+      "chainID": "crescent-1"
+    },
+    "ibc/B0DCDABFE43360722B031A2EA6348AEEC6EA4BFE7759CA35D16F1DA502EA3419": {
+      "token": "stride-1:stuatom",
+      "chainID": "juno-1"
+    },
+    "ibc/E37B0A409BFF1981B1CEE15E2D766F28BE0710AFFCB4DE546FADE29A290B92B4": {
+      "token": "stride-1:stuatom",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/6E92C832F3380E7C50D8EFFCCBAD267FA74B212ACB9DEFAF33C0CD58462335DC": {
+      "token": "stride-1:stuatom",
+      "chainID": "osmosis-1"
+    },
+    "ibc/72768DF49C2DA63C3699B814061020F16464A97CA13DE646A3B3857B7F00441D": {
+      "token": "stride-1:stuatom",
+      "chainID": "pacific-1"
+    },
+    "ibc/C9CD7EEFAD68A8227208EC3EC199F6249E4156D0172C9EA7EF7F5357433724F5": {
+      "token": "stride-1:stustars",
+      "chainID": "phoenix-1"
+    },
+    "ibc/9EFA027D9D388D678A463A92CD29D03C9A637F43A215738FA7D760226AFA6A25": {
+      "token": "stride-1:stustars",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/D743B0536CDEC68EA5DED793A04736B2B9A3B82C9C833B02B0941D7F5DFE38C8": {
+      "token": "stride-1:stustars",
+      "chainID": "carbon-1"
+    },
+    "ibc/068DDCC53CDF47FB93EC5A99591B8AE2CAD8132583782DCD4B53F52575E3709E": {
+      "token": "stride-1:stustars",
+      "chainID": "comdex-1"
+    },
+    "ibc/1B216B3FC63B5A9A90A3C44BBBEE4C1AADA43C9DA020025537BE2677E6E00C55": {
+      "token": "stride-1:stustars",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/B3ECA6F28120156DB142ED34EF276CEB2AD4C237D5B1C51CBE825FD18D1B0F2C": {
+      "token": "stride-1:stustars",
+      "chainID": "crescent-1"
+    },
+    "ibc/99E55A4B4ADCEC7FE061B0C95E591C1CDCB0875E5CF84B0BEC17661F2450FE76": {
+      "token": "stride-1:stustars",
+      "chainID": "juno-1"
+    },
+    "ibc/3E5BCCFB6C591DD08FA67C5A4C9AA1EE372CF591AA6E0B819C530AE5F653316A": {
+      "token": "stride-1:stustars",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/F91C946781D76B6EECED1F95F77C0B5A26AC8201F250A2BBADFC7A5FA5CE49E2": {
+      "token": "stride-1:stustars",
+      "chainID": "osmosis-1"
+    },
+    "ibc/C965E304F7F886A64FC30F03C1A5700DC8B06F2F2A9A7B4B1C6234082F6B09CA": {
+      "token": "stride-1:stustars",
+      "chainID": "pacific-1"
+    },
+    "ibc/96E0B9EB563C3D0D9B5C218C8D8B4B67C3DD6B6B66039B372940D3C059B999B0": {
+      "token": "stride-1:stinj",
+      "chainID": "phoenix-1"
+    },
+    "ibc/5FE24450875DBCBE83869C75DC18D61B0C06CD21B4002D6E305F38068B6BE1A2": {
+      "token": "stride-1:stinj",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/C4B5A21A1B840BAB233877F491E88CFF626FA4BB139D0730A0AFCF8E27E00CAE": {
+      "token": "stride-1:stinj",
+      "chainID": "carbon-1"
+    },
+    "ibc/74F438B6D5A8516070ADAA2A3CAB9BF2B220BA9E41AB62A398D7A263AF323612": {
+      "token": "stride-1:stinj",
+      "chainID": "comdex-1"
+    },
+    "ibc/C5E245652F3A58860617FD58912B2321345167399B652821F0F0562707A163F1": {
+      "token": "stride-1:stinj",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/A83EE4540040C564442D7B7E1AD1563760658A4D680802E7230E4D09F2764798": {
+      "token": "stride-1:stinj",
+      "chainID": "crescent-1"
+    },
+    "ibc/9A8B98FF6D350837B9948F10C590CEF0A58714F204D6DE15B60DE9049068D629": {
+      "token": "stride-1:stinj",
+      "chainID": "juno-1"
+    },
+    "ibc/200AA6FF848FF128EFC0B10625C07A14943EAA2BB5BF441D141DD4175C2A0E76": {
+      "token": "stride-1:stinj",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/5BC4BA1B2EEDA4AE015B31D070048BCD0D179B6BFDB6FDB7F80902090C240FA7": {
+      "token": "stride-1:stinj",
+      "chainID": "osmosis-1"
+    },
+    "ibc/4DE52596168D6BA070B1DA28153E08A8F8B3893C7F8790C76D9D7CB7A2CAEE93": {
+      "token": "stride-1:stinj",
+      "chainID": "pacific-1"
+    },
+    "ibc/990440C07CB76AAA2A08EE657CF8692A77BB4A679B5211AC7462E59A96110518": {
+      "token": "stride-1:stujuno",
+      "chainID": "phoenix-1"
+    },
+    "ibc/5FF9AF542704209B0A23099DA8AFA7C441311D37A63070B0C455920024699FD3": {
+      "token": "stride-1:stujuno",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/58ED7383ABD6898C006362BCA33D50343D7FA30BCB693D879FC244AAE6F43C27": {
+      "token": "stride-1:stujuno",
+      "chainID": "carbon-1"
+    },
+    "ibc/AC4EEAACA2E0815F4A3C12D4010DC6302467E7ABF19D6C14BDA41679AF89E940": {
+      "token": "stride-1:stujuno",
+      "chainID": "comdex-1"
+    },
+    "ibc/C4385BAF25938E02B0EA90D512CE43BFACA892F7FAD81D63CC82BD8EBFA21857": {
+      "token": "stride-1:stujuno",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/5E543C675D66B7A4AAF3F66A255E9435B9F4553053209497BC002A7F620DAE6A": {
+      "token": "stride-1:stujuno",
+      "chainID": "crescent-1"
+    },
+    "ibc/B9417A3D28565260FD953788CB591F24ACEC19B02CBF3F1DF7924291C8B61302": {
+      "token": "stride-1:stujuno",
+      "chainID": "juno-1"
+    },
+    "ibc/88C5B8AA229E9CCF38A70005A4DD50F758AF222244F7FF1506B57081C9E2A8BB": {
+      "token": "stride-1:stujuno",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/E0A99187B3E9B502AA0E931006785C7381C254BAE9FAE9D1227C2B87734DE1BA": {
+      "token": "stride-1:stujuno",
+      "chainID": "osmosis-1"
+    },
+    "ibc/E0BE2D706AB1E1D0CEA1716C07DE70C72C4251DADBB26E1F6ED52D6CC0EB3452": {
+      "token": "stride-1:stujuno",
+      "chainID": "pacific-1"
+    },
+    "ibc/2346CC608C5BD39D4054B86DFB3D24FB92C267C59F9E7F9D1676D2E027932212": {
+      "token": "stride-1:stuosmo",
+      "chainID": "phoenix-1"
+    },
+    "ibc/E649E8AAB0470E76E6CFDD3586839EA04C1B27AB6E28450BA8D10492E03F72CC": {
+      "token": "stride-1:stuosmo",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/FE405C39D2AA2B277603F2737963E23E203B7687ECF27A64F980ACE656A159CE": {
+      "token": "stride-1:stuosmo",
+      "chainID": "carbon-1"
+    },
+    "ibc/4E0DF8FFFC80AB9BB283EEE4E91E0F6A16D300BD66D949420E296AC964EC8302": {
+      "token": "stride-1:stuosmo",
+      "chainID": "comdex-1"
+    },
+    "ibc/4263C1D1EEEA066572F679EF212BDD522ADF0E57C86819AF260C8BC82BD87602": {
+      "token": "stride-1:stuosmo",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/2A9C58EC2A470C4C1ACF5F85170808E72952EACDDFE22F308E07700E0402142A": {
+      "token": "stride-1:stuosmo",
+      "chainID": "crescent-1"
+    },
+    "ibc/8B246FFCBB536DBDF68384ECBEFD8E69C9D47111444CF427412428B67228AE38": {
+      "token": "stride-1:stuosmo",
+      "chainID": "juno-1"
+    },
+    "ibc/9EA05E1C36673DCFEF7AFB499B10673F0232B3AB5279EDA20E2E149969169931": {
+      "token": "stride-1:stuosmo",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/13C021DFC1E673C94F03BAEBEC3F15D1F0F7D0A8FA0C2B6D871FE7657CC6102A": {
+      "token": "stride-1:stuosmo",
+      "chainID": "osmosis-1"
+    },
+    "ibc/69FEE5E12C962F0706AAF8B27E6D51CD0CEFD6FB55B261FCF8D0B9106ECA674A": {
+      "token": "stride-1:stuosmo",
+      "chainID": "pacific-1"
+    },
+    "ibc/51CE10769C3F59C243485BD1E431BED5FD9FB5949FEFFD3E1BF0A9CEB659C892": {
+      "token": "stride-1:staevmos",
+      "chainID": "phoenix-1"
+    },
+    "ibc/95883A552B3ECF2209129A0335E32C3360CE2E762153634616753A1E950F351B": {
+      "token": "stride-1:staevmos",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/B9862EA5990E54EFCAB2FE8EAB5592882163BB5AB81DEBFD308C0DABFF33BE9C": {
+      "token": "stride-1:staevmos",
+      "chainID": "carbon-1"
+    },
+    "ibc/ACCE86826257EFBD3B55491E99221EF53AFE6D71695E71DCCC3973F348449217": {
+      "token": "stride-1:staevmos",
+      "chainID": "comdex-1"
+    },
+    "ibc/04CDA5EBB8A7E94BB60879B7F43EF0EDD2604990D8AB5BA18ADCB173F66FF874": {
+      "token": "stride-1:staevmos",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/3C8DFA99D3F91C2626D5EA762BB0E8DF02444B46497FF613F895BF0A5C2F5283": {
+      "token": "stride-1:staevmos",
+      "chainID": "crescent-1"
+    },
+    "ibc/661AA0B10F49E548AF714E92F03F5EF7030AA7EA0CB6ED090EEDFAF547AE52F2": {
+      "token": "stride-1:staevmos",
+      "chainID": "juno-1"
+    },
+    "ibc/F33F8D7220E055E2079040C9E2BC6EC77FE77BD0D3FEB0ED5E1A9E5302E36885": {
+      "token": "stride-1:staevmos",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/E027B27ED8BF4926EA6D15B21C9537B74772B9E8F870979DEB389091D9D106FB": {
+      "token": "stride-1:staevmos",
+      "chainID": "osmosis-1"
+    },
+    "ibc/082030F68F828DA09A292E8BD1470DA1560B57D8FEFB1CA11B629D99C10C3272": {
+      "token": "stride-1:staevmos",
+      "chainID": "pacific-1"
+    },
+    "ibc/6314C1BE9FB893777FC7455F40E858EA55DEAC9E08C9EF33AE8FCC89581FBCA8": {
+      "token": "stafihub-1:ufis",
+      "chainID": "phoenix-1"
+    },
+    "ibc/9A50287403B3BFBAA6F2867A557E6AF500375CED98EAA3655695BFB06FF29BF5": {
+      "token": "stafihub-1:ufis",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/09442A7D35329C60CC795F870EE306E61E36EDD5FE0F460D2BDECB2DD824B29C": {
+      "token": "stafihub-1:ufis",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/CE19B9BA1A00B5BFBAC639507C785B2184D062E55EDB465E3F224D307909E324": {
+      "token": "stafihub-1:ufis",
+      "chainID": "carbon-1"
+    },
+    "ibc/402576CCEC1841E2A4B679B8EB079F2C2BFD5640C9389330BDEBBBA402125693": {
+      "token": "stafihub-1:ufis",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/75C049825C3220AE92B01273C11B6454F1B846B49E1AF704EE7C21591256AA21": {
+      "token": "stafihub-1:uratom",
+      "chainID": "phoenix-1"
+    },
+    "ibc/884F009562D81975DB2D2A6643AB7B24A1BEFF6CA66F8558B58D576E4F804556": {
+      "token": "stafihub-1:uratom",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/0C52E0115F55CBCB59B6636D9E53E2DA00706ED8BCB8F7EAF176935F52541417": {
+      "token": "stafihub-1:uratom",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/2C4C5B8340F059E85FC54F70DDA1542A3283E12301CC204F816BCDB91CAD8CA8": {
+      "token": "stafihub-1:uratom",
+      "chainID": "carbon-1"
+    },
+    "ibc/47C3E6ACE5905726B32E39DC7E5B14EB553F6680C667F1CD948966A5EFD5088A": {
+      "token": "stafihub-1:uratom",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/E4298356F5AB3D1D2074DB1925E41AEF4BE58C70583E6E1E700C554FEFA9D484": {
+      "token": "stafihub-1:uriris",
+      "chainID": "phoenix-1"
+    },
+    "ibc/16256094B1B5C020EBA3ADB6929D4234F4829CE3AED845F84A7FC961C9B0E836": {
+      "token": "stafihub-1:uriris",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/30051F86C8F214E4AC2245A617842F1F8321845E796C70AB6BC5FA11E527FF34": {
+      "token": "stafihub-1:uriris",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/DD39562B4B00B23F002ED74364CF81FFEF9A19652B9868854A599909B7C579E3": {
+      "token": "stafihub-1:uriris",
+      "chainID": "carbon-1"
+    },
+    "ibc/162EBD46EC2490ABB3BAF3B4AA7B1395748A828557112BD57409C5718FB0D090": {
+      "token": "stafihub-1:uriris",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/B0199119EB6607E3AADC42BA45C4E94CA99D83F3BF81514A4A63BA31B998F4F2": {
+      "token": "stafihub-1:urhuahua",
+      "chainID": "phoenix-1"
+    },
+    "ibc/CB4C1E2656E76F6975CE25AF8F18A974CB8D1F899AA25D65F67F95EAA17930F3": {
+      "token": "stafihub-1:urhuahua",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/4F56E6CE56146B69BA11C41B3220FEDD8A1D8F2EEC491CF497710743B544D3DF": {
+      "token": "stafihub-1:urhuahua",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/512D569DC5BE4DE977718B80499708D94F96DF4539801EC8F0FFCC47C227DA41": {
+      "token": "stafihub-1:urhuahua",
+      "chainID": "carbon-1"
+    },
+    "ibc/21AC7D799503A811CF1E85B537D1D249505AA25B502A3D3EE83FA71660F12BDC": {
+      "token": "stafihub-1:urhuahua",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/07EE2601293D6771EA2CD3C5D16FD347FD82AE8D5DD7B4FAC352230B79991845": {
+      "token": "stafihub-1:urswth",
+      "chainID": "phoenix-1"
+    },
+    "ibc/1DE4DABCCF3FD3A352D15D283C16345AF44962F251FFDE54C3D60944EC39F738": {
+      "token": "stafihub-1:urswth",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/FC6317EF81A556699825B6B19E39C616892E768320270B6D1A25745DFE48F395": {
+      "token": "stafihub-1:urswth",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/599DE55F5C4D50BA2427C199D02929031131E7437AC277F174CA22A30398A3EA": {
+      "token": "stafihub-1:urswth",
+      "chainID": "carbon-1"
+    },
+    "ibc/19C4A1BB5C7D0400E9FE9C43BF03B40E3C315ACA01E1F1526EDA3C7394FB482D": {
+      "token": "stafihub-1:urswth",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/01B9269F2A4475FD7A303D5B15FDC2907CF76FBAC7272360B369CF5B2C06FBC4": {
+      "token": "pacific-1:usei",
+      "chainID": "osmosis-1"
+    },
+    "ibc/5923FBBDB637ED6E2D84E9E5A5D53C67243EB0830FA0C4472C0F2040E8C0A133": {
+      "token": "pacific-1:usei",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/661DEFDAD158EF8842F7FDA61E554825EDCB4904FC7C65A8B1457458032DDD47": {
+      "token": "pacific-1:usei",
+      "chainID": "phoenix-1"
+    },
+    "ibc/348C1956DCD7FDABB3DABC93E30F398190FFC9EFE9C4004E955C9ACBEC6B8C5E": {
+      "token": "pacific-1:usei",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/F6E1FA3E56D4E024952EA065A21D709752E2F9B131C03D7E3879D91734DA204A": {
+      "token": "pacific-1:usei",
+      "chainID": "migaloo-1"
+    },
+    "ibc/C3936A0598EC7377DB516CD50EABC99017EF3930CE562FCC8DF980468B2BB688": {
+      "token": "pacific-1:usei",
+      "chainID": "stride-1"
+    },
+    "ibc/02A8520F7084F9B99666C69CB6FDFAB3B94C6FEB221D88E70AD108063C516919": {
+      "token": "secret-4:uscrt",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/BCEFD8175B8C47D712FB639034128CB43776364B79E3251F073CB3A2A32582A0": {
+      "token": "secret-4:uscrt",
+      "chainID": "osmosis-1"
+    },
+    "ibc/2D47E29F57D254F8A21B8F6B1BC2198AE54EE44DF680CB3A74EC6B1A2B4B0809": {
+      "token": "secret-4:uscrt",
+      "chainID": "juno-1"
+    },
+    "ibc/A848807F524E08C87BF9B95275D29D892A2248E9C4A602C3FF9B69607CCDC5C5": {
+      "token": "secret-4:uscrt",
+      "chainID": "akashnet-2"
+    },
+    "ibc/CC2EDD190F066B8EF88FB676269AC6737BED0C99702EF1CE2FDCBF5061AF6FD5": {
+      "token": "secret-4:uscrt",
+      "chainID": "columbus-5"
+    },
+    "ibc/089A874304F73C6F4369A58CA06C31A09E1346AE9F2335DEAAD3D8E75800126A": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "columbus-5"
+    },
+    "ibc/7EDD2AE80D4BA42F730F6088972FED8FF40367396D1D86DE1F5951A8A893E41A": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "phoenix-1"
+    },
+    "ibc/2A3B0F7536EE0FFD0746A8B443C90436B4515D8AEFDBCA77B4416F6DF8D5478A": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/399D0C35CF7AEDC6F05F15238B3EB7C782D0BBFAB6A47E975293E42B961CE698": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "carbon-1"
+    },
+    "ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "akashnet-2"
+    },
+    "ibc/4969706F9CB0010099A0F6CF30E296FC31798E3EA1AEC2E3EBBBCF44AA7F2F0A": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "cheqd-mainnet-1"
+    },
+    "ibc/CA976FDD194309023B94041CA7B3DE3F75D1514997AA70298B6F937F01C96C90": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/E575894E7CAEB7CEB2EA3188A0D8D54B76C6191FBCA50CBCCF33A125783999DB": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "comdex-1"
+    },
+    "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/0B58F266ED4E112BABCB358F1D5D25111D0D73AD27029A3E3B3088B0705A60D7": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "crescent-1"
+    },
+    "ibc/53EC66A41B296CB6AFA93C59B96C5034D8AD6FAF8298F296A1DD63EAAC0CEE44": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "mainnet-3"
+    },
+    "ibc/2CDF96BD24162BD23184A349B9880D7728B096E729AE5CFC07B6ADA2E1B676E0": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "juno-1"
+    },
+    "ibc/71BAF913BDAE847E959CD21178B124F99927C1564F0A83F652412707D980AFAE": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/5D9311B4DC40FA478335B70F9F99447FB5026288276AC94A23CC816469394592": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "mars-1"
+    },
+    "ibc/5D5825C2522193378527D2D0B1A1400D3BD46F692C64291E7983D4D43AC6FCF6": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "migaloo-1"
+    },
+    "ibc/E0B327DD05A63E6C7F917A2CACA5D893E0B2332D0F033D5ECC4E11CEE1375E71": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "stride-1"
+    },
+    "ibc/01C076E1B5CCDE39AA6A59CBCD14F17E40F4C0E05FECE9E5E3791DE5B3378D03": {
+      "token": "osmosis-1:uosmo",
+      "chainID": "archway-1"
+    },
+    "ibc/9FB7D40D18DB2331B80E5DEA07193EFD521611DFD9832E54E20BD28AF1C6695F": {
+      "token": "osmosis-1:uion",
+      "chainID": "columbus-5"
+    },
+    "ibc/80AFCA5314F5A59603AEECFF3E2CB5C9DB5C8491A17189910547612D6902CD9C": {
+      "token": "osmosis-1:uion",
+      "chainID": "phoenix-1"
+    },
+    "ibc/BEDA5BAC0F49E22E8896B8B080426C7DDB16ECCBBE94E7BF1A5D77D5EA144B89": {
+      "token": "osmosis-1:uion",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/6B561AC5AC24EE8493FE16B684100EDE2771D8ED9BEDA7C3C199A9FDEE0C9923": {
+      "token": "osmosis-1:uion",
+      "chainID": "carbon-1"
+    },
+    "ibc/EA7DF7F779C7F14E07172E5713E07356B55F01496CA649DDE46CF8FBF1A8466D": {
+      "token": "osmosis-1:uion",
+      "chainID": "akashnet-2"
+    },
+    "ibc/7248FDD1AB28404F99A90B1B59B4CAC48F20A0577EEAF0D31EAE8B5E862C8336": {
+      "token": "osmosis-1:uion",
+      "chainID": "cheqd-mainnet-1"
+    },
+    "ibc/A48B9C4DF5F420685B708AC983EB0EC8945C0308198F1071C59072D36E3854B3": {
+      "token": "osmosis-1:uion",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/4F3302D867BFD9EF768AE1E294D26FA852D562A5ECCADE1983475FB88EAF5028": {
+      "token": "osmosis-1:uion",
+      "chainID": "comdex-1"
+    },
+    "ibc/F7E92EE59B5428793F3EF5C1A4CB2494F61A9D0C9A69469D02390714A1372E16": {
+      "token": "osmosis-1:uion",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/0C2E6FACD7FCAC1E3FC7F4930C2C6E64E3BCE31AC206906E92A8AF60282305D8": {
+      "token": "osmosis-1:uion",
+      "chainID": "crescent-1"
+    },
+    "ibc/E5C8A1632C20E7F6C8B7D92C01BEB9959041DFB2430C715ADC6B2431A6225C5D": {
+      "token": "osmosis-1:uion",
+      "chainID": "mainnet-3"
+    },
+    "ibc/3ED6B25FA7153B457EA40722F5FFA22104B0CDDFB7A91CFF02CAB0FFA54E6E34": {
+      "token": "osmosis-1:uion",
+      "chainID": "juno-1"
+    },
+    "ibc/606A90B1E72A44251AAF98C8A32108314D2EC601BE5B31422E7EF1DF795C7D85": {
+      "token": "osmosis-1:uion",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/9E2125030B91B433DA5C463D0594AD4DB141E70CC4AD6D888D59CB58F052AA95": {
+      "token": "osmosis-1:uion",
+      "chainID": "mars-1"
+    },
+    "ibc/12CFE12895D7141FFACF9CE3521D91BED71E71EFA3A680B33E343FFBD8A675A6": {
+      "token": "osmosis-1:uion",
+      "chainID": "migaloo-1"
+    },
+    "ibc/7807BCF85097ED1D4C6FA89592D696BDF1BA8F1229275F2AA9A0316135869583": {
+      "token": "osmosis-1:uion",
+      "chainID": "stride-1"
+    },
+    "ibc/9863563368D71D024C9D2EC874BE79CD1E2271E26B19A55340F9E142F5D95F58": {
+      "token": "osmosis-1:uion",
+      "chainID": "archway-1"
+    },
+    "ibc/ECABA2EFBFF6689D8B20E1F0F377ECC2B95B9F4B58B5DF26F0E6DACAFDA65C43": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "columbus-5"
+    },
+    "ibc/3E5BE2D4EF58301B647D6B60946140454B8E6BD081AEFBB5835C8311CA325285": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "phoenix-1"
+    },
+    "ibc/EE806C1D89D44234242B750B4D51F0DEB4620582B0F1D12E91D2CADB6C42C6D6": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/6F69205CE5137A2F5B77B20618C0239995ED19483EE39A08DE58212CB9544B5B": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "carbon-1"
+    },
+    "ibc/4FBFB92ED8EBA5AB1454C1215D1FE536BB09393A58E27E3891FD5D9AE18B6A37": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "akashnet-2"
+    },
+    "ibc/1329C8D8EBD13533C02CA84A4FA4F8B15D1D3182B47A8BCE85E13E9055C41AAA": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "cheqd-mainnet-1"
+    },
+    "ibc/74468DAE83F6CF9A6E9A186F360FC6786F2571B13A9A9B1C6D665745BA131106": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/826E14A5C8A583A887146466498F00F7E6BC871E4EB734FF8DC7D57EBE7D2A5E": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "comdex-1"
+    },
+    "ibc/3616134E71F4F7C0AFD22C439567E8C514BE88955903834F4580D9E3E4E3470F": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/DB5FADB14EF86C7302119C7AEBA61D9F06C460F4B7DA0176FD5664DAEEECE28D": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "crescent-1"
+    },
+    "ibc/87078AEFCDD10D99730606FBB589711C4BE84EBD0F182910F92EC807EF26C2E7": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "mainnet-3"
+    },
+    "ibc/DE3E310E63940E83391D96B6CB5DB352B76E15D6E019C8ED4B8748B7E4D9134A": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "juno-1"
+    },
+    "ibc/54D1D00558367669D0572BE3AB5E2757820727D717250B10D49AF1A80BCAE42A": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/886E795672864EEAA53E2AA586513E02194E7D5B64C093A4B9A62A95A4F78E22": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "mars-1"
+    },
+    "ibc/ACC1DBCAA68C9B0099933CFBF16BC3ACAF0BAF2A96B210F9C6F273118305377C": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "migaloo-1"
+    },
+    "ibc/9812AB881EF7DB7BD2C7C9A914936C5486BCF686CF93DC36745AA971AC7D7BD1": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "stride-1"
+    },
+    "ibc/CBEF6D0708CBCC43C9A05C40BE725F614B27C0C45166BECE6E8BAAAD0C6BA448": {
+      "token": "osmosis-1:factory/osmo14klwqgkmackvx2tqa0trtg69dmy0nrg4ntq4gjgw2za4734r5seqjqm4gm/uibcx",
+      "chainID": "archway-1"
+    },
+    "ibc/4EB7B61FA104BB5F25ED2B66E84F0A8C0B59B28033BD9948502AF81FFF395F06": {
+      "token": "migaloo-1:uwhale",
+      "chainID": "phoenix-1"
+    },
+    "ibc/6ACE79F5ABD607D2075FAD4ABE284CBC5BB6A96C16555FFB901644E9D17411AC": {
+      "token": "migaloo-1:uwhale",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/D508149401167B3EB55F9BF77F8C2BB581277764CD51AA64D3C861724E0FEEBA": {
+      "token": "migaloo-1:uwhale",
+      "chainID": "comdex-1"
+    },
+    "ibc/29DB861A1768AEC593130AACF06F93FC8CCEA1C8A6E786137E8A68409AB6B4A5": {
+      "token": "migaloo-1:uwhale",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/C9F0A12B200C3AC2210AEF87B38E5EB1ED95C63645A7A56B8FEFEF63C497E658": {
+      "token": "migaloo-1:uwhale",
+      "chainID": "osmosis-1"
+    },
+    "ibc/C7E01CB2E77EFDD313DAE8ADF6764A03EADF6685FCFA74C124AA1FE7BFA2C5E1": {
+      "token": "migaloo-1:uwhale",
+      "chainID": "pacific-1"
+    },
+    "ibc/5951BEAD6B69B8255F3A0F6D8ADF671519D8A54718AD3062BC1FF928D32CDD4F": {
+      "token": "migaloo-1:factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE",
+      "chainID": "phoenix-1"
+    },
+    "ibc/D1877D70F5F2D132CBDDD1C060A077E6A437F14B8364DAF90633C437A3D16D65": {
+      "token": "migaloo-1:factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/A226AB4F8E868CE86F32A44CF88B7A86C7C89C49B27A8717EFD851E47E713AE3": {
+      "token": "migaloo-1:factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE",
+      "chainID": "comdex-1"
+    },
+    "ibc/07980997401D7E39C3D058BD7C46B2ABC32C59A7017AB97472DD83F73D8601E4": {
+      "token": "migaloo-1:factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/4DC9E9457F213BC0E09BC191675E3D4A34460DF3AF0A4A34D3AD1D0769E4D505": {
+      "token": "migaloo-1:factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE",
+      "chainID": "osmosis-1"
+    },
+    "ibc/521EC59FBC08EFAE0242C185AB5D0BB546C72D7DEA0F8338155C0CD1F1538435": {
+      "token": "migaloo-1:factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE",
+      "chainID": "pacific-1"
+    },
+    "ibc/0E92778F6C16B66C23035925DC51A881118F4C81251656FB0D9DA21D4725F398": {
+      "token": "migaloo-1:factory/migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u/boneWhale",
+      "chainID": "phoenix-1"
+    },
+    "ibc/A4CAEBA5DFA0528DBEEBC1566B83A937F9AC496A9DCF0E6F3CE3AE2CC7ECDA17": {
+      "token": "migaloo-1:factory/migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u/boneWhale",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/BED91E0D93623D1697F3FF00EACAE11EB48671B878ED1D3EE9F13174AE162335": {
+      "token": "migaloo-1:factory/migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u/boneWhale",
+      "chainID": "comdex-1"
+    },
+    "ibc/3764FB252C15E592DE879A46F80EDF04AE7BF974AB9B64D0021082621F05E6AB": {
+      "token": "migaloo-1:factory/migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u/boneWhale",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/B6A1D71EC0A6A75F7A336651E3D607A5C76A1D43F6A3970BE2B913E9EDB3F771": {
+      "token": "migaloo-1:factory/migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u/boneWhale",
+      "chainID": "osmosis-1"
+    },
+    "ibc/26F54260ECA14FF6DC71D954CB995440303CF7EA7E49FB1C24B0BC3C9C885B98": {
+      "token": "migaloo-1:factory/migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u/boneWhale",
+      "chainID": "pacific-1"
+    },
+    "ibc/0973EE75F04F14E896733FD6B6F00342E7CD7867785EE8596D3E74767BC19FC9": {
+      "token": "mars-1:umars",
+      "chainID": "phoenix-1"
+    },
+    "ibc/827893664176E89F04D4FF16D55E8953889310C65276496EEB2F93097DAF2044": {
+      "token": "mars-1:umars",
+      "chainID": "crescent-1"
+    },
+    "ibc/51A3E9883A23CE8C8AAC802E6FF4A46F8ECDDD361A254B3FB9D71A0EC3FB6A76": {
+      "token": "mars-1:umars",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/D648D61C0BC435EF544EC5A515D6741BD822C914E0CDAACC416126B048A0B92D": {
+      "token": "mars-1:umars",
+      "chainID": "osmosis-1"
+    },
+    "ibc/A90209307DC7E1DBA454C82F9BCE7CE82DA57C2446938EB09727CF4033DB6465": {
+      "token": "columbus-5:uluna",
+      "chainID": "juno-1"
+    },
+    "ibc/BA79C9FE0B2A9F7549A5F8B0ECF374D42FDC10DD18270BBF34988B01A14E0BBD": {
+      "token": "columbus-5:uluna",
+      "chainID": "crescent-1"
+    },
+    "ibc/20C6B930084F10C77270D2563A5ABCE8D25057FE71BAA1AADDB4C4B1C68ACA94": {
+      "token": "columbus-5:uluna",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/D70B0FBF97AEB04491E9ABF4467A7F66CD6250F4382CE5192D856114B83738D2": {
+      "token": "columbus-5:uluna",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/E72915C99ECB5001B5DFAE737B79F377802F62AA7F1BBE90F3478BBE12DD1AF3": {
+      "token": "columbus-5:uluna",
+      "chainID": "osmosis-1"
+    },
+    "ibc/117CCD5C7E5CD5E900B7F887FF798EB8A6FA3F408D71CE689F1ADAC92968AFF6": {
+      "token": "columbus-5:uusd",
+      "chainID": "juno-1"
+    },
+    "ibc/EFDBC4773540BF2FE5A407851C86BE805D8C41AD50D5A8F350367EDF7E2CC86F": {
+      "token": "columbus-5:uusd",
+      "chainID": "crescent-1"
+    },
+    "ibc/8B871DDCD9AFBDCC44A9D529FB0346498E78F4CC43B6BBA831A6DC8649F90CFE": {
+      "token": "columbus-5:uusd",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/4294C3DB67564CF4A0B2BFACC8415A59B38243F6FF9E288FBA34F9B4823BA16E": {
+      "token": "columbus-5:uusd",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/85E790ECF7668C308157BCD62D2BEECF1DE0E1582FE870D520199335D5315666": {
+      "token": "columbus-5:uusd",
+      "chainID": "osmosis-1"
+    },
+    "ibc/E9B1C9158B12771B273CD9608CC4BE886A934026BF063DFB7D75A76EE83A6415": {
+      "token": "columbus-5:uaud",
+      "chainID": "juno-1"
+    },
+    "ibc/5DA863C8B1D43945DFF412CC84BEED77F7EE831A0F40B9B39410EFB03D0537AC": {
+      "token": "columbus-5:uaud",
+      "chainID": "crescent-1"
+    },
+    "ibc/CE7A480FCDE6B18EC1848A86AB7E4AA68F497586433937F535D02956C41C6981": {
+      "token": "columbus-5:uaud",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/D5DCF5E149C09446D37F344333E08631EF6EC0E647752B2F1886A52926A8919C": {
+      "token": "columbus-5:uaud",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/41168DBFDF2260F8141C34BE06D690620A184D9EF8686FBF6CBECAA94026D8BE": {
+      "token": "columbus-5:uaud",
+      "chainID": "osmosis-1"
+    },
+    "ibc/B564CD9B0B59EC2400AF557EBD9D70C4F512171E963ACFF00CCCA973174A3D8C": {
+      "token": "columbus-5:ucad",
+      "chainID": "juno-1"
+    },
+    "ibc/7477AF3DB909AFC630093A9B3193F8924CABC8D25EEDDB06D54BF8ED9DCB1149": {
+      "token": "columbus-5:ucad",
+      "chainID": "crescent-1"
+    },
+    "ibc/066BA5661A6424E0B4125852FF9C0AFBE8F8C41932DFB9095F12E3175215F0E6": {
+      "token": "columbus-5:ucad",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/C4BAEF150EB365F0A93BF2B6A3826EA7622D934280A43E3A7ED755DD81CCA6E3": {
+      "token": "columbus-5:ucad",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/EEE8D4DCB29240B54563CF8B4B84793208937111F9E6EA5FC9C7EC051AD1F3B2": {
+      "token": "columbus-5:ucad",
+      "chainID": "osmosis-1"
+    },
+    "ibc/B6388ABA637A03D8CF6A3C698DE6BFC6161421DD250247BFBF1A1FBDAD183554": {
+      "token": "columbus-5:uchf",
+      "chainID": "juno-1"
+    },
+    "ibc/A5CC6A7806F6966AA39885E6438A7C4800263C58C9DCF96DE3DF1C6BB08DD0C4": {
+      "token": "columbus-5:uchf",
+      "chainID": "crescent-1"
+    },
+    "ibc/DB0D986D2DE9A4145483E3349BAD16D41DB482134A530C7C6A58BCFEDD751CEB": {
+      "token": "columbus-5:uchf",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/30FA2C42446A4D7BCC31084EED4F69A706282C7FB3580CA19DE55514990E8AF8": {
+      "token": "columbus-5:uchf",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/04B7DC8B695C3474B9343E2E6D44363C29EFA5018F9FE129223793F82B7D3EA9": {
+      "token": "columbus-5:uchf",
+      "chainID": "osmosis-1"
+    },
+    "ibc/986CC9470A244D9CB7300059E7E1673E7D0BBEB48A70BC048AD882BF94C09333": {
+      "token": "columbus-5:ucny",
+      "chainID": "juno-1"
+    },
+    "ibc/202B572C690B12B3BBEB95AA78A9E61EF418C5429680E5B06CDB2BF49C747681": {
+      "token": "columbus-5:ucny",
+      "chainID": "crescent-1"
+    },
+    "ibc/BB7D70583DE497FFD8185D0A848285DDC886F988D720ECA7B4DDFA79F6EA082D": {
+      "token": "columbus-5:ucny",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/F60269C50DD6B775E4B360B3B98EA9A8897ABC0DF016C9A22F5A820D32D3CCDB": {
+      "token": "columbus-5:ucny",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/9AD6AB3BB2BAB9BDBEB686F330528E9003FBC0706AF8759468C7D886101DF929": {
+      "token": "columbus-5:ucny",
+      "chainID": "osmosis-1"
+    },
+    "ibc/90C64B47D24A290BD2A6401C083EFE8AD924D2F994F9D92C1101002013489BB8": {
+      "token": "columbus-5:udkk",
+      "chainID": "juno-1"
+    },
+    "ibc/30F49EBF92FB6C5F11174BBF321459113FDBF71E86D0BECA7F4D55A3A6EC958C": {
+      "token": "columbus-5:udkk",
+      "chainID": "crescent-1"
+    },
+    "ibc/0C2B49BA0ECDB33DAF42E7D2B4E2DCA82FBC8AFCB1FE67B91473334C6DB19DD2": {
+      "token": "columbus-5:udkk",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/A0B065D9E464B5B6DE8BA03D0C72389B3993B2564A4255FF7753C5925BC7450D": {
+      "token": "columbus-5:udkk",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/6539104683978DFE6F1A2689A343C09FA358E323A905A9A70D23FD9B35548E0D": {
+      "token": "columbus-5:udkk",
+      "chainID": "osmosis-1"
+    },
+    "ibc/7D9D5C0A6B94861254A7DDFFAF346DFD3BA70B72DA74D33877BE1D35DD15C0CD": {
+      "token": "columbus-5:ueur",
+      "chainID": "juno-1"
+    },
+    "ibc/F43B98EDB71CF55D068CDBADDA901230F5B21A571D0BBF18F2276FC5C1762AB9": {
+      "token": "columbus-5:ueur",
+      "chainID": "crescent-1"
+    },
+    "ibc/46351F0685E9B6FCA346CB8766EFBFA2407F45C00B23EF8D567350C13A8CA2EB": {
+      "token": "columbus-5:ueur",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/E64FDA6D195B7EB3DE1C65ED557F6AEA1917FC245A7A765BAD2D1EF0090DBE39": {
+      "token": "columbus-5:ueur",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/F5D572BB3BB3BC72DEEDD252DE0585DD3593991181CF264CF3AAF2BA7784B7FA": {
+      "token": "columbus-5:ueur",
+      "chainID": "osmosis-1"
+    },
+    "ibc/2E7AE18C4DC7A5E4E08D8F4EAA545DF46988ECEA47C336672488A10321ABCAF4": {
+      "token": "columbus-5:ugbp",
+      "chainID": "juno-1"
+    },
+    "ibc/A1C304C502ADF04D9F87B2E4CD7DEF1ECED2595340010559B368B3E796A5F8DE": {
+      "token": "columbus-5:ugbp",
+      "chainID": "crescent-1"
+    },
+    "ibc/4DF40720AAC1E3D61F35ADD1531835F0C2BA347ABE89D58B400DCD6345FA209D": {
+      "token": "columbus-5:ugbp",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/BDD9C206ACDEE5612C651E52AF1C1CC093E71BF303521538F0854AF77CC91570": {
+      "token": "columbus-5:ugbp",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/0480192F44120783D5929F50313375C326D689D0A948BB104988D2F2B9FB9F15": {
+      "token": "columbus-5:ugbp",
+      "chainID": "osmosis-1"
+    },
+    "ibc/E7ACDB191188D1C202891B09AA9119D42E80C383F89C44ACAAC676A174FE166B": {
+      "token": "columbus-5:uhkd",
+      "chainID": "juno-1"
+    },
+    "ibc/C9F48E8557A7764B44D0C1416DFD3C7D437FA5DF2CFB19EE840DD71CCCA05C51": {
+      "token": "columbus-5:uhkd",
+      "chainID": "crescent-1"
+    },
+    "ibc/8B3FDFF4E47EDC0C712B9483764D5853FAADFE91D4320EDBF419B5FCBDBD7D8D": {
+      "token": "columbus-5:uhkd",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/E8586F23B4D4131338AC124186911E03B427061681A5AD75F2EF552F27BF297E": {
+      "token": "columbus-5:uhkd",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/24FEC3493B1E7FAC509940A0926412E449F73B33FCCC726C3166D2149F8F201D": {
+      "token": "columbus-5:uhkd",
+      "chainID": "osmosis-1"
+    },
+    "ibc/148CFBF7E57032DC929D4458A62A9CAB427BE0E0AA085842CD168228A97C62CC": {
+      "token": "columbus-5:uidr",
+      "chainID": "juno-1"
+    },
+    "ibc/8749E693EA2FB0841C2973C554EFA7B41E0FC2A3E0C4D6F4A25E42B7641B3A36": {
+      "token": "columbus-5:uidr",
+      "chainID": "crescent-1"
+    },
+    "ibc/0DE6EA1B326CF3A6ECC81C71E6BB41E62C259B974351B72C216DAE8FD849F95E": {
+      "token": "columbus-5:uidr",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/3263CA410F8FE83300CEB6E60E3BA696B5B1C7374B1705498BE9BA423CF9808F": {
+      "token": "columbus-5:uidr",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/92326C5B97CBC199C7B6257049D26BA16DE16AD4AB797BB12557E727D7B799A4": {
+      "token": "columbus-5:uidr",
+      "chainID": "osmosis-1"
+    },
+    "ibc/AD9A421F0F9D766E5A613AB608F2846D1A43C38178117AD27EE4677CBEDAC2C9": {
+      "token": "columbus-5:uinr",
+      "chainID": "juno-1"
+    },
+    "ibc/56D9C542BD2E5C58EB9B3020C53FE46887F83484786B25CA5F90C94437C0F25D": {
+      "token": "columbus-5:uinr",
+      "chainID": "crescent-1"
+    },
+    "ibc/8D16288586B987F1E1D58CAC9609F9EE982681AD5648A68C3D8DBD84B9CB5870": {
+      "token": "columbus-5:uinr",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/2507EF0A0E239A7952B59437773C7AD1A7BC9E3C0F76DDD54526B7C4E3AFE633": {
+      "token": "columbus-5:uinr",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/70F03BBB8AA113E35F65722C69056DE7A36B5712823609D7BD33581CC55CA7D7": {
+      "token": "columbus-5:uinr",
+      "chainID": "osmosis-1"
+    },
+    "ibc/783A3C7867755B850C8D96A8AB164097B6333187AADE1A014B2954AB2271659C": {
+      "token": "columbus-5:ujpy",
+      "chainID": "juno-1"
+    },
+    "ibc/062642F822D71A7700DF052B13FC0A9A7C3DF80BBCADB1D9A57214AB8834261F": {
+      "token": "columbus-5:ujpy",
+      "chainID": "crescent-1"
+    },
+    "ibc/9B14BFF9C38FF6534E44132F9A41200BE1F0279BB267ECFEB7F0AFC0BD185D0F": {
+      "token": "columbus-5:ujpy",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/55D4151978AFEEF1AAAB232E220931CA05F93D20328108F691A37F42BC6476DB": {
+      "token": "columbus-5:ujpy",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/2FC93D9F2779B4323532C94D7BC477A9E0993B46E1CA27B98F0B1F260CBF455F": {
+      "token": "columbus-5:ujpy",
+      "chainID": "osmosis-1"
+    },
+    "ibc/52AE3050D99EDB4848B1F75CEB885A13DE3D970D0B450A59165423D13D6735AD": {
+      "token": "columbus-5:ukrw",
+      "chainID": "juno-1"
+    },
+    "ibc/98A0FEC51EE505B70C0F23E79E9860224FA36E8FB21D7D4A4E5E880300736D24": {
+      "token": "columbus-5:ukrw",
+      "chainID": "crescent-1"
+    },
+    "ibc/00FCFACA6B63FAB4C3E08ADBE069AFC0D069BB606EA1B8517B8B2DB0C7544982": {
+      "token": "columbus-5:ukrw",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/F341E5FD11E5A747A62A1BA11D13D25AF9708D1C63944E1E4762ADA883BC46F5": {
+      "token": "columbus-5:ukrw",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/86CC46935130C5423968E5E847827257189AA765FBD09D1E9F5853FEDF50D7E2": {
+      "token": "columbus-5:ukrw",
+      "chainID": "osmosis-1"
+    },
+    "ibc/898F8B4EAC414FCFD9CBC56DF8BE66E1196449F655180F8A3766AC90C85BA71C": {
+      "token": "columbus-5:umnt",
+      "chainID": "juno-1"
+    },
+    "ibc/DB4863DABED297E88A9BFC39344EAE90BCFD9A2F2CC4C492715C8A68489CA001": {
+      "token": "columbus-5:umnt",
+      "chainID": "crescent-1"
+    },
+    "ibc/AD550969BBFABF66A2C81CE264B512725ECA2A3058643937155615EEB6B0813C": {
+      "token": "columbus-5:umnt",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/6DF0B65089BF26975F3365DD60CBD0C9D680E5E714DA7D50F784A87A39F58A04": {
+      "token": "columbus-5:umnt",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/D9A77F1A9B4EF0882F94CE8B12EB62EC56A94B6947EFBAA7FAA0E43E0CE9A3D4": {
+      "token": "columbus-5:umnt",
+      "chainID": "osmosis-1"
+    },
+    "ibc/B23E8826D7378F4EF19FB97B0AB08942B83DA77F3B8B47CB9CF8FC6D746EA17E": {
+      "token": "columbus-5:umyr",
+      "chainID": "juno-1"
+    },
+    "ibc/FA6B33D50F288E4DEE5E8E84BC69E792543B5B8D78B1881141A9900700B1F388": {
+      "token": "columbus-5:umyr",
+      "chainID": "crescent-1"
+    },
+    "ibc/16150FBA84710026D79A5AFB255671454D607C191F8545617CE3DCE42027D9B5": {
+      "token": "columbus-5:umyr",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/0A3E5BC285A042C02ACE462CE155F2BC98BD3DEC2F69D61F7ABC0DC3554C6834": {
+      "token": "columbus-5:umyr",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/6030C70BFAEF02B28FEEE5DF1C35DEDA4ACE8376A17BF85582A923C314900618": {
+      "token": "columbus-5:umyr",
+      "chainID": "osmosis-1"
+    },
+    "ibc/63730F3A71BE99F9FF36955F2AD4595D8DACF27C7CA24B2C5341FF3AAF8C73A7": {
+      "token": "columbus-5:unok",
+      "chainID": "juno-1"
+    },
+    "ibc/4CFC48047E16733C79050B6C7EB9032CAFE6925D964E28ED20FB70410F27BCB8": {
+      "token": "columbus-5:unok",
+      "chainID": "crescent-1"
+    },
+    "ibc/808ACF19B68AE10B6B396262B207690F3738A812AAD10146DD42AFB5F6608E05": {
+      "token": "columbus-5:unok",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/A11E616929F4A8E1AB7A342710DE00A268BF99A1BF988BA20DE061F05CE0BE63": {
+      "token": "columbus-5:unok",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/00027761C00A04FD07B72DA8ABD17F8D61259D5A082016A8BCACC3FA66235C4E": {
+      "token": "columbus-5:unok",
+      "chainID": "osmosis-1"
+    },
+    "ibc/478CDA4786946E70ACFA4342944927D65D947822D4AE0CE3ECB9A0031794CE70": {
+      "token": "columbus-5:uphp",
+      "chainID": "juno-1"
+    },
+    "ibc/C7AD29A59C5A299197D943E3C9F4FAFF900BBF856BE53526E0077A0F9BF758DF": {
+      "token": "columbus-5:uphp",
+      "chainID": "crescent-1"
+    },
+    "ibc/E1A2E5DE03A21F36F1F46CD32D6BE12C9E5A781ADE8452C20C9B420A0F1C436D": {
+      "token": "columbus-5:uphp",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/270A3E6DC34F4D3ED4688FE4679D713811D26EB44CB1FFDA40413CE5EEBB0840": {
+      "token": "columbus-5:uphp",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/8A431561606CDEEA14C5816C1093E3D7F3A00D44E8909B1285686457D9F66954": {
+      "token": "columbus-5:uphp",
+      "chainID": "osmosis-1"
+    },
+    "ibc/5E2158A08123929A139EC384168500C39A249297634289DC036D57DE706593F5": {
+      "token": "columbus-5:usdr",
+      "chainID": "juno-1"
+    },
+    "ibc/3410ADB51A8C1E49D8E94B1D7F1E4509F6C51A71D165D9F414B05A6362559C02": {
+      "token": "columbus-5:usdr",
+      "chainID": "crescent-1"
+    },
+    "ibc/A132BEC5EF14B45A33C082B8F0C30E896FEFC8C92A31C02144D3C456FC523DDB": {
+      "token": "columbus-5:usdr",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/6DCB3F809DC21752DA3ACA8E9C4282A21F7953143EDDEDD793378CC2057CB69B": {
+      "token": "columbus-5:usdr",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/BC34722A592D084B095776DCB9BA506942CD595CEAC2EA6BD68EE29A0F8D7482": {
+      "token": "columbus-5:usdr",
+      "chainID": "osmosis-1"
+    },
+    "ibc/B50053D3328B8F675765ABEFB6309FE7900714AD3FAEAFFEB3D60C099866C1E2": {
+      "token": "columbus-5:usek",
+      "chainID": "juno-1"
+    },
+    "ibc/3850C1CB98A8F63BA7AAF4139C832D9248DD4991836572C0A926364DCC899F29": {
+      "token": "columbus-5:usek",
+      "chainID": "crescent-1"
+    },
+    "ibc/9AFFE53B3D8DE65BC0449E64366D8E2C118989DF61541F1CEB14D68D7CEE8EB7": {
+      "token": "columbus-5:usek",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/A87E93DAE1F5C36538288747814F57FB7D202C580AB427B99088EF1DF6111D17": {
+      "token": "columbus-5:usek",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/E15D4FC6253147B6D434791A7296F015F2C38A6E9DB8E16081CE6D2E1F3B384B": {
+      "token": "columbus-5:usek",
+      "chainID": "osmosis-1"
+    },
+    "ibc/8113D5D70DC907B311DDF63814F55FC7B0125D7BB5A815F30FC6C6B9715FA961": {
+      "token": "columbus-5:usgd",
+      "chainID": "juno-1"
+    },
+    "ibc/614DA34DAE138FAB9CC96CBE974E4B3D82F180244CA913DAC45536507C9DB50C": {
+      "token": "columbus-5:usgd",
+      "chainID": "crescent-1"
+    },
+    "ibc/F57C3AC3B7AAEE902884135DD8DA56F31D0698FC8F314FE73534335BB5144073": {
+      "token": "columbus-5:usgd",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/1A354A2E6D9E8A7B5A314241D5E3FE3F156BAB8BF6CA1C7B9BD0E2B0D4068482": {
+      "token": "columbus-5:usgd",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/F0042335DD268A83131EC9D1F929706BC32BA03B7E45715CBE032CE9EA5FCBAD": {
+      "token": "columbus-5:usgd",
+      "chainID": "osmosis-1"
+    },
+    "ibc/FBF9C1B5106E572F9CC66E0CD983FB5BDC14D2531163B68167DB1A9220B7CCAD": {
+      "token": "columbus-5:uthb",
+      "chainID": "juno-1"
+    },
+    "ibc/A4D959CBA3C75ED32541E504C84691224835AD8330B64119484A86680E60F246": {
+      "token": "columbus-5:uthb",
+      "chainID": "crescent-1"
+    },
+    "ibc/D04E0CCE1E5863F298D9A0B571F6588F0754DBBA152DEE479A4FB95AEFB0C7DA": {
+      "token": "columbus-5:uthb",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/F88DA77C46D2F325B996E83A70E55BC4163C3042A2CA38189798ABCE8F7FC435": {
+      "token": "columbus-5:uthb",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/D4BE331FCE262B9DDBEB0D3744DACD82EC3C5F6207723D1E1E4BCB321BA0112E": {
+      "token": "columbus-5:uthb",
+      "chainID": "osmosis-1"
+    },
+    "ibc/4F2C4AA0FFF90A07A2001E076F31AD50D08399DF1AA5D11895FA0BDA918661F6": {
+      "token": "columbus-5:utwd",
+      "chainID": "juno-1"
+    },
+    "ibc/28DDBDB816793C9151471431B0EDB35FFA299368883ACDB26817D242CF57931D": {
+      "token": "columbus-5:utwd",
+      "chainID": "crescent-1"
+    },
+    "ibc/5822EEE073EC3DA149B2D84C60621925120FB9F8367B6D4D8AE5C57C8454A476": {
+      "token": "columbus-5:utwd",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/E7DF6598D244E74049B4AF67D56145D8A2A53F164ED7AB0DD3A357DFCBBE2EB5": {
+      "token": "columbus-5:utwd",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/3CF29AD2668ED4E26E3822D095DB83FDEE409D4DE9C79126B44423F9A543A896": {
+      "token": "columbus-5:utwd",
+      "chainID": "osmosis-1"
+    },
+    "ibc/976C73350F6F48A69DE740784C8A92931C696581A5C720D96DDF4AFA860FFF97": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "phoenix-1"
+    },
+    "ibc/662914D0C1CEBCB070C68F061D035E8B10A07C79AB286E7342C85F3BE74612C5": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/444525E149A73E0021CE23DD528BDC3548D5D7EC03ADAD68130464F5F55B5242": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "carbon-1"
+    },
+    "ibc/49EA22CE97E9F245F63906481F8489B6D6B87BAB3714D3AC40C48D0DF5AE92DE": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "akashnet-2"
+    },
+    "ibc/90F27756D300141BDF07B83E65401BDC58C05269B9BAE3ECB0B20FAB166BCF8F": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/CAABCBC8E1C20235A4EEF243D29CFB328C37315CF8C3EFCB89D4FC063677593B": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "crescent-1"
+    },
+    "ibc/EA41091A85386B95598828FEA4E5F26940AF76CEC347B8E7DB8EC9499252BCC0": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "mars-1"
+    },
+    "ibc/6B94CC273DD12337B26C32F02D19BCED2321BB0B8D33801F758619D4E1D29F08": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "migaloo-1"
+    },
+    "ibc/1053E271314D36FECBC915B51474F8B3962597CE88FF3E4A74795B0E3F367A8B": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "osmosis-1"
+    },
+    "ibc/0737C3B0B7BFD2D216B84A5147A90F7BF5FA1AD763FF8D679119DCCDD4C4F225": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "stride-1"
+    },
+    "ibc/80218E9FDB41FC5F86B8CA4347F2763574B3D46C58A2BEEE34908556EBAFE0F8": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "archway-1"
+    },
+    "ibc/C4BE30A03C8FA2274C3C80C751F0517B538BB419546370C6DB19D32417CA3E3D": {
+      "token": "kaiyo-1:ukuji",
+      "chainID": "stafihub-1"
+    },
+    "ibc/99B1D6051D9B73EA1A23DC6777C9621E4DAA0F3BECD199A8502BEB09F6CD4686": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "phoenix-1"
+    },
+    "ibc/06E1E9DD50ADCB62D1CD0ADF2792B471616A144CB42ED8A4A229C3201ED68531": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/F9C23B2A26E5663CF8AFA92BE40FB26950155AA9D517F75A573758C69696E715": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "carbon-1"
+    },
+    "ibc/646012CB735FB202776E9E6D91956F7C838D0C96AAB1CE94D4581122B1ECBE19": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "akashnet-2"
+    },
+    "ibc/093231535A38351AD2FEEFF897D23CF8FE43A44F6EAA3611F55F4B3D62C45014": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/83405D94F7E6A758F8E8548C469C3E6AAEEA1BB69107D7A0392DBFAB14DFAEC2": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "crescent-1"
+    },
+    "ibc/534478EF5389B9A9310AF8CA0F20F3EE90B564369290B62A53CDC2CA923A45B5": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "mars-1"
+    },
+    "ibc/1B43EE050E4B0BFF696CCFEA44903A71CB60F78A9D19172BD935E449A4EDD7B6": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "migaloo-1"
+    },
+    "ibc/427E7C81609A8D9104B19A842A0EF960E606992B6206A07605088BEDB27D8DA6": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "osmosis-1"
+    },
+    "ibc/B5AF8D33880FAB3DADC1A1CCDD457FD413FA8788D44C0332A6ABC750E7003F68": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "stride-1"
+    },
+    "ibc/33196ECABB6DDD561E1F9599D12356FEB536DF7149718B3EB168FA269DC1CDE7": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "archway-1"
+    },
+    "ibc/219C3FB64A60CA8E8B0D760D10FF108F6C0484F1AAD2E621232230ECC303803B": {
+      "token": "kaiyo-1:factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk",
+      "chainID": "stafihub-1"
+    },
+    "ibc/E7DFE820CDB7E799F62689AD4CA7C8A350F3B1E87A91BB3B2D12E2092412E2BD": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "phoenix-1"
+    },
+    "ibc/D75FF9F7ACE6B976FA775B1A9C015A977AD0D53F41EDA3428BFB43B12FC731BA": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/B4FD880B1AE3E78C85C137A245D82FF33F51E3499DF7E8EA2313B6A4C3BCAD54": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "carbon-1"
+    },
+    "ibc/DED6BEA3BE125D82955CFD757DADBBA004B107AA3E3807BF3069073AA0BCEAA4": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "akashnet-2"
+    },
+    "ibc/50344A002E7459A2A85C62023A6E73099C5A66A96660285ED9AFF531D407E913": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/E47EFCC7F8CE8AC57DE136A79416DAE5C73E9929C0CFCB587ED9B665DC963D36": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "crescent-1"
+    },
+    "ibc/D7D7ECD27526E29A3794F4E51754C79DD2530D18FCBFDEAC6B81C0CDFA9A2DF3": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "mars-1"
+    },
+    "ibc/B46262B3ED6FC17CC4D72BC260A4FA39900FA2875D62B5F38149EBEC3B3AE2C3": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "migaloo-1"
+    },
+    "ibc/6AED9CD8CE7874DC54B75C357B0AB073BBBA14F67DC732CAD4E6FB2AE7ABF680": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "osmosis-1"
+    },
+    "ibc/67689DA403E3948A751D21404B06CE49FF91A42F6AD37470D4DEFB3771D9D0BB": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "stride-1"
+    },
+    "ibc/9E748D43F4F75B6924D9575C9FF6F8EFCD9EF1916EF09F44B71803DB7A361E93": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "archway-1"
+    },
+    "ibc/E86221FC3E95D3EC501CD6CDB7BA4FE2C9F7E3D4AD118CDDE60BB42F7BFDA28E": {
+      "token": "kaiyo-1:factory/kujira1n3fr5f56r2ce0s37wdvwrk98yhhq3unnxgcqus8nzsfxvllk0yxquurqty/ampKUJI",
+      "chainID": "stafihub-1"
+    },
+    "ibc/83EE6F4AA8393209641B2505FEDDA21CA4B16EE578D6FBD539F2E45EBB1E8D94": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "phoenix-1"
+    },
+    "ibc/B57E4B4CF6BC7E77013AE65E218DB629AB2BDBFB56B17DFC870EEBE40F4EFF72": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/363DBDE1FC8F2992ACC96670AB120D5DE862A1638BC370A3849692F792859267": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "carbon-1"
+    },
+    "ibc/D1B91387D4F1AC93628135CD60ECF48AB4266C594054E08F348647009039052F": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "akashnet-2"
+    },
+    "ibc/A4BBECFE888F55B9027600BC9A56EB60A694BF61F152F1C9633BB7477D3A02AC": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/7BB61FB5BDE2051FFF7467F7BEE4EF7E74BC8329F8C98D772456EEFCF996167C": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "crescent-1"
+    },
+    "ibc/9D48EEF96F5D931C7EE60C5B2AED260C59656018C12B2F138CEDFD45DA94E2EA": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "mars-1"
+    },
+    "ibc/0F90AF1393C048DF12A40A865FC5EBD1E028CDF988C17830E2CD46E2F169686A": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "migaloo-1"
+    },
+    "ibc/2FCBC9ECB42BBBD3A9F25E780ED03C93E62D0E414A6687A4D4A2E1EBAED48BFA": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "osmosis-1"
+    },
+    "ibc/F40E6E73B7160C6E8979221E541CAC35F4EAE2CC2F777431EA8D7BC357BDC273": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "stride-1"
+    },
+    "ibc/8F6F4798997D216CCF130369C3ABD35FB2F0AB9EC1D029B2BBD4F33502D4502F": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "archway-1"
+    },
+    "ibc/BB3542A4F848C44D8822AA70AADF728F05B53591E16B9F3950AE582393319C82": {
+      "token": "kaiyo-1:factory/kujira1swkuyt08z74n5jl7zr6hx0ru5sa2yev5v896p6/local",
+      "chainID": "stafihub-1"
+    },
+    "ibc/881AA74A83F962B9E931513C733882FF5CC4A1977911FE94E7B0CCB4DEE0CEAC": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "phoenix-1"
+    },
+    "ibc/6CF0F0B216BB36E7DA6A2285F0B675BF4F3ECD168036D902979A79B9280E981C": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/80E38300E5137BBD0CA9126CAFEB500FAB67915D7D0AD017F8A80D24579BBB65": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "carbon-1"
+    },
+    "ibc/0C75F0DB53DE46C7CCC809B188B91DD7A7B13942A6FCF30DBB7BDFB4CC2D8FA3": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "akashnet-2"
+    },
+    "ibc/2F9BCBF3B08F85785F170DE7EEB5100A082B1009E17674EB6013CBB98DE2D1D8": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/4CA2B5C3B40D3EB08C3D4DBD510292ADE6AFE2A82D64133FA1CC8ACABD0A9A34": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "crescent-1"
+    },
+    "ibc/260270FD8A5170F1F1E2D1288898A7D958D1D7C71006D48D71C5BB858AE1BB8A": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "mars-1"
+    },
+    "ibc/0A3D9EBA87FC4C0A43A48A5358BBA9CFEF347FF9F6AE15D5BFF10FE71DD37ED7": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "migaloo-1"
+    },
+    "ibc/362D700B3402608A66C21660FD904DF89F7124357AEA5DDAD1B0D08BF2A5F6DA": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "osmosis-1"
+    },
+    "ibc/E1787A4042548DAD64C13E092DA15D7796C31A522F261FD59D957B09CA38A6E3": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "stride-1"
+    },
+    "ibc/D4EE20BF5BC39869F5888E014F215B3D3A6FE61DD9560A96F202C11C8B260EFC": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "archway-1"
+    },
+    "ibc/0DE6E4FBC8EB12ACDBBD9E0D29105B5B2DAED6126BC2AAD73A1BD53C657120BB": {
+      "token": "kaiyo-1:factory/kujira13y8hs83sk0la7na2w5g5nzrnjjpnkvmd7e87yd35g8dcph7dn0ksenay2a/ulp",
+      "chainID": "stafihub-1"
+    },
+    "ibc/EF6B7074D846B3A0A1CBE73EC590F470F7867CD443006D5B911B54972E115D1F": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "phoenix-1"
+    },
+    "ibc/8E2594F112187317FE9A1D78F9195FBBF73A6A9645E00ADA2BEE4091370CA1BA": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/D57F18610636EF58B65471F5A405155957946922F61AF08E4969173DB566B3CD": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "carbon-1"
+    },
+    "ibc/62B41E4620AE082D3C7B5CB314CD6CE89B5A90C9DBE2B939804D825477E67335": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "akashnet-2"
+    },
+    "ibc/3C35E3857C4A7A21AFB176358042DC0A451F53C5DEDE48213EB45F8FB95D1C6A": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/F4EC4BD2C58D153657456C6F5EFED2F067F9F6E9411078968CF67B496116029C": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "crescent-1"
+    },
+    "ibc/D09AE0EF4A44C92811E03ECACF7F573B1FF7331A3CA11B8EC04D5FE60BE0C2CC": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "mars-1"
+    },
+    "ibc/5DC78ECA58F36B6431B788AE506CCD4FCF1F366A758FF7615CD9D15E415389A7": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "migaloo-1"
+    },
+    "ibc/83794D4DD229BCBA72347244EE5FC4594880FF236F9A0A98680D10954DE9641C": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "osmosis-1"
+    },
+    "ibc/BEA97A4C43C5AA01ABC1BCDBE5F58BF1299A3CC6C4AF9EFE13A18AA1F8099F41": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "stride-1"
+    },
+    "ibc/75D683419C0AD1F3F4DEF854629337285AF4251C4A9A6288816E70159FA07101": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "archway-1"
+    },
+    "ibc/A62473604D62221441CDE24B41E3556E772A98C936679576F3389AF32CE87C98": {
+      "token": "kaiyo-1:factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta",
+      "chainID": "stafihub-1"
+    },
+    "ibc/BFF85929EE6F092DE48CF114A0346C099E904D20FB0FEA1227FA57563DFA089D": {
+      "token": "juno-1:ujuno",
+      "chainID": "columbus-5"
+    },
+    "ibc/3EDFD287DA7552429E1148BF954AB6F44F7C9730567964208B3052E6DDF18D08": {
+      "token": "juno-1:ujuno",
+      "chainID": "phoenix-1"
+    },
+    "ibc/F31A931E6D0167D7E8755593BBEF7188B0340CD79E71586C1B6023928F2C3ED8": {
+      "token": "juno-1:ujuno",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/5E5666B0018CE11EBC5B9A5591D9DF33C51758F1637123121932840F9AA42511": {
+      "token": "juno-1:ujuno",
+      "chainID": "akashnet-2"
+    },
+    "ibc/6BC45560F40111D831D4A5B8D62E398A55C664FA461D52EDA04494B2313D19C6": {
+      "token": "juno-1:ujuno",
+      "chainID": "chihuahua-1"
+    },
+    "ibc/330D65554F859FB20E13413C88951CFE774DD2D83F593417A0552C0607C92225": {
+      "token": "juno-1:ujuno",
+      "chainID": "comdex-1"
+    },
+    "ibc/EFF323CC632EC4F747C61BCE238A758EFDB7699C3226565F7C20DA06509D59A5": {
+      "token": "juno-1:ujuno",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/0C9234DD9ABDCF11E1E6E00DFD20D90AE6C422CCF91275E9A4EA512B4D4247C2": {
+      "token": "juno-1:ujuno",
+      "chainID": "crescent-1"
+    },
+    "ibc/04F5F501207C3626A2C14BFEF654D51C2E0B8F7CA578AB8ED272A66FE4E48097": {
+      "token": "juno-1:ujuno",
+      "chainID": "osmosis-1"
+    },
+    "ibc/7645A595BD417E775FC42FCAF00F0D8DB4AC151E466649A696AB8F465CE39D47": {
+      "token": "juno-1:ujuno",
+      "chainID": "stride-1"
+    },
+    "ibc/7584E8AAE0C74A9E8752327258F29DA7633B14BB3062B27D40A9E4CE0994FC20": {
+      "token": "juno-1:ujuno",
+      "chainID": "archway-1"
+    },
+    "ibc/A5088ECE24F3AD7259D93F686D82902B009D2DF15B73DF46D449F0E3E4942355": {
+      "token": "mainnet-3:udec",
+      "chainID": "phoenix-1"
+    },
+    "ibc/ACEE0830DDDC5913826A28B4FD34DF89C24F762F99DD6290E4CE8D44620D3004": {
+      "token": "mainnet-3:udec",
+      "chainID": "osmosis-1"
+    },
+    "ibc/A7304EE764FD4AAE4D81A75F0F396D3C2038F4BB8DA655ED2F8735F2F9F36295": {
+      "token": "crescent-1:ucre",
+      "chainID": "columbus-5"
+    },
+    "ibc/38D0CC293C33A7CACCE1FE4A8160886615D21ACC60D7DFFA9E1FEFAF37AC1CDF": {
+      "token": "crescent-1:ucre",
+      "chainID": "phoenix-1"
+    },
+    "ibc/DF3CFAE5A09DDFEF934E6C2C1786DCCB3D532386F471BB0965EDB67B91FC4895": {
+      "token": "crescent-1:ucre",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/88502F3B55B36797FD98B6D7CC48D6918521ECFD6F575C666DD3476EF39BF7FF": {
+      "token": "crescent-1:ucre",
+      "chainID": "akashnet-2"
+    },
+    "ibc/AC1C2A51F65F31032B0FBF87D6D405D62727B3A548F0390B8C727FF8D8193DAD": {
+      "token": "crescent-1:ucre",
+      "chainID": "comdex-1"
+    },
+    "ibc/1AA2D0DA14D24CEC9CCCE698F3B113B32F651365F6C91FFB5F301CFA33A175E1": {
+      "token": "crescent-1:ucre",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/2089AEF3822B84CC292A8FFDA5F7BE4DBE81F5AE21B82269847D8FB2387F8C07": {
+      "token": "crescent-1:ucre",
+      "chainID": "juno-1"
+    },
+    "ibc/11B59694184B3FA3EBA2FCF155F5B1FBC165B27F9855FDB887CF40080EEE9EF1": {
+      "token": "crescent-1:ucre",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/856A1CE8FFD310647D9FC20CE319C1F9C13005DA2B7CC91E16FA117ECE51B801": {
+      "token": "crescent-1:ucre",
+      "chainID": "mars-1"
+    },
+    "ibc/31DCE745EBDFBB19710DF9B1B2D2378183DDB9216EA42750AD1E246CF4A6040B": {
+      "token": "crescent-1:ucre",
+      "chainID": "osmosis-1"
+    },
+    "ibc/950AFAF082216791DC5ABFC88F8D85C598915EAD9FBFAD466D0FD97659D5951F": {
+      "token": "crescent-1:ucre",
+      "chainID": "stride-1"
+    },
+    "ibc/159B1266BE02BF047E345B234EC05ACC24191B067BFAD893D1049A14A16E0CEA": {
+      "token": "crescent-1:ucre",
+      "chainID": "archway-1"
+    },
+    "ibc/6A0DE9B62EBDEC440CAF8CAC565D8B5D296AB8C2A59E71D696DE50D42E7942FB": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "columbus-5"
+    },
+    "ibc/E0BAF31622B13F0DE4D0C2463B0A1B2736264E6EFF027D69C8D1F58CF25B177A": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "phoenix-1"
+    },
+    "ibc/09F31216AEB40D3713C6FB5AA9053998090C1F2C3FD28D5EBFB5CABA7A25C982": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/8EE0EDD8E8E55BFF110695D5B4317E1060E2588006BB1BAACCFE363AB0DBFD11": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "carbon-1"
+    },
+    "ibc/6E68B5068555AA65B6B9B9B42A8A92FBBF9B4E7B0635DEF289E65E11FCB4B60C": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "akashnet-2"
+    },
+    "ibc/AB320853C98FC8444064FDAD8DD3361FF35125BD09244D038C54C3EAD634CDCE": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "crescent-1"
+    },
+    "ibc/F93F1E6BBF34AB5D0F20048A8E3BA9CCA5789532D82FE4F4EB9BCF700AC7FEA4": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "juno-1"
+    },
+    "ibc/15D539D528AA002DA3E3D8096E426428BB45CC7F0DB6FA921A385EE602DFF9B5": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/16D4D17E9AE25E6C07487244BA89CF0F19BF47859EDDD0FCB99AB13BDF8B87C8": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "osmosis-1"
+    },
+    "ibc/BC1DCC349E88ED848B82B5B899EBEECEB7B57C8175A2650F7982585022694AA4": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "stride-1"
+    },
+    "ibc/AF51132F9EF928013D254AECDB4E4BCFC317C9B759E72CE5F8C07BEB69B20597": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "pacific-1"
+    },
+    "ibc/D1B75E908C713D46386E6F2C67E965C670CA691EA3C53EAF29D4582F5CD5CC1F": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "archway-1"
+    },
+    "ibc/E75AEEA9E23276E612B2D0D48F09C873FA6774224D1B307CDD5B03A1F9BEA8C8": {
+      "token": "cosmoshub-4:uatom",
+      "chainID": "stafihub-1"
+    },
+    "ibc/0EC3D9C0AFA5DE4AA860CF8D3973C8316900CBA1A16B30FF4FC4F58B9F0784B8": {
+      "token": "comdex-1:ucmdx",
+      "chainID": "phoenix-1"
+    },
+    "ibc/D2381C9EAC88431AF89418694BCC23F2C6770D5EE7291F48DEC0B94B243E3DE4": {
+      "token": "comdex-1:ucmdx",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/61DF64ADF65230540C14C63D64897BE08A3DC9A516A91425913F01240E2F432F": {
+      "token": "comdex-1:ucmdx",
+      "chainID": "crescent-1"
+    },
+    "ibc/3607EB5B5E64DD1C0E12E07F077FF470D5BC4706AFCBC98FE1BA960E5AE4CE07": {
+      "token": "comdex-1:ucmdx",
+      "chainID": "juno-1"
+    },
+    "ibc/DFBDE185EC916F4933DF02D3A282FA801BC9EE77FE0B768FB517407730105491": {
+      "token": "comdex-1:ucmdx",
+      "chainID": "migaloo-1"
+    },
+    "ibc/5DC0FFF9D5BD0E50DB4B08DA7812ACA812F2E99BD8353E1E5409E7AF02154F97": {
+      "token": "comdex-1:ucmdx",
+      "chainID": "osmosis-1"
+    },
+    "ibc/97C58C8CBE156DE3D5F049CDCD06C50DF312FCA5E371C50809D980388731CAA6": {
+      "token": "comdex-1:ucmdx",
+      "chainID": "stride-1"
+    },
+    "ibc/D429F3F9877EDDCD04DB23E116086B717322802D3268BF424A0F488079E54947": {
+      "token": "comdex-1:ucmst",
+      "chainID": "phoenix-1"
+    },
+    "ibc/18DF27D3CB6E1261CBED1E80828F54175EB2F3054658CB074C1C9A3E569EF05D": {
+      "token": "comdex-1:ucmst",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/9EC8A1701813BB7B73BFED2496009ABB2C8BF187E6CDFA788D77F68E08BC05CD": {
+      "token": "comdex-1:ucmst",
+      "chainID": "crescent-1"
+    },
+    "ibc/1603E8643A49AD47F536F645A4BF0E4C1E06C76F0A98CBE8054B177F1EE7C39A": {
+      "token": "comdex-1:ucmst",
+      "chainID": "juno-1"
+    },
+    "ibc/B8CA0EBE2C9D8800390CE4256DF6C194CF6740CB0AEE140EEE60C1CE288CDB86": {
+      "token": "comdex-1:ucmst",
+      "chainID": "migaloo-1"
+    },
+    "ibc/39384CF2A63E537B05AE8CC8FA53CE9C12338F51B773F9ADFA9238A9C5994687": {
+      "token": "comdex-1:ucmst",
+      "chainID": "osmosis-1"
+    },
+    "ibc/4CE07B2CAD759B01908A57E29109182907D65FA0E2729371A6E035C9D7F51F74": {
+      "token": "comdex-1:ucmst",
+      "chainID": "stride-1"
+    },
+    "ibc/C5F8BAE64B4F13309FD4177F0DFA64D5302CAC967FD2F9CCDDAB66E086EC3F0C": {
+      "token": "comdex-1:uharbor",
+      "chainID": "phoenix-1"
+    },
+    "ibc/3F924BC3C5BC7BDC3B7847B49B6F20C864982359B23F5617F306F6DC8B28EDAE": {
+      "token": "comdex-1:uharbor",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/BAEA8E5E532DD3442D8938DA6E3C456EEE52CFD2CCC1B3512B0A77E7BEDB2F45": {
+      "token": "comdex-1:uharbor",
+      "chainID": "crescent-1"
+    },
+    "ibc/46B7745F093B6185D871EBE8EA3B3EDE54E7CBFDF9B8DB6EE0F8DF3446B388A5": {
+      "token": "comdex-1:uharbor",
+      "chainID": "juno-1"
+    },
+    "ibc/33E509EAF84ED39E60F746CCAF89130B386A11FDD3B76A77377FB3946BC9D829": {
+      "token": "comdex-1:uharbor",
+      "chainID": "migaloo-1"
+    },
+    "ibc/74E2F762EBA952FDCE0C1145A8BADD8C8FB610EB255F2E749CD479452089C5FE": {
+      "token": "comdex-1:uharbor",
+      "chainID": "osmosis-1"
+    },
+    "ibc/47597365902980BDBFF4A409C16461825424D992395BF062CE662827EDBFC8AB": {
+      "token": "comdex-1:uharbor",
+      "chainID": "stride-1"
+    },
+    "ibc/048BE20AE2E6BFD4142C547E04F17E5F94363003A12B7B6C084E08101BFCF7D1": {
+      "token": "chihuahua-1:uhuahua",
+      "chainID": "phoenix-1"
+    },
+    "ibc/630E7B10690ADEC9E9CEEE904CE78C522BBCDDC6A081B23FA26A55F6EF40E41E": {
+      "token": "chihuahua-1:uhuahua",
+      "chainID": "juno-1"
+    },
+    "ibc/3108493F7C897AA6EB0827DAF878591B864342443185A37B467AFD75FF45655D": {
+      "token": "chihuahua-1:uhuahua",
+      "chainID": "migaloo-1"
+    },
+    "ibc/3E15FA9DFDBDA9F8B6A98FFA5FBE3D2D024E97AD7D9AEA80074E02D09BCDAB3C": {
+      "token": "chihuahua-1:uhuahua",
+      "chainID": "osmosis-1"
+    },
+    "ibc/6963E3A2B943B577EB026E20875B464E46A85002C1F99D20F00748E59C6267E8": {
+      "token": "chihuahua-1:uhuahua",
+      "chainID": "stafihub-1"
+    },
+    "ibc/C5EE8F3765062E2AE064D9B5E8587F848B9858535FB5F6186D8EC461FBC7082B": {
+      "token": "cheqd-mainnet-1:ncheq",
+      "chainID": "phoenix-1"
+    },
+    "ibc/19D515BB82FEAFCEC357D04C1B75DBF123DB5479041A9BAE38BFCF295477404D": {
+      "token": "cheqd-mainnet-1:ncheq",
+      "chainID": "osmosis-1"
+    },
+    "ibc/EDDE5356A539A1D722C1AF7D42B42C207064C2DF5D63254CAEEFA29F30BC1A22": {
+      "token": "carbon-1:swth",
+      "chainID": "phoenix-1"
+    },
+    "ibc/F1B2961D5F129B10EEFD9543C4AE743DB69C927B276B2867430A04A73D1937E1": {
+      "token": "carbon-1:swth",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/E7F015DDFFC66CBF0F799E1B6D669BEE67A7F04D5A4B78BECE279F89994411BC": {
+      "token": "carbon-1:swth",
+      "chainID": "stride-1"
+    },
+    "ibc/6C10C81F74ECF7C10811E4328D61C57F7D8D825A5E61B325E843C78DF1CDB5AC": {
+      "token": "carbon-1:swth",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/02CB8CCAD2E3A5E3FABF0DB66D7A911637C791671D1C4B482A65CD220171525E": {
+      "token": "carbon-1:swth",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/CE5B589C2D87FF4C5197074C8EFBEBEE52F53F9A37BE3D5820A01E07A2448ABB": {
+      "token": "carbon-1:swth",
+      "chainID": "osmosis-1"
+    },
+    "ibc/44FCDE3511B5793B2BAAFD8F0EA98AB5352E78CB8BD020F1AA015CF72DC8C863": {
+      "token": "carbon-1:swth",
+      "chainID": "stafihub-1"
+    },
+    "ibc/C47034A9A00E4EDD520F1C34075171ACE0494341FA07F2176D2D296319F77004": {
+      "token": "carbon-1:cgt/1",
+      "chainID": "phoenix-1"
+    },
+    "ibc/5AFF8BFB3B9E156DC1936BD0B55E027E45A0B22FA36DF5E6D2C4A13B43CA3A79": {
+      "token": "carbon-1:cgt/1",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/F29F637A1388DD57DCF6638E53D19D513964FCC8E3894F5E768A12753125AA81": {
+      "token": "carbon-1:cgt/1",
+      "chainID": "stride-1"
+    },
+    "ibc/B7EC9129863B4151444F23B3557B024D15F412FFB22DAE9ECF0423C1B0B210FE": {
+      "token": "carbon-1:cgt/1",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/75964EAAB3813103B09571FF9DF0BA99E0FB879C62BEE62DDDE3332E63FFE0A9": {
+      "token": "carbon-1:cgt/1",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/415645140128167824288D33225F755952AE2A7FA054512C6D579058D60D7398": {
+      "token": "carbon-1:cgt/1",
+      "chainID": "osmosis-1"
+    },
+    "ibc/EE502B576926C17C012561EEF94642FA745CF01B979EFB52357C091A4D09A357": {
+      "token": "carbon-1:cgt/1",
+      "chainID": "stafihub-1"
+    },
+    "ibc/CF254311125FE781B14CC3C955C9AE4FF6B1CAC3E306CBA967ACDFE3C5F73AFA": {
+      "token": "carbon-1:bnb.1.6.773edb",
+      "chainID": "phoenix-1"
+    },
+    "ibc/0B703083173259A088343E1F2E8CCC341528A937FF7E2D72A7BED0EFC5D2C2CD": {
+      "token": "carbon-1:bnb.1.6.773edb",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/3C77ECB3B6C58D98DE8453FE9AD0FCCF7D3099926685740A328BBAB0B7C6F18F": {
+      "token": "carbon-1:bnb.1.6.773edb",
+      "chainID": "stride-1"
+    },
+    "ibc/BD2964C88DF99305BF6AC1B4AAE99670C8F98A120294A1EADA155EFD73C57513": {
+      "token": "carbon-1:bnb.1.6.773edb",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/4C2055B47B075CAED8358772FCA835C26721EEB507080A67CC41668E6FF8D46D": {
+      "token": "carbon-1:bnb.1.6.773edb",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/502310825CE439A40FA8947A25E1E976240680535FAA6154E2627006FC6FD799": {
+      "token": "carbon-1:bnb.1.6.773edb",
+      "chainID": "osmosis-1"
+    },
+    "ibc/D4B248762E45B3E686052A7260C9F687199ABAEF16B7AFCD943A053434980707": {
+      "token": "carbon-1:bnb.1.6.773edb",
+      "chainID": "stafihub-1"
+    },
+    "ibc/9128D7F66EB5260CDE08EA840E8B65C46F4D26AA6A9E1FD9C0CE8C1A23F27722": {
+      "token": "carbon-1:eth.1.2.942d87",
+      "chainID": "phoenix-1"
+    },
+    "ibc/FE3E9776872BF0FC65CEF5825538A31C7019750588B93FFC82396FA842B64319": {
+      "token": "carbon-1:eth.1.2.942d87",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/9D26BB4D406F9314E5D873B8601949ADAF462C303286C9C078F58719FF54FFDE": {
+      "token": "carbon-1:eth.1.2.942d87",
+      "chainID": "stride-1"
+    },
+    "ibc/16555C3ED97BAB1C3DA9542BD282CEC85A96A7E8EE2DD73523ACA6EE899748FB": {
+      "token": "carbon-1:eth.1.2.942d87",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/5199BE007A1211514EC3B53261CD529AE73CACFE7B686D566AE8C91F275A8DB9": {
+      "token": "carbon-1:eth.1.2.942d87",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/E5942E3B86D9FE077AB733A1089DB13FF01F11907A749FC7303473A211431D65": {
+      "token": "carbon-1:eth.1.2.942d87",
+      "chainID": "osmosis-1"
+    },
+    "ibc/F75C70148B167D59441CF9FDCF942AF4D1BC2082D7CB1AD96650C24DEFC840A6": {
+      "token": "carbon-1:eth.1.2.942d87",
+      "chainID": "stafihub-1"
+    },
+    "ibc/0C905D0B031A7CCE186A0102C3FAEB9C6373DF5CA4160910E3C354E274A14F9F": {
+      "token": "carbon-1:zwap.1.18.393529",
+      "chainID": "phoenix-1"
+    },
+    "ibc/FE59DA50F9B8C07083434F782B4E3F2850AEDFA6807CCDD7BB31CE15CD22E087": {
+      "token": "carbon-1:zwap.1.18.393529",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/57BEDA36A45FB8BE03C19FC96443C4FE8BD1493E44712A99C4CB5025807DF78B": {
+      "token": "carbon-1:zwap.1.18.393529",
+      "chainID": "stride-1"
+    },
+    "ibc/E5DF2EEE3A13E7ABC87D5E2AB8E06F763CF05C0F56EE77B19CE04B65F335BC17": {
+      "token": "carbon-1:zwap.1.18.393529",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/268ADE09EB8E5D7A11807BAD62FCBA5BBF9AF1873C0B19F4E60A7D6408239D6B": {
+      "token": "carbon-1:zwap.1.18.393529",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/E69915547D187642FB2E9188DBDA0C573F9F15085220161DE2AD9489F123E669": {
+      "token": "carbon-1:zwap.1.18.393529",
+      "chainID": "osmosis-1"
+    },
+    "ibc/C375359F69D46B0C7A5D9DB61CADCAB4F9308E63BD4C7C6F22381165977D8937": {
+      "token": "carbon-1:zwap.1.18.393529",
+      "chainID": "stafihub-1"
+    },
+    "ibc/DC68F7E0498F489D64D5BD46106D9AEEFD9ECB57B24706BFD4614CC7AABBC960": {
+      "token": "carbon-1:ava1.1.6.95712b",
+      "chainID": "phoenix-1"
+    },
+    "ibc/64C41261C785C1844943C8B0F37AD5BAF63CAAB0EF52658B0DCA7A3A777A300C": {
+      "token": "carbon-1:ava1.1.6.95712b",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/F4E2CDDCB916116B9F96AA65EB89CDFB767BCC2670AAD555025234CA10037625": {
+      "token": "carbon-1:ava1.1.6.95712b",
+      "chainID": "stride-1"
+    },
+    "ibc/ABE7E82D5DDD2A3F384ADC7395DB01A720F3B04E786FD1A566E6F60B8AB816EF": {
+      "token": "carbon-1:ava1.1.6.95712b",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/220445506AF35CBDA42F0E64663B2732946F2D2E9B624526E8841CF75F53CA75": {
+      "token": "carbon-1:ava1.1.6.95712b",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/BA2FB29768C9E5B3FB6EB93637029E902FDA01A21D70E41B2C7F932853757E09": {
+      "token": "carbon-1:ava1.1.6.95712b",
+      "chainID": "osmosis-1"
+    },
+    "ibc/AEF2987CF3A2C3975CB684001601FB012D380690436879C62E417F88F8209CF3": {
+      "token": "carbon-1:ava1.1.6.95712b",
+      "chainID": "stafihub-1"
+    },
+    "ibc/0AD7158AAEB834F76795B66D7716B0B1EE06CC8E7A933A8AE03AA4FBC88842B6": {
+      "token": "carbon-1:blur.1.2.0c0069",
+      "chainID": "phoenix-1"
+    },
+    "ibc/23C4F74B1F4F67D812ED9C4DD908DBBE238F8C18A7D4144E98885DAF08BF472E": {
+      "token": "carbon-1:blur.1.2.0c0069",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/BDB3482F26168B0A1F1D575DE53C0FFFF0659528EF04363E77DC7BE286EF1109": {
+      "token": "carbon-1:blur.1.2.0c0069",
+      "chainID": "stride-1"
+    },
+    "ibc/02FBFD9B58D140AC541AE011B11348DB57F214BAE195CFA5465A5B0FCD25ED4B": {
+      "token": "carbon-1:blur.1.2.0c0069",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/69C3D5D64413B0F9FEA9685999C250CF76252F0DB2E77E00FF7812400B26D8B6": {
+      "token": "carbon-1:blur.1.2.0c0069",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/C6C581FE9D661B1BB103E4DDD10FE404F2B7BA970717C5CB7E9D2626F210010C": {
+      "token": "carbon-1:blur.1.2.0c0069",
+      "chainID": "osmosis-1"
+    },
+    "ibc/BA4F6AA808117D5DFEFDE6A716E74714771B65963748D17EFF0A11DB6377187D": {
+      "token": "carbon-1:blur.1.2.0c0069",
+      "chainID": "stafihub-1"
+    },
+    "ibc/E61880EB6A8F637B1E38F06189D9A417F6D34C87D490522EE84D21DEFD6A6100": {
+      "token": "carbon-1:busd.1.6.754a80",
+      "chainID": "phoenix-1"
+    },
+    "ibc/92E651B6E0EC01E7D4356E5B45A482F5E678E1221AE5E3B95249F1CEECB246B5": {
+      "token": "carbon-1:busd.1.6.754a80",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/115AA38B77F2C9FFD0AFD0B77E1934D1D8E9B895F367FEA1ABD49ADBFC8FAC76": {
+      "token": "carbon-1:busd.1.6.754a80",
+      "chainID": "stride-1"
+    },
+    "ibc/1A63E2C216C7AB95FC9A33550E30B6FDAB519321E2252E934CBB1FBA2808E8E4": {
+      "token": "carbon-1:busd.1.6.754a80",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/98F37AF92B2948D76C625A6BAD72121B7E67E5BB2D88154B66DC22496EDECB84": {
+      "token": "carbon-1:busd.1.6.754a80",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/77EC66988608061216EED4339F51896086B70D76C7148473335698EE46060E43": {
+      "token": "carbon-1:busd.1.6.754a80",
+      "chainID": "osmosis-1"
+    },
+    "ibc/8C306E58DEED9C71A778AEA92616D3903AC45458B18890C93DC2C5978086159B": {
+      "token": "carbon-1:busd.1.6.754a80",
+      "chainID": "stafihub-1"
+    },
+    "ibc/C56B9D314CC4FC9C28E05FB2EE246838624EF4259A53363131F585153B2CFB77": {
+      "token": "carbon-1:zil.1.18.1a4a06",
+      "chainID": "phoenix-1"
+    },
+    "ibc/42C512EE4F6808E9B24C5210BFC018E1E30439BAC58F67C4F859A8EFEF220830": {
+      "token": "carbon-1:zil.1.18.1a4a06",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/9A78732F746273113CDC4CA4D7A4AB2D8B3E45EB97249CCED7DB5D33458BE973": {
+      "token": "carbon-1:zil.1.18.1a4a06",
+      "chainID": "stride-1"
+    },
+    "ibc/28E3A8E65992F613DB54DE9FFDA2DC05E45151D13378432C481B8712ADDA16FE": {
+      "token": "carbon-1:zil.1.18.1a4a06",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/9E867F142ED27A77A8957CEA964A4A272978CEEB02E02F0D7C7B051FD873EA2A": {
+      "token": "carbon-1:zil.1.18.1a4a06",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/BDE5746DE886FA1F221970EC8236067DEF8832D7EBD44C9AE7162FA38F4E7C18": {
+      "token": "carbon-1:zil.1.18.1a4a06",
+      "chainID": "osmosis-1"
+    },
+    "ibc/1546D03A4C426B52006D50BA35EB7549D11918E9BCE1A5ED188CF1B176DD5B79": {
+      "token": "carbon-1:zil.1.18.1a4a06",
+      "chainID": "stafihub-1"
+    },
+    "ibc/2CC0B1B7A981ACC74854717F221008484603BB8360E81B262411B0D830EDE9B0": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "columbus-5"
+    },
+    "ibc/A77E732D858BC4DE47AC8562CE2BFB3ACCC187A484D65362A55B441B985DD0F0": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "phoenix-1"
+    },
+    "ibc/2253DE2F950B35D9AB9B403F58F30B970ABDFE1A35AD23E9AB20AE575C68984A": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/062588846168EDFECF20F7681F2A0A131A53B9A3C8535BCA8F7D1A268246974B": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "crescent-1"
+    },
+    "ibc/0634D0993744740D675AD01E81156EAC945AEAAE17C074918DC7FF52F41B263E": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "juno-1"
+    },
+    "ibc/9463E39D230614B313B487836D13A392BD1731928713D4C8427A083627048DB3": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "osmosis-1"
+    },
+    "ibc/C0E66D1C81D8AAF0E6896E05190FDFBC222367148F86AC3EA679C28327A763CD": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/1F6F47BC4AF41C7F767DD84D9387BC6058FCFEEF0C6D0D6E6C53DA23A761D139": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "carbon-1"
+    },
+    "ibc/6B4F4D3938CB83786736371D5BDA1E2A3F478812405EE4C7DA205CAFB1F7C039": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "comdex-1"
+    },
+    "ibc/AF333938369CC586F88C6240DB4412B998B23D1EBDAE1EAFFE1C703B34672945": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "stride-1"
+    },
+    "ibc/6095ECA440F543A7F5B0B8483B9752A67904E88780A5806D80E353E5C9E21196": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "pacific-1"
+    },
+    "ibc/9FF57CA31D883C22EA53BEC3B526BADB3580EBADD483271258ADC37547B75DA0": {
+      "token": "axelar-dojo-1:uaxl",
+      "chainID": "archway-1"
+    },
+    "ibc/2128CEA1302902DC2F28B762CB8B596D741AAD065F6202D81392A2A7C9E180EA": {
+      "token": "archway-1:aarch",
+      "chainID": "axelar-dojo-1"
+    },
+    "ibc/B4E8A10C6E5F68F61BCC89290A59290F7695FCEBBDFD60AB46B31B974B516B73": {
+      "token": "archway-1:aarch",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/3A6EF291CAE66EDCA46E43874FF6FC1499F61C4B56CA8186B8DFD9227F10D631": {
+      "token": "archway-1:aarch",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/1DDAA22E435DD07B495F8A97144CCC197524D8CF4EE57C5AE81E2899F52D12FA": {
+      "token": "archway-1:aarch",
+      "chainID": "osmosis-1"
+    },
+    "ibc/984B575E2FCAD4B993A17595769550526C0079E9CDA5A810B22442F8986F9CA8": {
+      "token": "archway-1:aarch",
+      "chainID": "juno-1"
+    },
+    "ibc/70DC99A64A171817AF26E0470425869E713B0457BDA26A722260EC5BB3421831": {
+      "token": "archway-1:aarch",
+      "chainID": "crescent-1"
+    },
+    "ibc/358DA342925CC336CDB5B21468667A4B87A844D706CC2B8E064DB485CA6B0C84": {
+      "token": "akashnet-2:uakt",
+      "chainID": "phoenix-1"
+    },
+    "ibc/EC59CC503653F9E50F1AD459B94A9EAE677BCD323E041970BCF85D7B8B5FB0AB": {
+      "token": "akashnet-2:uakt",
+      "chainID": "cosmoshub-4"
+    },
+    "ibc/52E4CAD5310EC79D63A67E4748B4C336D998E631244C0575E1DEA0F55E766E22": {
+      "token": "akashnet-2:uakt",
+      "chainID": "crescent-1"
+    },
+    "ibc/8DB2B323F05912BCA73FA1D09E9AE4A80D5A07CA126E90FC8B7C369DEABA35AB": {
+      "token": "akashnet-2:uakt",
+      "chainID": "juno-1"
+    },
+    "ibc/04A5DC1E5A1DBF2717DDBA885A24805A09891D841BFC80A1FE213C67C49575AB": {
+      "token": "akashnet-2:uakt",
+      "chainID": "kaiyo-1"
+    },
+    "ibc/ED3433FEFECE0B9EC584F0EBAB31E8AB6A7A187537F3E5B1D8A80998986E7ACF": {
+      "token": "akashnet-2:uakt",
+      "chainID": "osmosis-1"
+    }
+  }
+}

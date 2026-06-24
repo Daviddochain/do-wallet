@@ -1,0 +1,1080 @@
+{
+  "classic": {},
+  "mainnet": {
+    "Do-Chain": {
+      "chainID": "Do-Chain",
+      "name": "Do Chain",
+      "networkType": "mainnet",
+      "lcd": "https://do-chain.com",
+      "api": "https://do-chain.com",
+      "rpc": "https://do-chain.com/rpc",
+      "gasAdjustment": 2,
+      "gasPrices": {
+        "udo": 0.025
+      },
+      "prefix": "do",
+      "coinType": 888,
+      "baseAsset": "udo",
+      "icon": "/station-assets/img/chains/DoChain.png",
+      "alliance": false,
+      "explorer": {
+        "name": "Do Chain Stats",
+        "url": "https://www.do-chain.com/stats",
+        "address": "https://www.do-chain.com/stats",
+        "tx": "https://www.do-chain.com/stats",
+        "validator": "https://www.do-chain.com/stats",
+        "block": "https://www.do-chain.com/stats"
+      },
+      "channels": {}
+    },
+    "columbus-5": {
+      "chainID": "columbus-5",
+      "name": "Terra Classic (LUNC)",
+      "networkType": "mainnet",
+      "lcd": "https://terra-classic-lcd.publicnode.com",
+      "api": "https://terra-classic-lcd.publicnode.com",
+      "rpc": "https://terra-classic-rpc.publicnode.com",
+      "fcd": "https://terra-classic-fcd.publicnode.com",
+      "hive": "https://hive.terraclassic.community/graphql",
+      "prefix": "terra",
+      "coinType": 330,
+      "baseAsset": "uluna",
+      "gasAdjustment": 1.5,
+      "gasPrices": {
+        "uluna": 28.325,
+        "usdr": 0.52469,
+        "uusd": 0.75,
+        "ukrw": 850,
+        "umnt": 2142.855,
+        "ueur": 0.625,
+        "ucny": 4.9,
+        "ujpy": 81.85,
+        "ugbp": 0.55,
+        "uinr": 54.4,
+        "ucad": 0.95,
+        "uchf": 0.7,
+        "uaud": 0.95,
+        "usgd": 1,
+        "uthb": 23.1,
+        "usek": 6.25,
+        "unok": 6.25,
+        "udkk": 4.5,
+        "uidr": 10900,
+        "uphp": 38,
+        "uhkd": 5.85,
+        "umyr": 3,
+        "utwd": 20
+      },
+      "serviceFee": {
+        "enabled": false,
+        "rate": 0.003,
+        "wallet": "",
+        "denom": "uluna",
+        "label": "Infrastructure fee",
+        "description": "Supports wallet infrastructure and archive node operations"
+      },
+      "icon": "/station-assets/img/chains/TerraClassic.svg",
+      "isClassic": true,
+      "alliance": false,
+      "burnAddress": "terra1sk06e3dyexuq4shw77y3dsv480xv42mq73anxu",
+      "explorer": {
+        "address": "https://finder.terraclassic.community/mainnet/address/{}",
+        "tx": "https://finder.terraclassic.community/mainnet/tx/{}",
+        "validator": "https://finder.terraclassic.community/mainnet/validator/{}",
+        "block": "https://finder.terraclassic.community/mainnet/block/{}"
+      },
+      "channels": {
+        "juno-1": "channel-20",
+        "crescent-1": "channel-49",
+        "axelar-dojo-1": "channel-19",
+        "cosmoshub-4": "channel-2",
+        "osmosis-1": "channel-28"
+      },
+      "symbol": "LUNC",
+      "cmcSymbol": "LUNC"
+    },
+    "phoenix-1": {
+      "chainID": "phoenix-1",
+      "name": "Terra (LUNA)",
+      "networkType": "mainnet",
+      "lcd": "https://terra-lcd.publicnode.com",
+      "api": "https://terra-lcd.publicnode.com",
+      "rpc": "https://terra-rpc.publicnode.com:443",
+      "prefix": "terra",
+      "coinType": 330,
+      "baseAsset": "uluna",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "uluna": 28.325
+      },
+      "icon": "/station-assets/img/chains/Terra.svg",
+      "alliance": false,
+      "explorer": {
+        "address": "https://finder.terra.money/mainnet/address/{}",
+        "tx": "https://finder.terra.money/mainnet/tx/{}",
+        "validator": "https://finder.terra.money/mainnet/validator/{}",
+        "block": "https://finder.terra.money/mainnet/block/{}"
+      },
+      "channels": {
+        "akashnet-2": "channel-56",
+        "axelar-dojo-1": "channel-11",
+        "carbon-1": "channel-12",
+        "cheqd-mainnet-1": "channel-9",
+        "chihuahua-1": "channel-34",
+        "comdex-1": "channel-51",
+        "cosmoshub-4": "channel-339",
+        "crescent-1": "channel-27",
+        "mainnet-3": "channel-99",
+        "juno-1": "channel-86",
+        "kaiyo-1": "channel-5",
+        "mars-1": "channel-2",
+        "migaloo-1": "channel-0",
+        "osmosis-1": "channel-251",
+        "pacific-1": "channel-3",
+        "stafihub-1": "channel-9",
+        "stride-1": "channel-52"
+      },
+      "symbol": "LUNA",
+      "cmcSymbol": "LUNA"
+    },
+    "secret-4": {
+      "chainID": "secret-4",
+      "lcd": "https://rest.lavenderfive.com:443/secretnetwork",
+      "api": "https://rest.lavenderfive.com:443/secretnetwork",
+      "rpc": "https://rpc.lavenderfive.com:443/secretnetwork",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "uscrt": 0.1
+      },
+      "prefix": "secret",
+      "coinType": "529",
+      "baseAsset": "uscrt",
+      "name": "Secret Network",
+      "icon": "/station-assets/img/chains/Secret.png",
+      "alliance": false
+    },
+    "dungeon-1": {
+      "chainID": "dungeon-1",
+      "name": "Dungeon Chain",
+      "networkType": "mainnet",
+      "lcd": "https://api.dungeongames.io",
+      "api": "https://api.dungeongames.io",
+      "rpc": "https://rpc.dungeongames.io",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "udgn": 0.05
+      },
+      "prefix": "dungeon",
+      "coinType": 118,
+      "baseAsset": "udgn",
+      "icon": "/station-assets/img/chains/Dungeon.png",
+      "channels": {},
+      "explorer": {
+        "address": "https://ping.pub/Dungeonchain/account/{}",
+        "tx": "https://ping.pub/Dungeonchain/tx/{}",
+        "validator": "https://ping.pub/Dungeonchain/validator/{}",
+        "block": "https://ping.pub/Dungeonchain/block/{}"
+      }
+    },
+    "cosmoshub-4": {
+      "chainID": "cosmoshub-4",
+      "lcd": "https://lcd-cosmoshub.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "uatom": 0.025
+      },
+      "prefix": "cosmos",
+      "coinType": "118",
+      "baseAsset": "uatom",
+      "name": "Cosmos",
+      "icon": "/station-assets/img/chains/Cosmos.svg",
+      "channels": {
+        "axelar-dojo-1": "channel-293",
+        "carbon-1": "channel-342",
+        "akashnet-2": "channel-184",
+        "crescent-1": "channel-326",
+        "juno-1": "channel-207",
+        "kaiyo-1": "channel-343",
+        "osmosis-1": "channel-141",
+        "stride-1": "channel-391",
+        "pacific-1": "channel-584",
+        "archway-1": "channel-623",
+        "noble-1": "channel-536",
+        "stafihub-1": "channel-369",
+        "neutron-1": "channel-569",
+        "injective-1": "channel-220",
+        "kava_2222-10": "channel-277",
+        "Oraichain": "channel-301"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/cosmos/account/{}",
+        "tx": "https://www.mintscan.io/cosmos/txs/{}",
+        "validator": "https://www.mintscan.io/cosmos/validators/{}",
+        "block": "https://www.mintscan.io/cosmos/blocks/id/{}"
+      }
+    },
+    "osmosis-1": {
+      "chainID": "osmosis-1",
+      "lcd": "https://lcd-osmosis.tfl.foundation",
+      "gasAdjustment": 1.5,
+      "version": "0.46",
+      "gasPrices": {
+        "uosmo": 0.025
+      },
+      "prefix": "osmo",
+      "coinType": "118",
+      "baseAsset": "uosmo",
+      "name": "Osmosis",
+      "icon": "/station-assets/img/chains/Osmosis.svg",
+      "channels": {
+        "axelar-dojo-1": "channel-208",
+        "carbon-1": "channel-188",
+        "akashnet-2": "channel-1",
+        "cheqd-mainnet-1": "channel-108",
+        "chihuahua-1": "channel-113",
+        "comdex-1": "channel-87",
+        "cosmoshub-4": "channel-0",
+        "crescent-1": "channel-297",
+        "mainnet-3": "channel-181",
+        "juno-1": "channel-42",
+        "kaiyo-1": "channel-259",
+        "migaloo-1": "channel-642",
+        "stride-1": "channel-326",
+        "archway-1": "channel-1429",
+        "neutron-1": "channel-874",
+        "noble-1": "channel-750",
+        "pacific-1": "channel-782",
+        "injective-1": "channel-122",
+        "celestia": "channel-6994",
+        "dydx-mainnet-1": "channel-6787",
+        "stargaze-1": "channel-75",
+        "pirin-1": "channel-783",
+        "kava_2222-10": "channel-143",
+        "Oraichain": "channel-216"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/osmosis/account/{}",
+        "tx": "https://www.mintscan.io/osmosis/txs/{}",
+        "validator": "https://www.mintscan.io/osmosis/validators/{}",
+        "block": "https://www.mintscan.io/osmosis/blocks/id/{}"
+      }
+    },
+    "juno-1": {
+      "chainID": "juno-1",
+      "lcd": "https://lcd-juno.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "ujuno": 0.1
+      },
+      "prefix": "juno",
+      "coinType": "118",
+      "baseAsset": "ujuno",
+      "name": "Juno",
+      "icon": "/station-assets/img/chains/Juno.svg",
+      "channels": {
+        "axelar-dojo-1": "channel-71",
+        "akashnet-2": "channel-29",
+        "chihuahua-1": "channel-28",
+        "comdex-1": "channel-36",
+        "cosmoshub-4": "channel-1",
+        "crescent-1": "channel-81",
+        "osmosis-1": "channel-0",
+        "stride-1": "channel-139",
+        "archway-1": "channel-290",
+        "noble-1": "channel-224",
+        "stargaze-1": "channel-20"
+      },
+      "ics20Channels": {
+        "osmosis-1": [
+          {
+            "contract": "juno1v4887y83d6g28puzvt8cl0f3cdhd3y6y9mpysnsp3k8krdm7l6jqgm0rkn",
+            "channel": "channel-47",
+            "otherChannel": "channel-169"
+          }
+        ]
+      },
+      "icsChannels": {
+        "osmosis-1": {
+          "contract": "juno1v4887y83d6g28puzvt8cl0f3cdhd3y6y9mpysnsp3k8krdm7l6jqgm0rkn",
+          "channel": "channel-47",
+          "otherChannel": "channel-169"
+        }
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/juno/account/{}",
+        "tx": "https://www.mintscan.io/juno/txs/{}",
+        "validator": "https://www.mintscan.io/juno/validators/{}",
+        "block": "https://www.mintscan.io/juno/blocks/id/{}"
+      }
+    },
+    "akashnet-2": {
+      "chainID": "akashnet-2",
+      "lcd": "https://lcd-akash.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "uakt": 0.0025
+      },
+      "prefix": "akash",
+      "coinType": "118",
+      "baseAsset": "uakt",
+      "name": "Akash",
+      "icon": "/station-assets/img/chains/Akash.svg",
+      "channels": {
+        "cosmoshub-4": "channel-17",
+        "crescent-1": "channel-70",
+        "juno-1": "channel-35",
+        "kaiyo-1": "channel-63",
+        "osmosis-1": "channel-9",
+        "kava_2222-10": "channel-37"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/akash/account/{}",
+        "tx": "https://www.mintscan.io/akash/txs/{}",
+        "validator": "https://www.mintscan.io/akash/validators/{}",
+        "block": "https://www.mintscan.io/akash/blocks/id/{}"
+      }
+    },
+    "Oraichain": {
+      "chainID": "Oraichain",
+      "lcd": "https://lcd-oraichain.tfl.foundation",
+      "gasAdjustment": 1.5,
+      "gasPrices": {
+        "orai": 0.005
+      },
+      "prefix": "orai",
+      "coinType": "118",
+      "baseAsset": "orai",
+      "name": "Oraichain",
+      "icon": "/station-assets/img/chains/orai.svg",
+      "channels": {
+        "cosmoshub-4": "channel-15",
+        "injective-1": "channel-146",
+        "osmosis-1": "channel-13"
+      },
+      "explorer": {
+        "address": "https://scan.orai.io/account/{}",
+        "tx": "https://scan.orai.io/txs/{}",
+        "validator": "https://scan.orai.io/validators/{}",
+        "block": "https://scan.orai.io/blocks/{}"
+      }
+    },
+    "andromeda-1": {
+      "chainID": "andromeda-1",
+      "lcd": "https://andromeda.api.kjnodes.com",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "uandr": 0.25
+      },
+      "prefix": "andr",
+      "coinType": "118",
+      "baseAsset": "uandr",
+      "name": "Andromeda",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/Andromeda.png",
+      "channels": {
+        "archway-1": "channel-11"
+      },
+      "explorer": {
+        "address": "https://explorer.stavr.tech/Andromeda-Mainnet/account/{}",
+        "tx": "https://explorer.stavr.tech/Andromeda-Mainnet/tx/{}",
+        "validator": "https://explorer.stavr.tech/Andromeda-Mainnet/validators/{}",
+        "block": "https://explorer.stavr.tech/Andromeda-Mainnet/blocks/id/{}"
+      }
+    },
+    "archway-1": {
+      "chainID": "archway-1",
+      "lcd": "https://lcd-archway.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "aarch": 1500000000000
+      },
+      "prefix": "archway",
+      "coinType": "118",
+      "baseAsset": "aarch",
+      "name": "Archway",
+      "icon": "/station-assets/img/chains/Archway.png",
+      "channels": {
+        "axelar-dojo-1": "channel-13",
+        "cosmoshub-4": "channel-0",
+        "kaiyo-1": "channel-11",
+        "osmosis-1": "channel-1",
+        "juno-1": "channel-15",
+        "crescent-1": "channel-6",
+        "andromeda-1": "channel-97"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/archway/account/{}",
+        "tx": "https://www.mintscan.io/archway/txs/{}",
+        "validator": "https://www.mintscan.io/archway/validators/{}",
+        "block": "https://www.mintscan.io/archway/blocks/id/{}"
+      }
+    },
+    "axelar-dojo-1": {
+      "chainID": "axelar-dojo-1",
+      "lcd": "https://lcd-axelar.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "uaxl": 0.007
+      },
+      "prefix": "axelar",
+      "coinType": "118",
+      "baseAsset": "uaxl",
+      "name": "Axelar",
+      "icon": "/station-assets/img/chains/Axelar.svg",
+      "channels": {
+        "kaiyo-1": "channel-14",
+        "crescent-1": "channel-7",
+        "juno-1": "channel-4",
+        "osmosis-1": "channel-3",
+        "cosmoshub-4": "channel-2",
+        "carbon-1": "channel-37",
+        "comdex-1": "channel-31",
+        "stride-1": "channel-64",
+        "pacific-1": "channel-103",
+        "archway-1": "channel-111",
+        "neutron-1": "channel-78",
+        "injective-1": "channel-10"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/axelar/account/{}",
+        "tx": "https://www.mintscan.io/axelar/txs/{}",
+        "validator": "https://www.mintscan.io/axelar/validators/{}",
+        "block": "https://www.mintscan.io/axelar/blocks/id/{}"
+      }
+    },
+    "bitcoin-mainnet": {
+      "chainID": "bitcoin-mainnet",
+      "prefix": "bc",
+      "coinType": "0",
+      "baseAsset": "btc",
+      "name": "Bitcoin",
+      "icon": "/station-assets/img/chains/Bitcoin.svg",
+      "chainNamespace": "bip122",
+      "caip2": "bip122:000000000019d6689c085ae165831e93",
+      "explorer": {
+        "address": "https://mempool.space/address/{}",
+        "tx": "https://mempool.space/tx/{}",
+        "block": "https://mempool.space/block/{}"
+      }
+    },
+    "carbon-1": {
+      "chainID": "carbon-1",
+      "lcd": "https://lcd-carbon.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "swth": 1000
+      },
+      "prefix": "swth",
+      "coinType": "118",
+      "baseAsset": "swth",
+      "name": "Carbon",
+      "icon": "/station-assets/img/chains/Carbon.svg",
+      "alliance": true,
+      "version": "0.46",
+      "channels": {
+        "axelar-dojo-1": "channel-7",
+        "stride-1": "channel-8",
+        "cosmoshub-4": "channel-3",
+        "kaiyo-1": "channel-9",
+        "osmosis-1": "channel-0",
+        "stafihub-1": "channel-13",
+        "stargaze-1": "channel-15"
+      },
+      "explorer": {
+        "address": "https://scan.carbon.network/account/{}?net=main",
+        "tx": "https://scan.carbon.network/transaction/{}?net=main",
+        "validator": "https://scan.carbon.network/validator/{}?net=main",
+        "block": "https://scan.carbon.network/block/{}?net=main"
+      }
+    },
+    "celestia": {
+      "chainID": "celestia",
+      "lcd": "https://lcd-celestia.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "utia": 0.02
+      },
+      "prefix": "celestia",
+      "coinType": "118",
+      "baseAsset": "utia",
+      "name": "Celestia",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/Celestia.svg",
+      "channels": {
+        "osmosis-1": "channel-2",
+        "kava_2222-10": "channel-13"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/celestia/account/{}",
+        "tx": "https://www.mintscan.io/celestia/txs/{}",
+        "validator": "https://www.mintscan.io/celestia/validators/{}",
+        "block": "https://www.mintscan.io/celestia/blocks/id/{}"
+      }
+    },
+    "cheqd-mainnet-1": {
+      "chainID": "cheqd-mainnet-1",
+      "lcd": "https://lcd-cheqd.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "ncheq": 75
+      },
+      "prefix": "cheqd",
+      "coinType": "118",
+      "baseAsset": "ncheq",
+      "name": "Cheqd",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/Cheqd.svg",
+      "channels": {
+        "osmosis-1": "channel-0"
+      },
+      "explorer": {
+        "address": "https://explorer.cheqd.io/accounts/{}",
+        "tx": "https://explorer.cheqd.io/transactions/{}",
+        "validator": "https://explorer.cheqd.io/validators/{}",
+        "block": "https://explorer.cheqd.io/blocks/{}"
+      }
+    },
+    "chihuahua-1": {
+      "chainID": "chihuahua-1",
+      "lcd": "https://lcd-chihuahua.tfl.foundation",
+      "gasAdjustment": 2,
+      "gasPrices": {
+        "uhuahua": 1250
+      },
+      "prefix": "chihuahua",
+      "coinType": "118",
+      "baseAsset": "uhuahua",
+      "name": "Chihuahua",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/Huahua.png",
+      "channels": {
+        "juno-1": "channel-11",
+        "migaloo-1": "channel-39",
+        "osmosis-1": "channel-7",
+        "stafihub-1": "channel-25"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/chihuahua/account/{}",
+        "tx": "https://www.mintscan.io/chihuahua/txs/{}",
+        "validator": "https://www.mintscan.io/chihuahua/validators/{}",
+        "block": "https://www.mintscan.io/chihuahua/blocks/id/{}"
+      }
+    },
+    "comdex-1": {
+      "chainID": "comdex-1",
+      "lcd": "https://lcd-comdex.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "ucmdx": 0.025
+      },
+      "prefix": "comdex",
+      "coinType": "118",
+      "baseAsset": "ucmdx",
+      "name": "Comdex",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/Comdex.svg",
+      "channels": {
+        "axelar-dojo-1": "channel-34",
+        "crescent-1": "channel-26",
+        "juno-1": "channel-18",
+        "migaloo-1": "channel-63",
+        "osmosis-1": "channel-1",
+        "stride-1": "channel-45"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/comdex/account/{}",
+        "tx": "https://www.mintscan.io/comdex/txs/{}",
+        "validator": "https://www.mintscan.io/comdex/validators/{}",
+        "block": "https://www.mintscan.io/comdex/blocks/id/{}"
+      }
+    },
+    "crescent-1": {
+      "chainID": "crescent-1",
+      "lcd": "https://lcd-crescent.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "ucre": 0.025
+      },
+      "prefix": "cre",
+      "coinType": "118",
+      "baseAsset": "ucre",
+      "name": "Crescent",
+      "icon": "/station-assets/img/chains/Crescent.svg",
+      "channels": {
+        "axelar-dojo-1": "channel-4",
+        "akashnet-2": "channel-44",
+        "comdex-1": "channel-49",
+        "cosmoshub-4": "channel-1",
+        "juno-1": "channel-3",
+        "kaiyo-1": "channel-42",
+        "osmosis-1": "channel-9",
+        "stride-1": "channel-29",
+        "archway-1": "channel-65",
+        "noble-1": "channel-38",
+        "injective-1": "channel-23",
+        "stargaze-1": "channel-21"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/crescent/account/{}",
+        "tx": "https://www.mintscan.io/crescent/txs/{}",
+        "validator": "https://www.mintscan.io/crescent/validators/{}",
+        "block": "https://www.mintscan.io/crescent/blocks/id/{}"
+      }
+    },
+    "dydx-mainnet-1": {
+      "chainID": "dydx-mainnet-1",
+      "lcd": "https://lcd-dydx.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "adydx": 12500000000
+      },
+      "prefix": "dydx",
+      "coinType": "118",
+      "baseAsset": "adydx",
+      "name": "dYdX Protocol",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/dydx.svg",
+      "channels": {
+        "kaiyo-1": "channel-5",
+        "noble-1": "channel-0",
+        "osmosis-1": "channel-3",
+        "stride-1": "channel-1",
+        "kava_2222-10": "channel-7"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/dydx/account/{}",
+        "tx": "https://www.mintscan.io/dydx/txs/{}",
+        "validator": "https://www.mintscan.io/dydx/validators/{}",
+        "block": "https://www.mintscan.io/dydx/blocks/id/{}"
+      }
+    },
+    "ethereum-mainnet": {
+      "chainID": "ethereum-mainnet",
+      "api": "https://ethereum.publicnode.com",
+      "rpc": "https://ethereum.publicnode.com",
+      "prefix": "0x",
+      "coinType": "60",
+      "baseAsset": "eth",
+      "name": "Ethereum",
+      "icon": "/station-assets/img/chains/Ethereum.svg",
+      "evm": true,
+      "chainNamespace": "eip155",
+      "caip2": "eip155:1",
+      "explorer": {
+        "address": "https://etherscan.io/address/{}",
+        "tx": "https://etherscan.io/tx/{}",
+        "block": "https://etherscan.io/block/{}"
+      }
+    },
+    "injective-1": {
+      "chainID": "injective-1",
+      "lcd": "https://lcd-injective.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "inj": 1000000000
+      },
+      "prefix": "inj",
+      "coinType": "60",
+      "baseAsset": "inj",
+      "name": "Injective",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/Injective.svg",
+      "channels": {
+        "axelar-dojo-1": "channel-84",
+        "cosmoshub-4": "channel-1",
+        "crescent-1": "channel-90",
+        "migaloo-1": "channel-102",
+        "osmosis-1": "channel-8",
+        "stride-1": "channel-89",
+        "kaiyo-1": "channel-98",
+        "kava_2222-10": "channel-143",
+        "Oraichain": "channel-147"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/injective/account/{}",
+        "tx": "https://www.mintscan.io/injective/txs/{}",
+        "validator": "https://www.mintscan.io/injective/validators/{}",
+        "block": "https://www.mintscan.io/injective/blocks/id/{}"
+      }
+    },
+    "kaiyo-1": {
+      "chainID": "kaiyo-1",
+      "lcd": "https://lcd-kujira.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "version": "0.46",
+      "gasPrices": {
+        "ukuji": 0.0051,
+        "ibc/DA59C009A0B3B95E0549E6BF7B075C8239285989FF457A8EDDBB56F10B2A6986": 0.02243,
+        "ibc/295548A78785A1007F232DE286149A6FF512F180AF5657780FC89C009E2C348F": 0.01785,
+        "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2": 0.00193,
+        "ibc/47BD209179859CDE4A2806763D7189B6E6FE13A17880FE2B42DE1E6C1E329E23": 0.02692,
+        "factory/kujira1643jxg8wasy5cfcn7xm8rd742yeazcksqlg4d7/umnta": 0.02711,
+        "factory/kujira1qk00h5atutpsv900x202pxx42npjr9thg58dnqpa72f2p7m2luase444a7/uusk": 0.01779
+      },
+      "prefix": "kujira",
+      "coinType": "118",
+      "baseAsset": "ukuji",
+      "name": "Kujira",
+      "icon": "/station-assets/img/chains/Kujira.png",
+      "channels": {
+        "axelar-dojo-1": "channel-9",
+        "carbon-1": "channel-46",
+        "akashnet-2": "channel-64",
+        "cosmoshub-4": "channel-0",
+        "crescent-1": "channel-67",
+        "migaloo-1": "channel-58",
+        "osmosis-1": "channel-3",
+        "stride-1": "channel-35",
+        "archway-1": "channel-99",
+        "noble-1": "channel-62",
+        "stafihub-1": "channel-63",
+        "neutron-1": "channel-75",
+        "injective-1": "channel-54",
+        "dydx-mainnet-1": "channel-118",
+        "stargaze-1": "channel-7",
+        "kava_2222-10": "channel-95"
+      },
+      "alliance": true,
+      "explorer": {
+        "address": "https://finder.kujira.network/kaiyo-1/address/{}",
+        "tx": "https://finder.kujira.network/kaiyo-1/tx/{}",
+        "validator": "https://blue.kujira.network/stake/{}",
+        "block": "https://finder.kujira.network/kaiyo-1/block/{}"
+      }
+    },
+    "kava_2222-10": {
+      "chainID": "kava_2222-10",
+      "lcd": "https://lcd-kava.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "ukava": 0.1
+      },
+      "prefix": "kava",
+      "coinType": "459",
+      "baseAsset": "ukava",
+      "name": "Kava",
+      "icon": "/station-assets/img/chains/Kava.svg",
+      "version": "0.46",
+      "channels": {
+        "celestia": "channel-140",
+        "cosmoshub-4": "channel-0",
+        "dydx-mainnet-1": "channel-137",
+        "injective-1": "channel-122",
+        "kaiyo-1": "channel-116",
+        "migaloo-1": "channel-120",
+        "neutron-1": "channel-136",
+        "osmosis-1": "channel-1",
+        "pacific-1": "channel-132",
+        "akashnet-2": "channel-5"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/kava/account/{}",
+        "tx": "https://www.mintscan.io/kava/txs/{}",
+        "validator": "https://www.mintscan.io/kava/validators/{}",
+        "block": "https://www.mintscan.io/kava/blocks/id/{}"
+      }
+    },
+    "mainnet-3": {
+      "chainID": "mainnet-3",
+      "lcd": "https://lcd-decentr.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "udec": 0.025
+      },
+      "prefix": "decentr",
+      "coinType": "118",
+      "baseAsset": "udec",
+      "name": "Decentr",
+      "icon": "/station-assets/img/chains/Decentr.svg",
+      "channels": {
+        "osmosis-1": "channel-1"
+      },
+      "explorer": {
+        "address": "https://ping.pub/decentr/account/{}",
+        "tx": "https://ping.pub/decentr/tx/{}",
+        "validator": "https://ping.pub/decentr/validators/{}",
+        "block": "https://ping.pub/decentr/blocks/id/{}"
+      }
+    },
+    "migaloo-1": {
+      "chainID": "migaloo-1",
+      "lcd": "https://lcd-migaloo.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "uwhale": 2
+      },
+      "prefix": "migaloo",
+      "coinType": "118",
+      "baseAsset": "uwhale",
+      "name": "Migaloo",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/Migaloo.svg",
+      "alliance": true,
+      "channels": {
+        "chihuahua-1": "channel-10",
+        "comdex-1": "channel-12",
+        "kaiyo-1": "channel-8",
+        "osmosis-1": "channel-5",
+        "pacific-1": "channel-52",
+        "injective-1": "channel-3",
+        "noble-1": "channel-60",
+        "kava_2222-10": "channel-48"
+      },
+      "explorer": {
+        "address": "https://ping.pub/Migaloo/account/{}",
+        "tx": "https://ping.pub/Migaloo/tx/{}",
+        "validator": "https://ping.pub/Migaloo/staking/{}",
+        "block": "https://ping.pub/Migaloo/block/{}"
+      }
+    },
+    "neutron-1": {
+      "chainID": "neutron-1",
+      "lcd": "https://lcd-neutron.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "untrn": 0.0053,
+        "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9": 0.0008,
+        "ibc/F082B65C88E4B6D5EF1DB243CDA1D331D002759E938A0F5CD3FFDC5D53B3E349": 0.008,
+        "factory/neutron1ug740qrkquxzrk2hh29qrlx3sktkfml3je7juusc2te7xmvsscns0n2wry/wstETH": 2903231.6597
+      },
+      "prefix": "neutron",
+      "coinType": "118",
+      "baseAsset": "untrn",
+      "name": "Neutron",
+      "icon": "/station-assets/img/chains/Neutron.png",
+      "disabledModules": [
+        "staking",
+        "gov"
+      ],
+      "channels": {
+        "osmosis-1": "channel-10",
+        "stride-1": "channel-8",
+        "axelar-dojo-1": "channel-2",
+        "cosmoshub-4": "channel-1",
+        "kaiyo-1": "channel-3",
+        "stargaze-1": "channel-18",
+        "kava_2222-10": "channel-36",
+        "pirin-1": "channel-44"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/neutron/account/{}",
+        "tx": "https://www.mintscan.io/neutron/tx/{}",
+        "validator": "https://www.mintscan.io/neutron/validators/{}",
+        "block": "https://www.mintscan.io/neutron/blocks/id/{}"
+      }
+    },
+    "noble-1": {
+      "chainID": "noble-1",
+      "lcd": "https://lcd-noble.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "uusdc": 0.1,
+        "ibc/EF48E6B1A1A19F47ECAEA62F5670C37C0580E86A9E88498B7E393EB6F49F33C0": 0.01
+      },
+      "prefix": "noble",
+      "coinType": "118",
+      "baseAsset": "uusdc",
+      "name": "Noble",
+      "disabledModules": [
+        "staking",
+        "gov"
+      ],
+      "icon": "/station-assets/img/chains/Noble.svg",
+      "channels": {
+        "migaloo-1": "channel-14",
+        "cosmoshub-4": "channel-4",
+        "crescent-1": "channel-0",
+        "juno-1": "channel-3",
+        "osmosis-1": "channel-1",
+        "kaiyo-1": "channel-2",
+        "dydx-mainnet-1": "channel-33",
+        "stargaze-1": "channel-11"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/noble/account/{}",
+        "tx": "https://www.mintscan.io/noble/txs/{}",
+        "validator": "https://www.mintscan.io/noble/validators/{}",
+        "block": "https://www.mintscan.io/noble/blocks/id/{}"
+      }
+    },
+    "pacific-1": {
+      "chainID": "pacific-1",
+      "lcd": "https://lcd-sei.tfl.foundation",
+      "gasAdjustment": 2,
+      "gasPrices": {
+        "usei": 0.1
+      },
+      "prefix": "sei",
+      "coinType": "118",
+      "baseAsset": "usei",
+      "name": "Sei",
+      "icon": "/station-assets/img/chains/sei.svg",
+      "channels": {
+        "osmosis-1": "channel-0",
+        "axelar-dojo-1": "channel-2",
+        "cosmoshub-4": "channel-1",
+        "migaloo-1": "channel-10",
+        "stride-1": "channel-11",
+        "kava_2222-10": "channel-18"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/sei/account/{}",
+        "tx": "https://www.mintscan.io/sei/txs/{}",
+        "validator": "https://www.mintscan.io/sei/validators/{}",
+        "block": "https://www.mintscan.io/sei/blocks/id/{}"
+      }
+    },
+    "pirin-1": {
+      "chainID": "pirin-1",
+      "lcd": "https://pirin-cl-arc.nolus.network:1317",
+      "gasAdjustment": 1.5,
+      "gasPrices": {
+        "unls": 0.025
+      },
+      "prefix": "nolus",
+      "coinType": "118",
+      "baseAsset": "unls",
+      "name": "Nolus",
+      "icon": "/station-assets/img/chains/Nolus.svg",
+      "channels": {
+        "osmosis-1": "channel-0",
+        "neutron-1": "channel-3839"
+      },
+      "explorer": {
+        "address": "https://ping.pub/nolus/account/{}",
+        "tx": "https://ping.pub/nolus/tx/{}",
+        "validator": "https://ping.pub/nolus/staking/{}",
+        "block": "https://ping.pub/nolus/block/{}"
+      }
+    },
+    "pryzm-1": {
+      "chainID": "pryzm-1",
+      "lcd": "https://api.pryzm.zone",
+      "gasAdjustment": 1.6,
+      "gasPrices": {
+        "upryzm": 0.01
+      },
+      "prefix": "pryzm",
+      "coinType": "118",
+      "baseAsset": "upryzm",
+      "name": "Pryzm",
+      "icon": "/station-assets/img/chains/Pryzm.svg",
+      "alliance": true,
+      "explorer": {
+        "address": "https://chainsco.pe/pryzm/address/{}",
+        "tx": "https://chainsco.pe/pryzm/tx/{}",
+        "validator": "https://chainsco.pe/pryzm/validator/{}",
+        "block": "https://chainsco.pe/pryzm/block/{}"
+      }
+    },
+    "solana-mainnet": {
+      "chainID": "solana-mainnet",
+      "api": "https://api.mainnet-beta.solana.com",
+      "rpc": "https://api.mainnet-beta.solana.com",
+      "prefix": "sol",
+      "coinType": "501",
+      "baseAsset": "sol",
+      "name": "Solana",
+      "icon": "/station-assets/img/chains/Solana.svg",
+      "chainNamespace": "solana",
+      "explorer": {
+        "address": "https://solscan.io/account/{}",
+        "tx": "https://solscan.io/tx/{}",
+        "block": "https://solscan.io/block/{}"
+      }
+    },
+    "stafihub-1": {
+      "chainID": "stafihub-1",
+      "lcd": "https://lcd-stafihub.tfl.foundation",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "ufis": 0.025
+      },
+      "prefix": "stafi",
+      "coinType": "118",
+      "baseAsset": "ufis",
+      "name": "StaFiHub",
+      "disabledModules": [
+        "staking"
+      ],
+      "icon": "/station-assets/img/chains/StaFiHub.png",
+      "channels": {
+        "cosmoshub-4": "channel-0",
+        "chihuahua-1": "channel-4",
+        "carbon-1": "channel-5",
+        "kaiyo-1": "channel-6"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/stafi/accounts/{}",
+        "tx": "https://www.mintscan.io/stafi/transactions/{}",
+        "validator": "https://www.mintscan.io/stafi/validators/{}",
+        "block": "https://www.mintscan.io/stafi/blocks/{}"
+      }
+    },
+    "stargaze-1": {
+      "chainID": "stargaze-1",
+      "lcd": "https://lcd-stargaze.tfl.foundation",
+      "gasAdjustment": 1.5,
+      "gasPrices": {
+        "ustars": 1.2
+      },
+      "prefix": "stars",
+      "coinType": "118",
+      "baseAsset": "ustars",
+      "name": "Stargaze",
+      "icon": "/station-assets/img/chains/Stargaze.png",
+      "channels": {
+        "carbon-1": "channel-123",
+        "crescent-1": "channel-51",
+        "juno-1": "channel-5",
+        "kaiyo-1": "channel-49",
+        "neutron-1": "channel-191",
+        "noble-1": "channel-204",
+        "osmosis-1": "channel-0",
+        "stride-1": "channel-106"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/stargaze/account/{}",
+        "tx": "https://www.mintscan.io/stargaze/txs/{}",
+        "validator": "https://www.mintscan.io/stargaze/validators/{}",
+        "block": "https://www.mintscan.io/stargaze/blocks/id/{}"
+      }
+    },
+    "stride-1": {
+      "chainID": "stride-1",
+      "lcd": "https://stride-fleet.main.stridenet.co/api",
+      "gasAdjustment": 1.75,
+      "gasPrices": {
+        "ustrd": 0.005
+      },
+      "prefix": "stride",
+      "coinType": "118",
+      "baseAsset": "ustrd",
+      "name": "Stride",
+      "version": "0.46",
+      "icon": "/station-assets/img/chains/Stride.png",
+      "channels": {
+        "axelar-dojo-1": "channel-69",
+        "carbon-1": "channel-47",
+        "comdex-1": "channel-49",
+        "cosmoshub-4": "channel-0",
+        "crescent-1": "channel-51",
+        "juno-1": "channel-24",
+        "kaiyo-1": "channel-18",
+        "osmosis-1": "channel-5",
+        "neutron-1": "channel-123",
+        "pacific-1": "channel-149",
+        "injective-1": "channel-6",
+        "dydx-mainnet-1": "channel-160",
+        "stargaze-1": "channel-19"
+      },
+      "explorer": {
+        "address": "https://www.mintscan.io/stride/account/{}",
+        "tx": "https://www.mintscan.io/stride/txs/{}",
+        "validator": "https://www.mintscan.io/stride/validators/{}",
+        "block": "https://www.mintscan.io/stride/blocks/id/{}"
+      }
+    }
+  },
+  "testnet": {}
+}

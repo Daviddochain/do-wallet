@@ -1,0 +1,67 @@
+module.exports = {
+  chainID: "comdex-1",
+
+  name: "Comdex",
+  networkType: "mainnet",
+
+  lcd: "/station-assets/api/lcd/comdex-1",
+  api: "/station-assets/api/lcd/comdex-1",
+  upstreamLcd: "https://comdex-api.polkachu.com",
+  upstreamApi: "https://comdex-api.polkachu.com",
+  rpc: "https://rpc.comdex.one",
+
+  gasAdjustment: 1.75,
+
+  gasPrices: {
+    ucmdx: "0.0025"
+  },
+
+  prefix: "comdex",
+
+  coinType: 118,
+
+  baseAsset: "ucmdx",
+
+  icon: "/img/chains/Comdex.svg",
+
+  channels: {
+    "phoenix-1": "channel-51",
+    "axelar-dojo-1": "channel-34",
+    "crescent-1": "channel-26",
+    "juno-1": "channel-18",
+    "migaloo-1": "channel-63",
+    "osmosis-1": "channel-1",
+    "stride-1": "channel-45"
+  },
+
+  explorer: {
+    address: "https://www.mintscan.io/comdex/account/{}",
+    tx: "https://www.mintscan.io/comdex/txs/{}",
+    validator: "https://www.mintscan.io/comdex/validators/{}",
+    block: "https://www.mintscan.io/comdex/blocks/id/{}"
+  },
+
+  tokens: [
+    {
+      token: "ucmdx",
+      symbol: "CMDX",
+      name: "Comdex",
+      icon: "/img/coins/Comdex.svg",
+      decimals: 6
+    },
+    {
+      token: "ucmst",
+      symbol: "CMST",
+      name: "Composite",
+      icon: "/img/coins/CMST.svg",
+      decimals: 6
+    },
+    {
+      token: "uharbor",
+      symbol: "HARBOR",
+      name: "Harbor",
+      icon: "/img/coins/Harbor.svg",
+      decimals: 6
+    }
+  ]
+};

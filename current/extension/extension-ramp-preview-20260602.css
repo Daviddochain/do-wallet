@@ -1,0 +1,27 @@
+.do-extension-ramp-button {
+  cursor: pointer;
+}
+
+.do-extension-ramp-row {
+  gap: 12px !important;
+}
+
+.do-extension-ramp-row.quick-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.do-extension-ramp-row > * {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+
+.do-extension-ramp-button h1,
+.do-extension-ramp-button h2,
+.do-extension-ramp-button h3,
+.do-extension-ramp-button strong,
+.do-extension-ramp-button span,
+.do-extension-ramp-button p {
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
+}

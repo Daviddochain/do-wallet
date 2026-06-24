@@ -1,0 +1,19 @@
+{
+  "files": {
+    "main.css": "/static/css/do-wallet-v2-styles.css",
+    "main.js": "/static/js/do-wallet-v2-main.js",
+    "runtime-before-main.js": "/static/js/do-wallet-v2-runtime-before-main.js",
+    "runtime-after-main.js": "/static/js/do-wallet-v2-runtime-after-main.js",
+    "index.html": "/index.html",
+    "version.json": "/version.json",
+    "manifest.json": "/manifest.json",
+    "static/js/do-wallet-v2-mfa-onboarding.js": "/static/js/do-wallet-v2-mfa-onboarding.js"
+  },
+  "entrypoints": [
+    "static/css/do-wallet-v2-styles.css",
+    "static/js/do-wallet-v2-runtime-before-main.js",
+    "static/js/do-wallet-v2-main.js",
+    "static/js/do-wallet-v2-mfa-onboarding.js",
+    "static/js/do-wallet-v2-runtime-after-main.js"
+  ]
+}

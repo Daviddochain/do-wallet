@@ -1,0 +1,208 @@
+.dochain-swap-redemption-host {
+  display: block;
+}
+
+.dochain-swap-redemption {
+  width: min(980px, 100%);
+  color: #fff;
+}
+
+.dochain-swap-header h1 {
+  margin: 0 0 34px;
+  color: #fff;
+  font-size: clamp(34px, 4.4vw, 54px);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.dochain-swap-card {
+  border: 1px solid rgba(168, 85, 247, .42);
+  border-radius: 8px;
+  background: #171220;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .22);
+}
+
+.dochain-swap-card-head {
+  margin-bottom: 22px;
+}
+
+.dochain-swap-card-head h2 {
+  margin: 0 0 10px;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.dochain-swap-card-head p {
+  margin: 0;
+  color: #d8b4fe;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.dochain-swap-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, .72fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.dochain-swap-form {
+  display: grid;
+  gap: 14px;
+}
+
+.dochain-swap-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.dochain-swap-form label span {
+  color: #e9d5ff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.dochain-swap-form input,
+.dochain-swap-form select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 48px;
+  border: 1px solid rgba(168, 85, 247, .7);
+  border-radius: 8px;
+  background: #07020f;
+  color: #fff;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.dochain-swap-form input:focus,
+.dochain-swap-form select:focus {
+  outline: 2px solid rgba(216, 180, 254, .28);
+  border-color: #d8b4fe;
+}
+
+.dochain-swap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.dochain-swap-primary {
+  min-height: 46px;
+  border: 1px solid #facc15;
+  border-radius: 8px;
+  background: #facc15;
+  color: #160d03;
+  padding: 0 18px;
+  font: inherit;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.dochain-swap-primary:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.dochain-swap-status {
+  min-height: 20px;
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.dochain-swap-error {
+  color: #fca5a5;
+}
+
+.dochain-swap-success {
+  color: #86efac;
+}
+
+.dochain-swap-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.dochain-swap-summary div {
+  min-height: 68px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 8px;
+  background: rgba(7, 2, 15, .68);
+  padding: 12px;
+}
+
+.dochain-swap-summary span {
+  display: block;
+  color: #c4b5fd;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.dochain-swap-summary strong {
+  display: block;
+  margin-top: 7px;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+}
+
+.dochain-swap-summary p {
+  margin: 0;
+  color: #fde68a;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.38;
+}
+
+.dochain-swap-contracts {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, .09);
+  padding-top: 16px;
+}
+
+.dochain-swap-contracts div {
+  display: grid;
+  gap: 5px;
+}
+
+.dochain-swap-contracts span {
+  color: #c4b5fd;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.dochain-swap-contracts code {
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 860px) {
+  .dochain-swap-card {
+    padding: 18px;
+  }
+
+  .dochain-swap-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dochain-swap-header h1 {
+    margin-bottom: 22px;
+  }
+}

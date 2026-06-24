@@ -1,0 +1,57 @@
+{
+  "name": "Do-Wallet",
+  "version": "2.0.0",
+  "date": "2026-06-24",
+  "build": "20260624SourceRuntime2",
+  "storagePolicy": "preserve-client-local-storage",
+  "activeTree": "source/frontend",
+  "styles": [
+    "do-wallet-v2-app.css",
+    "do-wallet-v2-onramper.css",
+    "do-wallet-v2-assets.css",
+    "do-wallet-v2-burn.css",
+    "do-wallet-v2-swap.css",
+    "do-wallet-v2-receive.css",
+    "do-wallet-v2-wallet-restore.css"
+  ],
+  "beforeMain": [
+    "do-wallet-v2-storage-guard.js",
+    "do-wallet-v2-branding.js",
+    "do-wallet-v2-runtime-guard.js",
+    "do-wallet-v2-import-merge-guard.js",
+    "do-wallet-v2-session-restore.js",
+    "do-wallet-v2-recovered-wallets.js",
+    "do-wallet-v2-connect-wallet-cleanup.js",
+    "do-wallet-v2-extension-authority.js",
+    "do-wallet-v2-network-compat.js",
+    "do-wallet-v2-wallet-priority.js",
+    "do-wallet-v2-native-do-asset.js",
+    "do-wallet-v2-governance-route-guard.js",
+    "do-wallet-v2-governance-chain-select.js",
+    "do-wallet-v2-chain-assets.js",
+    "do-wallet-v2-multichain-assets.js",
+    "do-wallet-v2-stake-snapshot.js",
+    "do-wallet-v2-receive-addresses.js",
+    "do-wallet-v2-quarantine-permissions.js",
+    "do-wallet-v2-mfa-approval.js"
+  ],
+  "main": "do-wallet-v2-main.js",
+  "afterMain": [
+    "do-wallet-v2-amount-decimal-guard.js",
+    "do-wallet-v2-validator-continuity.js",
+    "do-wallet-v2-broadcasting-video.js",
+    "do-wallet-v2-website-tx-approval.js",
+    "do-wallet-v2-validator-header.js",
+    "do-wallet-v2-hide-asset-contracts.js",
+    "do-wallet-v2-portfolio-group-panel.js",
+    "do-wallet-v2-burn-dodx.js",
+    "do-wallet-v2-swap-redemption.js",
+    "do-wallet-v2-onramper-config.js",
+    "do-wallet-v2-onramper-ramp.js",
+    "do-wallet-v2-markets-priority.js",
+    "do-wallet-v2-delete-extension-sync.js"
+  ],
+  "standaloneAfterMain": [
+    "do-wallet-v2-mfa-onboarding.js"
+  ]
+}

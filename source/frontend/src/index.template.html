@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="application-name" content="Do-Wallet" />
+    <meta name="Do-Wallet" content="Do-Wallet" />
+    <meta name="description" content="Do-Wallet is a web wallet for Do Chain and supported networks." />
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Do-Wallet" />
+    <meta name="twitter:description" content="Do-Wallet is a web wallet for Do Chain and supported networks." />
+    <meta name="twitter:site" content="@dochain" />
+    <meta name="twitter:creator" content="@dochain" />
+    <meta name="twitter:image" content="/do-logo.jpg" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" id="favicon" href="/do-logo.jpg" />
+    <title>Do-Wallet</title>
+    <script>
+      window.__DO_WALLET_SINGLE_PORTFOLIO_WRITER__ = "do-wallet-v2-multichain-assets";
+      window.__DO_WALLET_RECEIVE_CONTROLLER__ = "do-wallet-v2-receive-addresses";
+      (function () {
+        var resetVersion = "__BUILD__";
+        var resetKey = "do-wallet-browser-display-reset-version";
+        var explicitClear = {};
+        var protectedKeys = {
+          user: true,
+          keys: true,
+          "do-wallet-bridge-wallet": true,
+          "do-wallet-recovered-wallets.v1": true,
+          "do-wallet-selected-recovered-wallet.v1": true,
+          "do-wallet-extension-authority.v1": true
+        };
+        function shouldClearDisplayKey(key) {
+          if (!key || key === resetKey) return false;
+          if (explicitClear[key]) return true;
+          if (protectedKeys[key]) return false;
+          var lower = String(key).toLowerCase();
+          if (
+            lower.indexOf("seed") >= 0 ||
+            lower.indexOf("mnemonic") >= 0 ||
+            lower.indexOf("private") >= 0 ||
+            lower.indexOf("password") >= 0 ||
+            lower.indexOf("ledger") >= 0 ||
+            lower.indexOf("wallet") >= 0 ||
+            lower === "account" ||
+            lower === "keys"
+          ) {
+            return false;
+          }
+          return (
+            lower.indexOf("station-cache") >= 0 ||
+            lower.indexOf("panel-cache") >= 0 ||
+            lower.indexOf("asset-cache") >= 0
+          );
+        }
+        function clearStore(store) {
+          if (!store) return;
+          var keys = [];
+          for (var i = 0; i < store.length; i += 1) keys.push(store.key(i));
+          keys.forEach(function (key) {
+            if (shouldClearDisplayKey(key)) {
+              try {
+                store.removeItem(key);
+              } catch (error) {}
+            }
+          });
+        }
+        try {
+          if (window.localStorage && window.localStorage.getItem(resetKey) !== resetVersion) {
+            clearStore(window.localStorage);
+            window.localStorage.setItem(resetKey, resetVersion);
+          }
+          clearStore(window.sessionStorage);
+        } catch (error) {}
+      })();
+      if ("serviceWorker" in navigator) {
+        (function () {
+          var cacheResetKey = "do-wallet-cache-reset-version";
+          try {
+            if (window.localStorage && window.localStorage.getItem(cacheResetKey) === resetVersion) return;
+          } catch (error) {}
+          navigator.serviceWorker
+            .getRegistrations()
+            .then(function (registrations) {
+              registrations.forEach(function (registration) {
+                registration.unregister();
+              });
+              if ("caches" in window) {
+                return window.caches.keys().then(function (keys) {
+                  return Promise.all(
+                    keys.map(function (key) {
+                      return window.caches.delete(key);
+                    })
+                  );
+                });
+              }
+            })
+            .then(function () {
+              try {
+                if (window.localStorage) window.localStorage.setItem(cacheResetKey, resetVersion);
+              } catch (error) {}
+            })
+            .catch(function () {});
+        })();
+      }
+    </script>
+    <link rel="stylesheet" href="/static/css/do-wallet-v2-styles.css?v=__BUILD__" />
+  </head>
+  <body>
+    <div id="station"><div id="do-wallet"></div></div>
+    <script defer src="/static/js/do-wallet-v2-runtime-before-main.js?v=__BUILD__"></script>
+    <script defer src="/static/js/do-wallet-v2-main.js?v=__BUILD__"></script>
+__STANDALONE_AFTER_MAIN_SCRIPTS__
+    <script defer src="/static/js/do-wallet-v2-runtime-after-main.js?v=__BUILD__"></script>
+  </body>
+</html>

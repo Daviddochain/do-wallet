@@ -1,0 +1,248 @@
+/*
+  Compatibility stub.
+  The live wallet shell, page sizing, typography, and asset row layout are owned
+  by the main bundle and the scoped snapshot-row injector. This file remains so
+  older HTML links do not 404, but it must not redefine global wallet layout.
+*/
+
+.do-wallet-panel-supplement-row,
+.do-wallet-snapshot-row {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 46px !important;
+  margin: 5px 0 0 !important;
+  padding: 0 !important;
+  color: #fff !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  line-height: 1.12 !important;
+  overflow: hidden !important;
+}
+
+.do-wallet-panel-supplement-row img,
+.do-wallet-panel-supplement-row svg,
+.do-wallet-snapshot-row img,
+.do-wallet-snapshot-row svg {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  object-fit: cover !important;
+  position: static !important;
+  transform: none !important;
+}
+
+.do-wallet-panel-supplement-left,
+.do-wallet-snapshot-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+}
+
+.do-wallet-panel-supplement-left > span:last-child,
+.do-wallet-snapshot-left > span:last-child,
+.do-wallet-weth-left > div:last-child {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.do-wallet-panel-supplement-icon,
+.do-wallet-snapshot-icon,
+.do-wallet-weth-icon {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  flex: 0 0 24px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  font-size: 9px !important;
+}
+
+.do-wallet-panel-supplement-title,
+.do-wallet-snapshot-title,
+.do-wallet-weth-row strong {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.do-wallet-panel-supplement-title span:first-child,
+.do-wallet-snapshot-title span:first-child {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.do-wallet-panel-supplement-price,
+.do-wallet-snapshot-price,
+.do-wallet-panel-supplement-subtitle,
+.do-wallet-snapshot-subtitle,
+.do-wallet-panel-supplement-right small,
+.do-wallet-snapshot-right small,
+.do-wallet-weth-row small,
+.do-wallet-weth-right small {
+  color: #c4b8ee !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  line-height: 1.1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.do-wallet-panel-supplement-subtitle,
+.do-wallet-snapshot-subtitle {
+  display: block !important;
+  margin-top: 2px !important;
+  max-width: 185px !important;
+}
+
+.do-wallet-panel-supplement-right,
+.do-wallet-snapshot-right,
+.do-wallet-weth-right {
+  text-align: right !important;
+  white-space: nowrap !important;
+  min-width: 62px !important;
+  max-width: 42% !important;
+  flex: 0 0 auto !important;
+  overflow: hidden !important;
+}
+
+.do-wallet-panel-supplement-right strong,
+.do-wallet-snapshot-right strong,
+.do-wallet-weth-right strong {
+  display: block !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 760px) {
+  .do-wallet-panel-supplement-row,
+  .do-wallet-snapshot-row {
+    min-height: 44px !important;
+    gap: 7px !important;
+    margin-top: 5px !important;
+  }
+
+  .do-wallet-panel-supplement-title,
+  .do-wallet-snapshot-title,
+  .do-wallet-weth-row strong,
+  .do-wallet-panel-supplement-right strong,
+  .do-wallet-snapshot-right strong,
+  .do-wallet-weth-right strong {
+    font-size: 14px !important;
+  }
+}
+
+/*
+  The left Networks list is still rendered by the Station bundle. Custom chains
+  can arrive with the icon after the text, so keep the row order stable here.
+*/
+[class*="Nav_networkLink__"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+}
+
+[class*="Nav_networkLink__"] [class*="Nav_networkIcon__"],
+[class*="Nav_networkLink__"] [class*="Nav_networkIconPlaceholder__"],
+[class*="Nav_networkLink__"] img[src*="do-logo"],
+[class*="Nav_networkLink__"] img[src*="DoLogo"] {
+  order: -1 !important;
+  flex: 0 0 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  margin: 0 !important;
+  object-fit: contain !important;
+}
+
+[class*="Nav_networkLink__"] [class*="Nav_networkName__"] {
+  order: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* Keep narrow portfolio/detail drawers readable for long L2 token values. */
+.do-wallet-panel-supplement-row,
+.do-wallet-snapshot-row {
+  padding-right: 2px !important;
+}
+
+.do-wallet-panel-supplement-left,
+.do-wallet-snapshot-left,
+.do-wallet-weth-left {
+  flex: 1 1 44% !important;
+  max-width: 48% !important;
+}
+
+.do-wallet-panel-supplement-right,
+.do-wallet-snapshot-right,
+.do-wallet-weth-right {
+  flex: 1 1 52% !important;
+  max-width: 54% !important;
+  min-width: 112px !important;
+  overflow: visible !important;
+}
+
+.do-wallet-panel-supplement-right strong,
+.do-wallet-snapshot-right strong,
+.do-wallet-weth-right strong {
+  font-size: 13px !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+.do-wallet-panel-supplement-right small,
+.do-wallet-snapshot-right small,
+.do-wallet-weth-right small {
+  display: block !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  overflow-wrap: anywhere !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+}
+
+@media (max-width: 420px) {
+  .do-wallet-panel-supplement-right,
+  .do-wallet-snapshot-right,
+  .do-wallet-weth-right {
+    min-width: 124px !important;
+  }
+
+  .do-wallet-panel-supplement-right small,
+  .do-wallet-snapshot-right small,
+  .do-wallet-weth-right small {
+    font-size: 10px !important;
+    line-height: 1.15 !important;
+  }
+}

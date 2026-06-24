@@ -1,0 +1,67 @@
+Do-Wallet production release 2026-06-10 clean1
+
+2026-06-21 Do-Wallet v2 release candidate
+- Labels the active website as Do-Wallet v2 in metadata, manifest, title, and visible branding.
+- Preserves client localStorage wallet keys; no localStorage clear or wallet-key delete is introduced.
+- Keeps the active frontend/station-assets tree as the only deploy target for the live server.
+- Post-deploy hotfix: portfolio assets now hides whole legacy rows before drawing the v2 list, preventing the DO row/header from mixing with the replacement side-panel layout.
+- Clean server reinstall: active /opt/dochain-wallet/current is rebuilt from the local v2 bundle, old app-root archives are removed, and wallet app-shell/custom patch assets use cache-safe headers without clearing browser storage.
+
+Includes the live wallet fixes for:
+- Do-chain DO -> DODx burn redemption page at /burn-do
+- Terra Classic CW20 Cookie/Baked -> native DO/DODx swap redemption page at /swap
+- Receive address rendering for connected/imported wallet addresses
+- Do, Secret, Dungeon native chain/token configuration
+- Existing validator, MFA, WETH, network compatibility, and priority wallet scripts from the live bundle
+
+This release was promoted as a clean release directory rather than by editing /opt/dochain-wallet/current in place.
+
+clean2 update:
+- Direct /receive now renders the receive address page even when the compiled wallet fallback route would otherwise show 404.
+- Direct /burn-do now hides the compiled fallback route while the burn interface is open.
+
+clean3 update:
+- Bumped burn and receive asset query versions so browser caches load the corrected route behavior immediately.
+
+clean4 update:
+- Fixed direct /burn-do startup so cleanup does not redirect before the burn interface opens.
+
+clean5 update:
+- Direct /burn-do keeps the burn route stable after the compiled wallet redirects unknown routes.
+
+clean6 update:
+- Direct /receive renders outside the compiled wallet fallback and hides the 404 shell underneath.
+
+clean7 update:
+- Direct /receive always applies the standalone-route guard before checking whether address data changed.
+
+clean8 update:
+- Direct /receive hides every compiled wallet shell body child except the standalone receive page.
+
+clean9 update:
+- Corrected the standalone receive CSS exception to keep #dochain-receive-addresses-root visible.
+
+clean10 update:
+- Hardened swap amount validation so negative/non-finite/invalid values cannot reach transaction signing as NaN.
+
+clean11 update:
+- Rebuilt swap signer payload with explicit Amino/proto message forms and integer-string fee/gas/amount fields.
+- Added final serialized payload guard so NaN cannot be submitted to Do-Wallet.
+
+clean12 update:
+- Added explicit Terra Classic fee/gas fields to swap signer payload to avoid wallet-side NaN fee estimation.
+
+clean13 update:
+- Raised Terra Classic swap burn transaction fee from 10,000 uluna to 10,000,000 uluna so it satisfies columbus-5 minimum fee requirements.
+
+2026-06-10 clean14 latency and wallet switching pass
+- Throttled Do wallet priority shim from 5-second full polling to event-driven refresh with a 30-second visible safety check.
+- Cached receive-page wallet discovery and invalidated it on wallet bridge/storage events.
+- Fixed receive-page stale rendering when two wallets have the same address count.
+- Made swap sender/recipient fields refresh on wallet change while preserving user-entered amount/custom edits.
+- Debounced Burn DO launcher/nav MutationObserver and reduced fallback polling.
+
+2026-06-10 clean16 receive page list/navigation fix
+- Changed receive addresses from card grid to single-column list rows.
+- Added Back to wallet action on the standalone /receive route.
+- Cache-busted receive JS/CSS.

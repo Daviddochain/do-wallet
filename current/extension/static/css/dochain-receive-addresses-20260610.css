@@ -1,0 +1,168 @@
+html[data-dochain-receive-route="true"] #do-wallet {
+  display: none !important;
+}
+
+html[data-dochain-receive-route="true"] body > :not(#dochain-receive-addresses-root) {
+  display: none !important;
+}
+
+html[data-dochain-receive-route="true"] body {
+  background: #07020f;
+}
+
+html[data-dochain-receive-route="true"] .dochain-receive-addresses {
+  margin: 32px auto;
+  padding: 0 24px;
+}
+
+.dochain-receive-addresses {
+  width: min(1040px, 100%);
+  color: #fff;
+}
+
+.dochain-receive-addresses header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.dochain-receive-addresses h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.dochain-receive-addresses header p {
+  margin: 0;
+  color: #c4b5fd;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.dochain-receive-back {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(196, 181, 253, .55);
+  border-radius: 8px;
+  color: #fff;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 950;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dochain-receive-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.dochain-receive-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(168, 85, 247, .46);
+  border-radius: 8px;
+  background: #171220;
+  padding: 12px;
+}
+
+.dochain-receive-chain {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dochain-receive-chain span {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.dochain-receive-chain strong {
+  color: #c4b5fd;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.dochain-receive-row code {
+  display: block;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 8px;
+  background: #080411;
+  color: #fff;
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.dochain-receive-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.dochain-receive-actions button {
+  min-height: 38px;
+  border: 1px solid #facc15;
+  border-radius: 8px;
+  background: #facc15;
+  color: #170f04;
+  padding: 0 14px;
+  font: inherit;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.dochain-receive-empty {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(168, 85, 247, .42);
+  border-radius: 8px;
+  background: #171220;
+  padding: 18px;
+}
+
+.dochain-receive-empty strong {
+  color: #fff;
+  font-size: 18px;
+}
+
+.dochain-receive-empty span {
+  color: #c4b5fd;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .dochain-receive-addresses header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dochain-receive-row {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .dochain-receive-actions {
+    justify-content: stretch;
+  }
+
+  .dochain-receive-actions button {
+    width: 100%;
+  }
+}
