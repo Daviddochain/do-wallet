@@ -819,7 +819,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     { chainID: "arbitrum-one", label: "Arbitrum One", coinType: "60", kind: "evm", path: "m/44'/60'/0'/0/0", export: "EVM private key" },
     { chainID: "optimism-mainnet", label: "Optimism", coinType: "60", kind: "evm", path: "m/44'/60'/0'/0/0", export: "EVM private key" },
     { chainID: "avalanche-c-chain", label: "Avalanche C-Chain", coinType: "60", kind: "evm", path: "m/44'/60'/0'/0/0", export: "EVM private key" },
-    { chainID: "bitcoin-mainnet", label: "Bitcoin", coinType: "0", kind: "bitcoin", prefix: "bc", path: "m/44'/0'/0'/0/0", export: "BTC WIF private key" },
+    { chainID: "bitcoin-mainnet", label: "Bitcoin", coinType: "0", kind: "bitcoin", prefix: "bc", path: "m/84'/0'/0'/0/0", export: "BTC WIF private key" },
     { chainID: "solana-mainnet", label: "Solana", coinType: "501", kind: "solana", path: "m/44'/501'/0'/0'", export: "SOL private key" },
     { chainID: "cardano-mainnet", label: "Cardano", coinType: "1815", kind: "cardano", prefix: "addr", path: "m/44'/1815'/0'/0/0", export: "Cardano account key" },
     { chainID: "tron-mainnet", label: "Tron", coinType: "195", kind: "tron", path: "m/44'/195'/0'/0/0", export: "TRX private key" },
@@ -1288,6 +1288,39 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     }
   }
 
+  function normalizedWalletIndex(wallet) {
+    var index = Number(wallet && wallet.index);
+    if (!Number.isFinite(index) || index < 0) return 0;
+    return Math.floor(index);
+  }
+
+  function bitcoinPathForIndex(index) {
+    return "m/84'/0'/0'/0/" + normalizedWalletIndex({ index: index });
+  }
+
+  function legacyBitcoinPathForIndex(index) {
+    return "m/44'/0'/0'/0/" + normalizedWalletIndex({ index: index });
+  }
+
+  function bitcoinAddressFromBip84Seed(seedHex, index) {
+    try {
+      if (!seedHex || typeof window.doWalletBitcoinBip84FromSeed !== "function") return "";
+      var derived = window.doWalletBitcoinBip84FromSeed(seedHex, index);
+      if (isObject(derived)) {
+        if (looksLikeAddress(text(derived.address))) return text(derived.address);
+        if (derived.hash) return bitcoinAddressFromStored(derived.hash);
+      }
+      if (typeof derived === "string") return bitcoinAddressFromStored(derived);
+    } catch (error) {}
+    return "";
+  }
+
+  function legacyBitcoinAddressForWallet(wallet) {
+    var words = cleanMap(wallet && wallet.words, false);
+    var legacyStored = words && (words["0-legacy-do-wallet"] || words["bitcoin-mainnet-legacy"] || words["bitcoin-legacy"]);
+    return legacyStored ? bitcoinAddressFromStored(legacyStored) : "";
+  }
+
   async function revealMasterSeedPhrase(options) {
     var name = text(options && options.name);
     var walletIndex = Number(options && options.walletIndex);
@@ -1320,21 +1353,46 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
       throw new Error("This wallet was saved before master phrase reveal was enabled. Re-import the seed phrase once to enable reveal.");
     }
     var mnemonic = await decryptWalletSecret(wallet.encryptedMnemonic, password);
+    var seedHex = "";
+    try {
+      seedHex = await decryptWalletSecret(wallet.encryptedSeed, password);
+    } catch (error) {}
     var normalizedWallet = completeWalletForAllChains(wallet);
+    var walletIndexForPaths = normalizedWalletIndex(normalizedWallet);
+    var chains = DERIVED_CHAIN_EXPORTS.map(function (chain) {
+      var isBitcoin = chain.chainID === "bitcoin-mainnet";
+      var path = isBitcoin ? bitcoinPathForIndex(walletIndexForPaths) : chain.path;
+      var address = isBitcoin
+        ? (bitcoinAddressFromBip84Seed(seedHex, walletIndexForPaths) || chainAddressForWallet(normalizedWallet, chain))
+        : chainAddressForWallet(normalizedWallet, chain);
+      return {
+        chainID: chain.chainID,
+        label: chain.label,
+        coinType: chain.coinType,
+        address: address,
+        derivationPath: path,
+        path: path
+      };
+    });
+    var legacyBitcoinAddress = legacyBitcoinAddressForWallet(normalizedWallet);
+    var primaryBitcoin = chains.filter(function (chain) {
+      return chain.chainID === "bitcoin-mainnet";
+    })[0];
+    if (legacyBitcoinAddress && (!primaryBitcoin || lower(primaryBitcoin.address) !== lower(legacyBitcoinAddress))) {
+      chains.push({
+        chainID: "bitcoin-mainnet-legacy-do-wallet",
+        label: "Bitcoin (legacy Do-Wallet path)",
+        coinType: "0",
+        address: legacyBitcoinAddress,
+        derivationPath: legacyBitcoinPathForIndex(walletIndexForPaths),
+        path: legacyBitcoinPathForIndex(walletIndexForPaths)
+      });
+    }
     return {
       type: "master-seed",
       walletName: walletName(normalizedWallet),
       mnemonic: mnemonic,
-      chains: DERIVED_CHAIN_EXPORTS.map(function (chain) {
-        return {
-          chainID: chain.chainID,
-          label: chain.label,
-          coinType: chain.coinType,
-          address: chainAddressForWallet(normalizedWallet, chain),
-          derivationPath: chain.path,
-          path: chain.path
-        };
-      })
+      chains: chains
     };
   }
 
@@ -1627,6 +1685,11 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     }
 
     var words = mergeMap(existing && existing.words, incoming && incoming.words, false);
+    var oldWords = cleanMap(existing && existing.words, false);
+    var newWords = cleanMap(incoming && incoming.words, false);
+    if (words && oldWords && newWords && oldWords["0"] && newWords["0"] && lower(oldWords["0"]) !== lower(newWords["0"]) && !words["0-legacy-do-wallet"]) {
+      words["0-legacy-do-wallet"] = oldWords["0"];
+    }
     if (words) merged.words = words;
     var pubkey = mergeMap(existing && existing.pubkey, incoming && incoming.pubkey, false);
     if (pubkey) merged.pubkey = pubkey;
