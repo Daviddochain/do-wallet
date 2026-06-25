@@ -2538,1977 +2538,19 @@ runModule("do-wallet-v2-hide-asset-contracts.js", function(){
 })();
 });
 
-runModule("do-wallet-v2-portfolio-group-panel.js", function(){
-(function () {
-  "use strict";
-
-  if (window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins5) return;
-  window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins5 = true;
-
-  var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
-  var STYLE_ID = "do-wallet-portfolio-group-panel-style";
-  var RENDER_ATTR = "data-do-wallet-grouped-assets-panel";
-  var TABLE_ROW_SELECTOR = ".DoPortfolioAssetRow20260528";
-  var TABLE_GROUP_ATTR = "data-do-wallet-l1-table-grouped";
-  var SIDE_LIST_SELECTOR = "[class*='AssetList_assetlist__list']";
-  var SIDE_GROUP_ATTR = "data-do-wallet-l1-side-grouped";
-  var SIDE_SIGNATURE_ATTR = "data-do-wallet-l1-side-signature";
-  var SIDE_PENDING_SIGNATURE_ATTR = "data-do-wallet-l1-side-pending-signature";
-  var SIDE_PENDING_AT_ATTR = "data-do-wallet-l1-side-pending-at";
-  var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
-  var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
-  var SIDE_STABLE_DELAY = 0;
-  var VERSION = "20260625SideL1DetailCoins5";
-  var lastSignature = "";
-  var renderTimer = null;
-  var tableTimer = null;
-  var rendering = false;
-  var tableApplying = false;
-  var sideApplying = false;
-  var observer = null;
-  var tableObserver = null;
-  var snapshotCacheRaw = "";
-  var snapshotCacheValue = null;
-  var groupRowsCacheRaw = "";
-  var groupRowsCacheValue = [];
-  var detailGroupsCacheRaw = "";
-  var detailGroupsCacheValue = [];
-  var sideDetailGroupsCache = {};
-
-  function setDebug(reason, details) {
-    window.__doWalletPortfolioGroupPanelDebug = Object.assign({
-      version: VERSION,
-      reason: reason,
-      checkedAt: new Date().toISOString()
-    }, details || {});
-  }
-
-  function readJSON(key, fallback) {
-    try {
-      var raw = window.localStorage && window.localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (error) {
-      return fallback;
-    }
-  }
-
-  function readSnapshot() {
-    try {
-      var raw = window.localStorage && window.localStorage.getItem(SNAPSHOT_KEY);
-      if (!raw) {
-        snapshotCacheRaw = "";
-        snapshotCacheValue = null;
-        return null;
-      }
-      if (raw === snapshotCacheRaw) return snapshotCacheValue;
-      snapshotCacheRaw = raw;
-      snapshotCacheValue = JSON.parse(raw);
-      groupRowsCacheRaw = "";
-      detailGroupsCacheRaw = "";
-      return snapshotCacheValue;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  function text(value) {
-    return value == null ? "" : String(value);
-  }
-
-  function normalizedText(value) {
-    return text(value).replace(/\s+/g, " ").trim();
-  }
-
-  function lowerText(value) {
-    return normalizedText(value).toLowerCase();
-  }
-
-  function isVisibleElement(node) {
-    if (!node || !node.getBoundingClientRect) return false;
-    var rect = node.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-    try {
-      var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
-      if (style && (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0)) return false;
-    } catch (error) {}
-    return true;
-  }
-
-  function symbolOf(asset) {
-    return text(asset && (asset.symbol || asset.tokenSymbol || asset.ticker || asset.denom || asset.name)).trim();
-  }
-
-  function upperSymbol(asset) {
-    return symbolOf(asset).toUpperCase();
-  }
-
-  function chainNameOf(asset) {
-    return text(asset && (asset.chainName || asset.chain || asset.networkName || asset.network || asset.chainID || asset.chainId)).trim();
-  }
-
-  function chainIdOf(asset) {
-    return text(asset && (asset.chainID || asset.chainId || asset.network || asset.chainName || asset.chain)).trim();
-  }
-
-  function denomOf(asset) {
-    return text(asset && (asset.denom || asset.token || asset.contract || asset.baseAsset || asset.id)).trim();
-  }
-
-  function amountOf(asset) {
-    return text(asset && (asset.displayAmount || asset.amountText || asset.amount || asset.balance || asset.quantity || asset.tokenAmount)).trim();
-  }
-
-  function valueOf(asset) {
-    var value = asset && (asset.valueText || asset.usdValueText || asset.fiatValueText || asset.valueFormatted);
-    if (value) return text(value);
-    var numeric = asset && (asset.value || asset.usdValue || asset.fiatValue);
-    if (numeric == null || numeric === "" || !isFinite(Number(numeric))) return "$-";
-    var number = Number(numeric);
-    if (number > 0 && number < 0.01) return "< $0.01";
-    return "$" + number.toLocaleString(undefined, { maximumFractionDigits: number >= 1 ? 2 : 8 });
-  }
-
-  function priceOf(asset) {
-    var value = asset && (asset.priceText || asset.usdPriceText || asset.priceFormatted);
-    if (value) return text(value);
-    var numeric = asset && (asset.price || asset.usdPrice);
-    if (numeric == null || numeric === "" || !isFinite(Number(numeric))) return "";
-    var number = Number(numeric);
-    if (number > 0 && number < 0.01) return "< $0.01";
-    return "$" + number.toLocaleString(undefined, { maximumFractionDigits: number >= 1 ? 4 : 10 });
-  }
-
-  function percentOf(asset) {
-    var value = asset && (asset.changeText || asset.priceChangeText || asset.percentText || asset.change24hText);
-    if (value) return text(value);
-    var numeric = asset && (asset.change24h || asset.percentChange24h || asset.priceChangePercent);
-    if (numeric == null || numeric === "" || !isFinite(Number(numeric))) return "";
-    return Number(numeric).toFixed(2) + "%";
-  }
-
-  function iconOf(asset, fallback) {
-    return text(asset && (asset.icon || asset.image || asset.logo || asset.logoURI || asset.logoUrl || asset.tokenIcon || asset.chainIcon)) || fallback || "";
-  }
-
-  function childrenOf(asset) {
-    if (!asset) return [];
-    var keys = ["childAssets", "expandedAssets", "subAssets", "tokens", "children"];
-    for (var i = 0; i < keys.length; i += 1) {
-      if (Array.isArray(asset[keys[i]]) && asset[keys[i]].length) return asset[keys[i]];
-    }
-    return [];
-  }
-
-  function assetArrays(snapshot) {
-    if (!snapshot) return [];
-    var keys = [
-      "groupedPortfolioAssets",
-      "chainGroupedAssets",
-      "sidePanelAssets",
-      "portfolioPanelAssets",
-      "portfolioAssets",
-      "detailPortfolioAssets",
-      "assets",
-      "spendableAssets",
-      "rawPortfolioAssets",
-      "flatPortfolioAssets",
-      "unGroupedPortfolioAssets",
-      "rawTokenPortfolioAssets",
-      "sourcePortfolioAssets",
-      "rawSpendableAssets",
-      "flatSpendableAssets",
-      "unGroupedSpendableAssets",
-      "rawTokenSpendableAssets",
-      "sourceSpendableAssets"
-    ];
-    var rows = [];
-    var seen = {};
-    for (var i = 0; i < keys.length; i += 1) {
-      if (!Array.isArray(snapshot[keys[i]])) continue;
-      snapshot[keys[i]].forEach(function (asset) {
-        var key = [
-          upperSymbol(asset),
-          chainIdOf(asset),
-          chainNameOf(asset),
-          amountOf(asset),
-          valueOf(asset),
-          childrenOf(asset).length
-        ].join("|");
-        if (seen[key]) return;
-        seen[key] = true;
-        rows.push(asset);
-      });
-    }
-    return rows;
-  }
-
-  function nativeSymbolFor(chainId, chainName) {
-    var id = text(chainId).toLowerCase();
-    var name = text(chainName).toLowerCase();
-    if (id === "do-chain" || id.indexOf("dochain") >= 0 || name.indexOf("do chain") >= 0 || name.indexOf("do-chain") >= 0 || name.indexOf("dochain") >= 0) return "DO";
-    if (id === "330" || id === "columbus-5" || id === "terra-classic" || id === "lunc" || name.indexOf("terra classic") >= 0) return "LUNC";
-    if (id === "phoenix-1" || name.indexOf("terra (luna)") >= 0) return "LUNA";
-    if (id === "osmosis-1" || name.indexOf("osmosis") >= 0) return "OSMO";
-    if (id === "secret-4" || name.indexOf("secret") >= 0) return "SCRT";
-    if (id === "dungeon-1" || name.indexOf("dungeon") >= 0) return "DGN";
-    if (id.indexOf("bitcoin") >= 0 || name.indexOf("bitcoin") >= 0) return "BTC";
-    if (id.indexOf("ethereum") >= 0 || name.indexOf("ethereum") >= 0) return "ETH";
-    if (id.indexOf("bnb") >= 0 || name.indexOf("bnb smart") >= 0 || name.indexOf("binance") >= 0) return "BNB";
-    if (id.indexOf("solana") >= 0 || name.indexOf("solana") >= 0) return "SOL";
-    if (id.indexOf("xrp") >= 0 || name.indexOf("xrp ledger") >= 0) return "XRP";
-    if (id.indexOf("avalanche") >= 0 || name.indexOf("avalanche") >= 0) return "AVAX";
-    if (id.indexOf("cosmos") >= 0 || name.indexOf("cosmos") >= 0) return "ATOM";
-    if (id.indexOf("akash") >= 0 || name.indexOf("akash") >= 0) return "AKT";
-    if (id.indexOf("polygon") >= 0 || name.indexOf("polygon") >= 0) return "MATIC";
-    if (id.indexOf("cardano") >= 0 || name.indexOf("cardano") >= 0) return "ADA";
-    if (id.indexOf("base") >= 0 || name.indexOf("base") >= 0) return "ETH";
-    if (id.indexOf("arbitrum") >= 0 || name.indexOf("arbitrum") >= 0) return "ETH";
-    if (id.indexOf("optimism") >= 0 || name.indexOf("optimism") >= 0) return "ETH";
-    return "";
-  }
-
-  var TERRA_CLASSIC_DETAIL_SYMBOLS = {
-    LUNC: true,
-    UST: true,
-    USTC: true,
-    KRT: true,
-    MYT: true,
-    IDT: true,
-    THT: true,
-    JPT: true,
-    EUT: true,
-    GBT: true,
-    SET: true,
-    NOT: true,
-    INT: true,
-    DKT: true,
-    PHT: true,
-    HKT: true,
-    MNT: true,
-    SGT: true,
-    AUT: true,
-    CAT: true,
-    CHT: true,
-    CNT: true,
-    SDT: true
-  };
-
-  var TERRA_CLASSIC_DETAIL_DENOMS = {
-    uluna: true,
-    uusd: true,
-    ukrw: true,
-    umyr: true,
-    uidr: true,
-    uthb: true,
-    ujpy: true,
-    ueur: true,
-    ugbp: true,
-    usek: true,
-    unok: true,
-    uinr: true,
-    udkk: true,
-    uphp: true,
-    uhkd: true,
-    umnt: true,
-    usgd: true,
-    uaud: true,
-    ucad: true,
-    uchf: true,
-    ucny: true,
-    usdr: true
-  };
-
-  function terraClassicDetailContext(asset) {
-    var id = lowerText(chainIdOf(asset));
-    var chainName = lowerText(chainNameOf(asset));
-    var name = lowerText(asset && asset.name);
-    var symbol = upperSymbol(asset);
-    var denom = lowerText(denomOf(asset));
-    if (id === "330" || id === "columbus-5" || id === "terra-classic" || id === "lunc") return true;
-    if (chainName.indexOf("terra classic") >= 0 || name.indexOf("terra classic") >= 0) return true;
-    if (TERRA_CLASSIC_DETAIL_DENOMS[denom] || denom.indexOf("terra1") === 0) return true;
-    if (!TERRA_CLASSIC_DETAIL_SYMBOLS[symbol]) return false;
-    if (!id || id === "terra" || id === "mainnet") return true;
-    return (
-      id === "330" ||
-      id === "columbus-5" ||
-      id === "terra-classic" ||
-      chainName.indexOf("terra") >= 0 ||
-      name.indexOf("terra") >= 0
-    );
-  }
-
-  function doChainDetailContext(asset) {
-    var id = lowerText(chainIdOf(asset));
-    var chainName = lowerText(chainNameOf(asset));
-    var name = lowerText(asset && asset.name);
-    var denom = lowerText(denomOf(asset));
-    return (
-      id === "888" ||
-      id === "do" ||
-      id === "do-chain" ||
-      id.indexOf("dochain") >= 0 ||
-      id.indexOf("do-chain") >= 0 ||
-      chainName.indexOf("do chain") >= 0 ||
-      name.indexOf("do chain") >= 0 ||
-      denom === "udo" ||
-      denom === "udodx" ||
-      denom === "dodx"
-    );
-  }
-
-  function chainGroupKeyOf(asset) {
-    if (terraClassicDetailContext(asset)) return "columbus-5";
-    if (doChainDetailContext(asset)) return "Do-Chain";
-    var chainId = chainIdOf(asset);
-    if (chainId) return chainId;
-    var chainName = chainNameOf(asset);
-    if (chainName) return chainName;
-    return upperSymbol(asset);
-  }
-
-  function mergeGroupRows(rows) {
-    var groups = [];
-    var byKey = {};
-
-    rows.forEach(function (row) {
-      if (!row) return;
-      var children = childrenOf(row);
-      if (children.length) {
-        var groupKey = chainGroupKeyOf(row);
-        byKey[groupKey] = byKey[groupKey] || {
-          parent: row,
-          children: [],
-          chainId: groupKey,
-          chainName: chainNameOf(row),
-          icon: iconOf(row),
-        };
-        byKey[groupKey].parent = byKey[groupKey].parent || row;
-        byKey[groupKey].children = byKey[groupKey].children.concat(children);
-        return;
-      }
-
-      var chainId = chainIdOf(row);
-      var chainName = chainNameOf(row);
-      var key = chainGroupKeyOf(row);
-      var native = nativeSymbolFor(key || chainId, chainName);
-      var symbol = upperSymbol(row);
-      var isNative = native && symbol === native;
-
-      byKey[key] = byKey[key] || {
-        parent: null,
-        children: [],
-        chainId: key || chainId,
-        chainName: chainName,
-        icon: iconOf(row),
-      };
-
-      if (isNative && !byKey[key].parent) {
-        byKey[key].parent = row;
-      } else if (isNative && byKey[key].parent) {
-        byKey[key].children.unshift(row);
-      } else {
-        byKey[key].children.push(row);
-      }
-    });
-
-    Object.keys(byKey).forEach(function (key) {
-      var group = byKey[key];
-      if (!group.parent && group.children.length) {
-        var native = nativeSymbolFor(group.chainId, group.chainName);
-        group.parent = {
-          symbol: native || upperSymbol(group.children[0]),
-          name: group.chainName || chainNameOf(group.children[0]) || symbolOf(group.children[0]),
-          chainName: group.chainName || chainNameOf(group.children[0]),
-          chainID: group.chainId || chainIdOf(group.children[0]),
-          icon: group.icon || iconOf(group.children[0]),
-          valueText: "",
-          displayAmount: "",
-          syntheticGroup: true
-        };
-      }
-      if (group.parent) groups.push(group);
-    });
-
-    groups.sort(function (a, b) {
-      var as = upperSymbol(a.parent);
-      var bs = upperSymbol(b.parent);
-      if (as === "DO") return -1;
-      if (bs === "DO") return 1;
-      return as.localeCompare(bs);
-    });
-
-    return groups;
-  }
-
-  function groupedRowsFromSnapshot(snapshot) {
-    if (!snapshot) return [];
-    if (snapshotCacheRaw && groupRowsCacheRaw === snapshotCacheRaw) return groupRowsCacheValue;
-    groupRowsCacheValue = mergeGroupRows(assetArrays(snapshot));
-    groupRowsCacheRaw = snapshotCacheRaw || signatureOf(groupRowsCacheValue);
-    return groupRowsCacheValue;
-  }
-
-  function rawDetailRowsFromSnapshot(snapshot) {
-    if (!snapshot) return [];
-    var keys = [
-      "rawPortfolioAssets",
-      "flatPortfolioAssets",
-      "unGroupedPortfolioAssets",
-      "sourcePortfolioAssets",
-      "rawTokenPortfolioAssets",
-      "rawSpendableAssets",
-      "flatSpendableAssets",
-      "unGroupedSpendableAssets",
-      "sourceSpendableAssets",
-      "rawTokenSpendableAssets",
-      "staking"
-    ];
-    var rows = [];
-    var seen = {};
-    keys.forEach(function (key) {
-      if (!Array.isArray(snapshot[key])) return;
-      snapshot[key].forEach(function (asset) {
-        if (!asset) return;
-        var rowKey = [
-          upperSymbol(asset),
-          lowerText(chainIdOf(asset)),
-          lowerText(chainNameOf(asset)),
-          lowerText(denomOf(asset)),
-          amountOf(asset),
-          valueOf(asset)
-        ].join("|");
-        if (seen[rowKey]) return;
-        seen[rowKey] = true;
-        rows.push(asset);
-      });
-    });
-    return rows;
-  }
-
-  function syntheticTerraClassicDetailGroup(snapshot) {
-    var rows = rawDetailRowsFromSnapshot(snapshot).filter(terraClassicDetailContext);
-    if (rows.length < 2) return null;
-    rows.sort(function (a, b) {
-      var as = upperSymbol(a);
-      var bs = upperSymbol(b);
-      if (as === "LUNC") return -1;
-      if (bs === "LUNC") return 1;
-      return (Number(b && (b.valueUsd || b.value || b.usdValue || 0)) - Number(a && (a.valueUsd || a.value || a.usdValue || 0))) ||
-        as.localeCompare(bs);
-    });
-    var parent = rows.filter(function (asset) {
-      var symbol = upperSymbol(asset);
-      var denom = lowerText(denomOf(asset));
-      return symbol === "LUNC" || denom === "uluna";
-    })[0] || rows[0];
-    parent = Object.assign({}, parent, {
-      chainID: "columbus-5",
-      chainName: "Terra Classic (LUNC)",
-      symbol: "LUNC",
-      name: "Terra Classic (LUNC)",
-      icon: iconOf(parent, "/station-assets/img/chains/TerraClassic.svg") || "/station-assets/img/chains/TerraClassic.svg",
-      childAssets: rows,
-      expandedAssets: rows,
-      subAssets: rows,
-      tokens: rows,
-      children: rows
-    });
-    return {
-      parent: parent,
-      children: rows,
-      chainId: "columbus-5",
-      chainName: "Terra Classic (LUNC)",
-      icon: iconOf(parent, "/station-assets/img/chains/TerraClassic.svg")
-    };
-  }
-
-  function capturedSideDetailGroups() {
-    var cache = sideDetailGroupsCache || {};
-    try {
-      if (window.__doWalletSideDetailGroups) cache = Object.assign({}, window.__doWalletSideDetailGroups, cache);
-    } catch (error) {}
-    var out = [];
-    var seen = {};
-    Object.keys(cache).forEach(function (key) {
-      var group = cache[key];
-      if (!group || !Array.isArray(group.children) || !group.children.length) return;
-      var groupKey = detailGroupKey(group);
-      if (seen[groupKey]) return;
-      seen[groupKey] = true;
-      out.push(group);
-    });
-    return out;
-  }
-
-  function sideDetailGroupsSignature() {
-    return capturedSideDetailGroups().map(function (group) {
-      return detailGroupKey(group) + ":" + detailChildrenFor(group).map(function (child) {
-        return assetIdentity(child);
-      }).join("|");
-    }).join("||");
-  }
-
-  function replaceOrAppendDetailGroup(groups, nextGroup) {
-    if (!nextGroup || !detailChildrenFor(nextGroup).length) return groups;
-    var nextKey = lowerText(nextGroup.chainId || chainGroupKeyOf(nextGroup.parent));
-    var nextSymbol = upperSymbol(nextGroup.parent);
-    var replaced = false;
-    groups = groups.map(function (group) {
-      var key = lowerText(group && (group.chainId || chainGroupKeyOf(group.parent)));
-      var symbol = upperSymbol(group && group.parent);
-      var sameTerra = (nextKey === "columbus-5" || nextSymbol === "LUNC") && (key === "columbus-5" || symbol === "LUNC");
-      var sameDo = (nextKey === "do-chain" || nextSymbol === "DO") && (key === "do-chain" || symbol === "DO");
-      if (sameTerra || sameDo || (nextKey && key === nextKey) || (nextSymbol && symbol === nextSymbol)) {
-        replaced = true;
-        return nextGroup;
-      }
-      return group;
-    });
-    if (!replaced) groups.push(nextGroup);
-    return groups;
-  }
-
-  function detailGroupsFromSnapshot(snapshot) {
-    if (!snapshot) return [];
-    var cacheKey = (snapshotCacheRaw || signatureOf(groupedRowsFromSnapshot(snapshot))) + "::" + sideDetailGroupsSignature();
-    if (detailGroupsCacheRaw === cacheKey) return detailGroupsCacheValue;
-    var groups = groupedRowsFromSnapshot(snapshot).slice();
-    var terraGroup = syntheticTerraClassicDetailGroup(snapshot);
-    groups = replaceOrAppendDetailGroup(groups, terraGroup);
-    capturedSideDetailGroups().forEach(function (group) {
-      groups = replaceOrAppendDetailGroup(groups, group);
-    });
-    detailGroupsCacheValue = groups.filter(function (group) {
-      return detailChildrenFor(group).length > 0;
-    });
-    detailGroupsCacheRaw = cacheKey;
-    return detailGroupsCacheValue;
-  }
-
-  function findRightPane() {
-    var all = Array.prototype.slice.call(document.querySelectorAll("aside, section, main, div"));
-    var best = null;
-    var bestScore = -1;
-    all.forEach(function (node) {
-      if (!isVisibleElement(node)) return;
-      var rect = node.getBoundingClientRect();
-      var content = lowerText(node.textContent || "");
-      var dashboardPane =
-        content.indexOf("do-wallet overview") >= 0 ||
-        content.indexOf("all spendable balances") >= 0;
-      if (rect.width < 260 || rect.height < 260) return;
-      if (rect.left < window.innerWidth * 0.35 && !dashboardPane) return;
-      var score = 0;
-      if (content.indexOf("portfolio value") >= 0 || content.indexOf("do-wallet overview") >= 0) score += 5;
-      if (content.indexOf("all spendable balances") >= 0) score += 5;
-      if (content.indexOf("assets") >= 0) score += 4;
-      if (content.indexOf("manage") >= 0) score += 3;
-      if (content.indexOf("send") >= 0 && content.indexOf("receive") >= 0) score += 2;
-      if (content.indexOf("connect a wallet to see your portfolio") >= 0) score += 1;
-      score -= Math.abs(rect.right - window.innerWidth) / 200;
-      if (score > bestScore) {
-        bestScore = score;
-        best = node;
-      }
-    });
-    return bestScore > 6 ? best : null;
-  }
-
-  function findCandidatePanes() {
-    var all = Array.prototype.slice.call(document.querySelectorAll("aside, section, main, div"));
-    var candidates = [];
-    all.forEach(function (node) {
-      if (!isVisibleElement(node)) return;
-      var rect = node.getBoundingClientRect();
-      var content = lowerText(node.textContent || "");
-      var dashboardPane =
-        content.indexOf("do-wallet overview") >= 0 ||
-        content.indexOf("all spendable balances") >= 0;
-      if (rect.width < 260 || rect.height < 160) return;
-      if (rect.left < window.innerWidth * 0.35 && !dashboardPane) return;
-      var score = 0;
-      if (content.indexOf("portfolio value") >= 0) score += 8;
-      if (content.indexOf("do-wallet overview") >= 0) score += 5;
-      if (content.indexOf("all spendable balances") >= 0) score += 5;
-      if (content.indexOf("assets") >= 0) score += 4;
-      if (content.indexOf("manage") >= 0) score += 3;
-      if (content.indexOf("send") >= 0 && content.indexOf("receive") >= 0) score += 2;
-      if (content.indexOf("connect a wallet to see your portfolio") >= 0) score += 1;
-      score -= Math.abs(rect.right - window.innerWidth) / 250;
-      if (score > 6) candidates.push({ node: node, score: score });
-    });
-    candidates.sort(function (a, b) { return b.score - a.score; });
-    return candidates.map(function (candidate) { return candidate.node; });
-  }
-
-  function findAssetsSection(pane) {
-    if (!pane) return null;
-    var currentPanel = pane.querySelector("[" + RENDER_ATTR + '="1"]');
-    if (currentPanel && currentPanel.parentElement) return currentPanel.parentElement;
-
-    var nodes = Array.prototype.slice.call(pane.querySelectorAll("section, div, aside"));
-    var labelMatches = [];
-    nodes.forEach(function (node) {
-      if (!isVisibleElement(node)) return;
-      var direct = Array.prototype.slice.call(node.childNodes).some(function (child) {
-        return child.nodeType === 3 && child.nodeValue && lowerText(child.nodeValue) === "assets";
-      });
-      var ownLabel = node.children.length === 0 && lowerText(node.textContent || "") === "assets";
-      var headingLabel = Array.prototype.slice.call(node.querySelectorAll("h1,h2,h3,h4,h5,h6,span,strong")).some(function (child) {
-        return lowerText(child.textContent || "") === "assets";
-      });
-      if (direct || ownLabel || headingLabel) {
-        labelMatches.push(node);
-      }
-    });
-
-    var best = null;
-    var bestScore = -1;
-    function consider(node) {
-      if (!isVisibleElement(node)) return;
-      var rect = node.getBoundingClientRect();
-      if (rect.width < 230 || rect.height < 130) return;
-      var content = lowerText(node.textContent || "");
-      var isDashboardAssets =
-        content.indexOf("assets") >= 0 &&
-        (
-          content.indexOf("all spendable balances") >= 0 ||
-          content.indexOf("no assets found") >= 0 ||
-          content.indexOf("positions") >= 0
-        ) &&
-        content.indexOf("unbonding assets") < 0 &&
-        content.indexOf("staked assets") < 0 &&
-        content.indexOf("total assets") < 0;
-      var isLegacyAssets = content.indexOf("assets") >= 0 && content.indexOf("manage") >= 0;
-      var isPortfolioValueAssets =
-        content.indexOf("portfolio value") >= 0 &&
-        content.indexOf("assets") >= 0 &&
-        (
-          content.indexOf("manage") >= 0 ||
-          content.indexOf("send") >= 0 ||
-          content.indexOf("receive") >= 0 ||
-          content.indexOf("positions") >= 0
-        );
-      if (!isDashboardAssets && !isLegacyAssets && !isPortfolioValueAssets) return;
-      if (content.indexOf("portfolio value") >= 0 && rect.height > 900 && !node.hasAttribute(RENDER_ATTR)) return;
-      var score = rect.top + Math.min(rect.height, 500) / 20;
-      if (isPortfolioValueAssets) score += 650;
-      if (isDashboardAssets) score += 500;
-      if (content.indexOf("all spendable balances") >= 0) score += 250;
-      if (isLegacyAssets) score += 100;
-      if (node.hasAttribute(RENDER_ATTR)) score += 1000;
-      if (score > bestScore) {
-        bestScore = score;
-        best = node;
-      }
-    }
-
-    consider(pane);
-
-    labelMatches.forEach(function (label) {
-      var node = label;
-      for (var depth = 0; node && node !== pane && depth < 8; depth += 1) {
-        consider(node);
-        node = node.parentElement;
-      }
-    });
-
-    if (best) return best;
-    nodes.forEach(consider);
-    return best;
-  }
-
-  function findAssetsSections() {
-    var sections = [];
-    var seen = [];
-    function add(section) {
-      if (!section) return;
-      for (var i = 0; i < seen.length; i += 1) {
-        if (seen[i] === section) return;
-        if (seen[i].contains && seen[i].contains(section)) return;
-        if (section.contains && section.contains(seen[i])) {
-          sections.splice(i, 1);
-          seen.splice(i, 1);
-          i -= 1;
-        }
-      }
-      seen.push(section);
-      sections.push(section);
-    }
-
-    Array.prototype.slice.call(document.querySelectorAll("[" + RENDER_ATTR + '="1"]')).forEach(function (panel) {
-      if (panel && panel.parentElement) add(panel.parentElement);
-    });
-
-    findCandidatePanes().forEach(function (pane) {
-      add(findAssetsSection(pane));
-    });
-
-    if (!sections.length) add(findAssetsSection(findRightPane()));
-    return sections;
-  }
-
-  function escapeHTML(value) {
-    return text(value).replace(/[&<>"']/g, function (char) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char];
-    });
-  }
-
-  function renderIcon(asset, groupClass) {
-    var icon = iconOf(asset);
-    var label = upperSymbol(asset).slice(0, 3) || "?";
-    if (!icon) return '<span class="' + groupClass + ' do-wallet-grouped-fallback-icon">' + escapeHTML(label) + "</span>";
-    return '<img class="' + groupClass + '" src="' + escapeHTML(icon) + '" alt="" loading="eager" decoding="async" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\';" /><span class="' + groupClass + ' do-wallet-grouped-fallback-icon" style="display:none">' + escapeHTML(label) + "</span>";
-  }
-
-  function rowHTML(asset, child) {
-    var symbol = symbolOf(asset);
-    var chain = chainNameOf(asset);
-    var price = priceOf(asset);
-    var pct = percentOf(asset);
-    var amount = amountOf(asset);
-    var value = valueOf(asset);
-    var iconClass = child ? "do-wallet-grouped-child-icon" : "do-wallet-grouped-icon";
-    return [
-      '<div class="do-wallet-grouped-row ' + (child ? "is-child" : "is-parent") + '">',
-      '  <div class="do-wallet-grouped-left">',
-      renderIcon(asset, iconClass),
-      '    <div class="do-wallet-grouped-meta">',
-      '      <div class="do-wallet-grouped-title"><span>' + escapeHTML(symbol) + '</span>' + (price ? '<small>' + escapeHTML(price) + "</small>" : "") + "</div>",
-      '      <div class="do-wallet-grouped-chain">' + escapeHTML(chain || symbol) + "</div>",
-      pct ? '      <div class="do-wallet-grouped-change ' + (pct.indexOf("-") >= 0 ? "negative" : "positive") + '">' + escapeHTML(pct) + "</div>" : "",
-      "    </div>",
-      "  </div>",
-      '  <div class="do-wallet-grouped-right">',
-      '    <strong>' + escapeHTML(value) + "</strong>",
-      '    <span>' + escapeHTML(amount ? amount + " " + symbol : "") + "</span>",
-      "  </div>",
-      "</div>"
-    ].join("");
-  }
-
-  function panelHTML(groups) {
-    var rows = [];
-    groups.forEach(function (group) {
-      rows.push('<div class="do-wallet-grouped-chain-block">');
-      rows.push(rowHTML(group.parent, false));
-      group.children.forEach(function (child) {
-        if (child === group.parent) return;
-        rows.push(rowHTML(child, true));
-      });
-      rows.push("</div>");
-    });
-    return [
-      '<div class="do-wallet-grouped-panel" ' + RENDER_ATTR + '="1">',
-      '  <div class="do-wallet-grouped-header"><h3>Assets</h3><button type="button" class="do-wallet-grouped-manage">Manage <span>≡+</span></button></div>',
-      '  <div class="do-wallet-grouped-list">' + rows.join("") + "</div>",
-      "</div>"
-    ].join("");
-  }
-
-  function assetIdentity(asset) {
-    return [
-      upperSymbol(asset),
-      normalizeGroupKey(chainGroupKeyOf(asset)),
-      normalizeGroupKey(denomOf(asset)),
-      amountOf(asset),
-      valueOf(asset)
-    ].join("|");
-  }
-
-  function sameDisplayedAsset(a, b) {
-    if (!a || !b) return false;
-    if (a === b) return true;
-    if (assetIdentity(a) === assetIdentity(b)) return true;
-    return upperSymbol(a) === upperSymbol(b) &&
-      normalizeGroupKey(chainGroupKeyOf(a)) === normalizeGroupKey(chainGroupKeyOf(b)) &&
-      amountOf(a) === amountOf(b);
-  }
-
-  function detailChildrenFor(group) {
-    var children = [];
-    var seen = {};
-    var parentSymbol = upperSymbol(group && group.parent);
-    var parentNative = nativeSymbolFor(group && group.chainId, group && group.chainName);
-    (group.children || []).forEach(function (child) {
-      if (!child || sameDisplayedAsset(group.parent, child)) return;
-      if (parentNative && parentSymbol && upperSymbol(child) === parentSymbol) return;
-      var key = assetIdentity(child);
-      if (seen[key]) return;
-      seen[key] = true;
-      children.push(child);
-    });
-    return children;
-  }
-
-  function detailGroupKey(group) {
-    return normalizeGroupKey([
-      group && (group.chainId || chainGroupKeyOf(group.parent)),
-      group && (group.chainName || chainNameOf(group.parent)),
-      group && upperSymbol(group.parent)
-    ].join("|"));
-  }
-
-  function detailSignature(group, children) {
-    return [
-      detailGroupKey(group),
-      children.map(function (child) { return assetIdentity(child); }).join(">")
-    ].join("::");
-  }
-
-  function detailCoinHTML(asset) {
-    var symbol = symbolOf(asset);
-    var chain = chainNameOf(asset);
-    var price = priceOf(asset);
-    var pct = percentOf(asset);
-    var amount = amountOf(asset);
-    var amountDisplay = amount ? (new RegExp("\\b" + symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(String(amount)) ? String(amount) : amount + " " + symbol) : "";
-    var value = valueOf(asset);
-    return [
-      '<div class="do-wallet-detail-l1-coin">',
-      '  <div class="do-wallet-detail-l1-coin-left">',
-      renderIcon(asset, "do-wallet-detail-l1-coin-icon"),
-      '    <div class="do-wallet-detail-l1-coin-meta">',
-      '      <div class="do-wallet-detail-l1-coin-title"><span>' + escapeHTML(symbol) + '</span>' + (price ? '<small>' + escapeHTML(price) + "</small>" : "") + "</div>",
-      pct ? '      <div class="do-wallet-detail-l1-coin-change ' + (pct.indexOf("-") >= 0 ? "negative" : "positive") + '">' + escapeHTML(pct) + "</div>" : '      <div class="do-wallet-detail-l1-coin-chain">' + escapeHTML(chain || symbol) + "</div>",
-      "    </div>",
-      "  </div>",
-      '  <div class="do-wallet-detail-l1-coin-right">',
-      '    <strong>' + escapeHTML(value) + "</strong>",
-      '    <span>' + escapeHTML(amountDisplay) + "</span>",
-      "  </div>",
-      "</div>"
-    ].join("");
-  }
-
-  function detailPanelHTML(group, children) {
-    return [
-      '<div class="do-wallet-detail-l1-assets" ' + DETAIL_PANEL_ATTR + '="1" ' + DETAIL_GROUP_ATTR + '="' + escapeHTML(detailGroupKey(group)) + '" data-do-wallet-l1-detail-signature="' + escapeHTML(detailSignature(group, children)) + '">',
-      '  <div class="do-wallet-detail-l1-assets-title">Coins</div>',
-      '  <div class="do-wallet-detail-l1-assets-list">' + children.map(detailCoinHTML).join("") + "</div>",
-      "</div>"
-    ].join("");
-  }
-
-  function findDetailPanes() {
-    var candidates = [];
-    Array.prototype.slice.call(document.querySelectorAll("aside, section, main, div")).forEach(function (node) {
-      if (!isVisibleElement(node)) return;
-      var rect = node.getBoundingClientRect();
-      if (rect.width < 260 || rect.height < 300) return;
-      var content = lowerText(node.textContent || "");
-      if (content.indexOf("chains") < 0) return;
-      if (content.indexOf("search for a chain") >= 0) return;
-      var score = 0;
-      if (content.indexOf("chains") >= 0) score += 10;
-      if (content.indexOf("send") >= 0 && content.indexOf("receive") >= 0) score += 5;
-      if (content.indexOf("buy / sell") >= 0 || content.indexOf("burn do") >= 0) score += 3;
-      if (rect.width <= 620) score += 5;
-      if (content.indexOf("portfolio value") >= 0) score -= 4;
-      score -= Math.abs(rect.right - window.innerWidth) / 220;
-      score -= Math.max(0, rect.width - 620) / 80;
-      if (score > 8) candidates.push({ node: node, score: score });
-    });
-    candidates.sort(function (a, b) {
-      if (b.score !== a.score) return b.score - a.score;
-      var ar = a.node.getBoundingClientRect();
-      var br = b.node.getBoundingClientRect();
-      return (ar.width * ar.height) - (br.width * br.height);
-    });
-    return candidates.length ? [candidates[0].node] : [];
-  }
-
-  function findDetailActionBar(pane) {
-    var best = null;
-    var bestArea = Infinity;
-    Array.prototype.slice.call(pane.querySelectorAll("footer, section, div")).forEach(function (node) {
-      if (!isVisibleElement(node) || node === pane) return;
-      var content = lowerText(node.textContent || "");
-      if (content.indexOf("send") < 0 || content.indexOf("receive") < 0) return;
-      var rect = node.getBoundingClientRect();
-      if (rect.height < 40 || rect.width < 160) return;
-      var area = rect.width * rect.height;
-      if (area < bestArea) {
-        best = node;
-        bestArea = area;
-      }
-    });
-    return best;
-  }
-
-  function findDetailChainsBlock(pane) {
-    var best = null;
-    var bestArea = Infinity;
-    Array.prototype.slice.call(pane.querySelectorAll("section, article, div")).forEach(function (node) {
-      if (!isVisibleElement(node) || node === pane) return;
-      if (node.querySelector && node.querySelector("[" + DETAIL_PANEL_ATTR + '="1"]')) return;
-      var content = lowerText(node.textContent || "");
-      if (content.indexOf("chains") < 0) return;
-      if (content.indexOf("search for a chain") >= 0) return;
-      if (content.indexOf("send") >= 0 && content.indexOf("receive") >= 0) return;
-      var rect = node.getBoundingClientRect();
-      if (rect.height < 50 || rect.width < 180) return;
-      var area = rect.width * rect.height;
-      if (area < bestArea) {
-        best = node;
-        bestArea = area;
-      }
-    });
-    return best;
-  }
-
-  function detailPanelAnchor(pane) {
-    var actionBar = findDetailActionBar(pane);
-    if (actionBar && actionBar.parentElement) return { mode: "before", node: actionBar };
-    var chainsBlock = findDetailChainsBlock(pane);
-    if (chainsBlock && chainsBlock.parentElement) return { mode: "after", node: chainsBlock };
-    return null;
-  }
-
-  function placeDetailPanel(pane, panel, anchor) {
-    if (!panel) return false;
-    if (anchor && anchor.node && anchor.node.parentElement) {
-      if (anchor.mode === "before") {
-        anchor.node.parentElement.insertBefore(panel, anchor.node);
-        return true;
-      }
-      anchor.node.parentElement.insertBefore(panel, anchor.node.nextSibling);
-      return true;
-    }
-    pane.appendChild(panel);
-    return true;
-  }
-
-  function selectedDetailGroup(groups, pane) {
-    var content = lowerText(pane.textContent || "");
-    var best = null;
-    var bestScore = -1;
-    groups.forEach(function (group) {
-      var children = detailChildrenFor(group);
-      if (!children.length) return;
-      var parent = group.parent;
-      var symbol = lowerText(symbolOf(parent));
-      var upper = upperSymbol(parent);
-      var chainName = lowerText(chainNameOf(parent) || group.chainName);
-      var chainId = lowerText(chainIdOf(parent) || group.chainId);
-      var parentName = lowerText(parent && parent.name);
-      var amount = lowerText(amountOf(parent));
-      var value = lowerText(valueOf(parent));
-      var score = 0;
-      if ((content.indexOf("terra classic") >= 0 || content.indexOf("lunc") >= 0) && (chainId === "columbus-5" || symbol === "lunc")) score += 30;
-      if ((content.indexOf("do chain") >= 0 || content.indexOf(" do") >= 0) && (chainId === "do-chain" || symbol === "do")) score += 30;
-      if (chainName && content.indexOf(chainName) >= 0) score += 12;
-      if (chainId && content.indexOf(chainId) >= 0) score += 8;
-      if (parentName && content.indexOf(parentName) >= 0) score += 12;
-      if (symbol && content.indexOf(symbol) >= 0) score += 5;
-      if (upper && content.indexOf((" " + upper).toLowerCase()) >= 0) score += 3;
-      if (amount && content.indexOf(amount) >= 0) score += 6;
-      if (value && value !== "$-" && content.indexOf(value.toLowerCase()) >= 0) score += 4;
-      children.forEach(function (child) {
-        var childSymbol = lowerText(symbolOf(child));
-        var childAmount = lowerText(amountOf(child));
-        var childValue = lowerText(valueOf(child));
-        if (childSymbol && content.indexOf(childSymbol) >= 0) score += 8;
-        if (childAmount && content.indexOf(childAmount) >= 0) score += 3;
-        if (childValue && childValue !== "$-" && content.indexOf(childValue) >= 0) score += 3;
-      });
-      if (score > bestScore) {
-        best = group;
-        bestScore = score;
-      }
-    });
-    return bestScore >= 9 ? best : null;
-  }
-
-  function renderDetailPanel(pane, group) {
-    var children = detailChildrenFor(group);
-    var existing = pane.querySelector("[" + DETAIL_PANEL_ATTR + '="1"]');
-    if (!children.length) {
-      if (existing) existing.remove();
-      return false;
-    }
-
-    var signature = detailSignature(group, children);
-    var anchor = detailPanelAnchor(pane);
-    if (existing && existing.getAttribute("data-do-wallet-l1-detail-signature") === signature) {
-      if (anchor && anchor.node && anchor.node.parentElement) {
-        if (anchor.mode === "before" && existing.nextElementSibling !== anchor.node) return placeDetailPanel(pane, existing, anchor);
-        if (anchor.mode === "after" && anchor.node.nextElementSibling !== existing) return placeDetailPanel(pane, existing, anchor);
-      }
-      return false;
-    }
-
-    var wrapper = document.createElement("div");
-    wrapper.innerHTML = detailPanelHTML(group, children);
-    var panel = wrapper.firstElementChild;
-    if (!panel) return false;
-
-    if (existing) {
-      existing.parentElement.removeChild(existing);
-      placeDetailPanel(pane, panel, anchor);
-      return true;
-    }
-
-    placeDetailPanel(pane, panel, anchor);
-    return true;
-  }
-
-  function applyDetailPanelGrouping() {
-    var snapshot = readSnapshot();
-    if (!snapshot) {
-      Array.prototype.slice.call(document.querySelectorAll("[" + DETAIL_PANEL_ATTR + '="1"]')).forEach(function (node) { node.remove(); });
-      window.__doWalletDetailAssetGroupDebug = { version: VERSION, reason: "no-snapshot", checkedAt: new Date().toISOString() };
-      return { panes: 0, rendered: 0 };
-    }
-    var groups = detailGroupsFromSnapshot(snapshot);
-    var panes = findDetailPanes();
-    var rendered = 0;
-    var matched = 0;
-
-    panes.forEach(function (pane) {
-      var group = selectedDetailGroup(groups, pane);
-      if (!group) return;
-      matched += 1;
-      injectStyle();
-      if (renderDetailPanel(pane, group)) rendered += 1;
-    });
-
-    Array.prototype.slice.call(document.querySelectorAll("[" + DETAIL_PANEL_ATTR + '="1"]')).forEach(function (node) {
-      var keep = panes.some(function (pane) { return pane.contains(node); });
-      if (!keep) node.remove();
-    });
-
-    if (matched) document.documentElement.setAttribute("data-do-wallet-detail-asset-groups", VERSION);
-    window.__doWalletDetailAssetGroupDebug = {
-      version: VERSION,
-      reason: matched ? "rendered" : (panes.length ? "no-selected-group" : "no-detail-pane"),
-      checkedAt: new Date().toISOString(),
-      panes: panes.length,
-      groups: groups.length,
-      matched: matched,
-      rendered: rendered
-    };
-    return { panes: panes.length, groups: groups.length, matched: matched, rendered: rendered };
-  }
-
-  function injectStyle() {
-    if (document.getElementById(STYLE_ID)) return;
-    var style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = [
-      ".do-wallet-grouped-panel{width:100%;height:100%;box-sizing:border-box;padding:0;color:inherit;background:transparent;font-family:inherit;overflow:auto;}",
-      ".do-wallet-grouped-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}",
-      ".do-wallet-grouped-header h3{margin:0;font-size:18px;line-height:1.1;font-weight:var(--bold,500);letter-spacing:0;}",
-      ".do-wallet-grouped-manage{border:0;background:transparent;color:#a33cff;font:inherit;font-size:15px;font-weight:var(--bold,500);cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px;}",
-      ".do-wallet-grouped-list{display:flex;flex-direction:column;gap:14px;}",
-      ".do-wallet-grouped-chain-block{border-bottom:1px solid rgba(135,57,190,.28);padding-bottom:10px;}",
-      ".do-wallet-grouped-chain-block:last-child{border-bottom:0;}",
-      ".do-wallet-grouped-chain-block .do-wallet-grouped-row.is-parent+.do-wallet-grouped-row.is-child{margin-top:2px;}",
-      ".do-wallet-grouped-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:48px;padding:6px 0;}",
-      ".do-wallet-grouped-row.is-child{margin-left:48px;min-height:38px;opacity:.94;}",
-      ".do-wallet-grouped-left{display:flex;align-items:center;gap:13px;min-width:0;}",
-      ".do-wallet-grouped-icon,.do-wallet-grouped-child-icon{display:block;flex:0 0 auto;border-radius:50%;object-fit:cover;background:#2c2140;}",
-      ".do-wallet-grouped-icon{width:42px;height:42px;}",
-      ".do-wallet-grouped-child-icon{width:26px;height:26px;}",
-      ".do-wallet-grouped-fallback-icon{place-items:center;color:#fff;font-weight:var(--bold,500);font-size:11px;}",
-      ".do-wallet-grouped-meta{min-width:0;}",
-      ".do-wallet-grouped-title{display:flex;align-items:baseline;gap:8px;min-width:0;}",
-      ".do-wallet-grouped-title span{font-size:20px;font-weight:var(--bold,500);line-height:1;white-space:nowrap;}",
-      ".do-wallet-grouped-row.is-child .do-wallet-grouped-title span{font-size:15px;}",
-      ".do-wallet-grouped-title small{color:var(--text-muted,#7f7a8f);font-size:12px;font-weight:600;white-space:nowrap;}",
-      ".do-wallet-grouped-chain{margin-top:4px;color:var(--text-muted,#7f7a8f);font-size:13px;font-weight:var(--bold,500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:185px;}",
-      ".do-wallet-grouped-row.is-child .do-wallet-grouped-chain{font-size:12px;}",
-      ".do-wallet-grouped-change{margin-top:4px;font-size:13px;font-weight:var(--bold,500);}",
-      ".do-wallet-grouped-change.negative{color:#ff4b55;}",
-      ".do-wallet-grouped-change.positive{color:#2f83ff;}",
-      ".do-wallet-grouped-right{text-align:right;min-width:92px;}",
-      ".do-wallet-grouped-right strong{display:block;font-size:18px;line-height:1.1;font-weight:var(--bold,500);white-space:nowrap;}",
-      ".do-wallet-grouped-row.is-child .do-wallet-grouped-right strong{font-size:14px;}",
-      ".do-wallet-grouped-right span{display:block;margin-top:5px;color:var(--text-muted,#7f7a8f);font-size:13px;font-weight:var(--bold,500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;}",
-      ".DoPortfolioAssetRow20260528.do-wallet-l1-parent-row{border-top:1px solid rgba(135,57,190,.22);}",
-      ".DoPortfolioAssetRow20260528.do-wallet-l1-parent-row:first-child{border-top:0;}",
-      ".DoPortfolioAssetRow20260528.do-wallet-l1-child-row{opacity:.9;}",
-      ".DoPortfolioAssetRow20260528.do-wallet-l1-child-row td:first-child{padding-left:44px!important;position:relative;}",
-      ".DoPortfolioAssetRow20260528.do-wallet-l1-child-row td:first-child:before{content:'';position:absolute;left:22px;top:50%;width:12px;border-top:1px solid rgba(135,57,190,.45);}",
-      ".DoPortfolioAssetRow20260528.do-wallet-l1-child-row td:first-child>*{transform:scale(.94);transform-origin:left center;}",
-      ".do-wallet-side-l1-shell{display:flex;flex-direction:column;width:100%;}",
-      ".do-wallet-side-l1-group{border-bottom:1px solid rgba(135,57,190,.28);}",
-      ".do-wallet-side-l1-group:last-child{border-bottom:0;}",
-      ".do-wallet-side-l1-group>article{width:100%;}",
-      ".do-wallet-side-l1-parent-row{background:rgba(163,60,255,.045);}",
-      ".do-wallet-side-l1-parent-row[data-do-wallet-l1-child-count]:not([data-do-wallet-l1-child-count='0']){cursor:pointer;}",
-      ".do-wallet-side-l1-child-row{display:none!important;}",
-      ".do-wallet-side-l1-synthetic-parent{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:14px 0;background:rgba(163,60,255,.045);}",
-      ".do-wallet-side-l1-synthetic-left{display:flex;align-items:center;gap:12px;min-width:0;}",
-      ".do-wallet-side-l1-synthetic-icon,.do-wallet-side-l1-synthetic-fallback{width:28px;height:28px;border-radius:50%;background:#2c2140;flex:0 0 auto;}",
-      ".do-wallet-side-l1-synthetic-icon{object-fit:cover;display:block;}",
-      ".do-wallet-side-l1-synthetic-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
-      ".do-wallet-side-l1-synthetic-title{display:block;font-size:15px;font-weight:var(--bold,500);line-height:1.1;color:inherit;white-space:normal;}",
-      ".do-wallet-side-l1-synthetic-chain{display:block;margin-top:4px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight:var(--bold,500);}",
-      ".do-wallet-side-l1-synthetic-count{color:var(--text-muted,#aba3c2);font-size:12px;font-weight:var(--bold,500);white-space:nowrap;}",
-      ".do-wallet-detail-l1-assets{box-sizing:border-box;margin:18px 20px 108px;color:inherit;font-family:inherit;}",
-      ".do-wallet-detail-l1-assets-title{margin:0 0 12px;font-size:16px;line-height:1.1;font-weight:var(--bold,500);letter-spacing:0;}",
-      ".do-wallet-detail-l1-assets-list{display:flex;flex-direction:column;border-top:1px solid rgba(135,57,190,.32);}",
-      ".do-wallet-detail-l1-coin{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:12px 0;border-bottom:1px solid rgba(135,57,190,.32);}",
-      ".do-wallet-detail-l1-coin-left{display:flex;align-items:center;gap:12px;min-width:0;}",
-      ".do-wallet-detail-l1-coin-icon{width:30px;height:30px;border-radius:50%;object-fit:cover;background:#2c2140;flex:0 0 auto;}",
-      ".do-wallet-detail-l1-coin-icon.do-wallet-grouped-fallback-icon{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
-      ".do-wallet-detail-l1-coin-meta{min-width:0;}",
-      ".do-wallet-detail-l1-coin-title{display:flex;align-items:baseline;gap:7px;min-width:0;}",
-      ".do-wallet-detail-l1-coin-title span{font-size:15px;font-weight:var(--bold,500);line-height:1;white-space:nowrap;}",
-      ".do-wallet-detail-l1-coin-title small{color:var(--text-muted,#aba3c2);font-size:11px;font-weight:var(--bold,500);white-space:nowrap;}",
-      ".do-wallet-detail-l1-coin-chain,.do-wallet-detail-l1-coin-change{margin-top:4px;font-size:12px;font-weight:var(--bold,500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;}",
-      ".do-wallet-detail-l1-coin-chain{color:var(--text-muted,#aba3c2);}",
-      ".do-wallet-detail-l1-coin-change.negative{color:#ff4b55;}",
-      ".do-wallet-detail-l1-coin-change.positive{color:#2f83ff;}",
-      ".do-wallet-detail-l1-coin-right{text-align:right;min-width:86px;}",
-      ".do-wallet-detail-l1-coin-right strong{display:block;font-size:14px;line-height:1.1;font-weight:var(--bold,500);white-space:nowrap;}",
-      ".do-wallet-detail-l1-coin-right span{display:block;margin-top:5px;color:var(--text-muted,#aba3c2);font-size:12px;font-weight:var(--bold,500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:126px;}",
-      "@media(max-width:680px){.do-wallet-grouped-panel{padding:22px 18px}.do-wallet-grouped-row.is-child{margin-left:30px}.do-wallet-grouped-title span{font-size:18px}.do-wallet-grouped-right strong{font-size:16px}}"
-    ].join("\n");
-    document.head.appendChild(style);
-  }
-
-  function normalizeGroupKey(value) {
-    return lowerText(value).replace(/[^a-z0-9]+/g, " ").trim();
-  }
-
-  function sideFallbackChainForSymbol(symbol) {
-    var upper = text(symbol).toUpperCase();
-    var terraClassic = {
-      LUNC: true,
-      UST: true,
-      USTC: true,
-      KRT: true,
-      MYT: true,
-      IDT: true,
-      THT: true,
-      JPT: true
-    };
-    if (terraClassic[upper]) {
-      return {
-        key: "terra classic",
-        name: "Terra Classic",
-        nativeSymbol: "LUNC",
-        icon: "/station-assets/img/chains/TerraClassic.svg"
-      };
-    }
-    var bySymbol = {
-      DO: ["Do Chain", "DO", "/station-assets/img/chains/DoChain.png"],
-      BTC: ["Bitcoin", "BTC", "/station-assets/img/chains/Bitcoin.svg"],
-      ETH: ["Ethereum", "ETH", "/station-assets/img/chains/Ethereum.svg"],
-      BNB: ["BNB Smart Chain", "BNB", "/station-assets/img/chains/Bnb.svg"],
-      SOL: ["Solana", "SOL", "/station-assets/img/chains/Solana.svg"],
-      XRP: ["XRP Ledger", "XRP", "/station-assets/img/chains/XRP.svg"],
-      AVAX: ["Avalanche C-Chain", "AVAX", "/station-assets/img/chains/Avalanche.svg"],
-      ATOM: ["Cosmos", "ATOM", "/station-assets/img/chains/Cosmos.svg"],
-      OSMO: ["Osmosis", "OSMO", "/station-assets/img/chains/Osmosis.svg"],
-      AKT: ["Akash", "AKT", "/station-assets/img/chains/Akash.svg"],
-      ACT: ["Akash", "AKT", "/station-assets/img/chains/Akash.svg"],
-      MATIC: ["Polygon", "MATIC", "/station-assets/img/chains/Polygon.svg"],
-      ADA: ["Cardano", "ADA", "/station-assets/img/chains/Cardano.svg"],
-      LUNA: ["Terra", "LUNA", "/station-assets/img/chains/Terra.svg"]
-    };
-    if (!bySymbol[upper]) return null;
-    return {
-      key: normalizeGroupKey(bySymbol[upper][0]),
-      name: bySymbol[upper][0],
-      nativeSymbol: bySymbol[upper][1],
-      icon: bySymbol[upper][2]
-    };
-  }
-
-  function sideSymbolOfRow(row) {
-    var symbolNode = row && row.querySelector && row.querySelector("[class*='Asset_symbol__name']");
-    var symbol = normalizedText(symbolNode && symbolNode.textContent || "");
-    if (symbol) return symbol.toUpperCase();
-    var textValue = normalizedText(row && row.textContent || "");
-    return (textValue.match(/^[A-Z0-9]{2,12}/) || [""])[0].toUpperCase();
-  }
-
-  function sideChainMetaOfRow(row, symbol) {
-    var chainIcon = row && row.querySelector && row.querySelector("[class*='Asset_chain__icon']");
-    var tokenIcon = row && row.querySelector && row.querySelector("[class*='TokenIcon_icon']");
-    var fallback = sideFallbackChainForSymbol(symbol) || {};
-    var chainName = normalizedText(chainIcon && (chainIcon.getAttribute("alt") || chainIcon.alt) || "") || fallback.name || symbol;
-    var chainIconSrc = text(chainIcon && chainIcon.getAttribute("src"));
-    var tokenIconSrc = text(tokenIcon && tokenIcon.getAttribute("src"));
-    var nativeSymbol = nativeSymbolFor(chainName, chainName) || fallback.nativeSymbol || symbol;
-    return {
-      key: normalizeGroupKey(chainName || fallback.key || symbol),
-      name: chainName,
-      nativeSymbol: text(nativeSymbol).toUpperCase(),
-      icon: chainIconSrc || fallback.icon || tokenIconSrc
-    };
-  }
-
-  function sideRowText(row, selector) {
-    var node = row && row.querySelector && row.querySelector(selector);
-    return normalizedText(node && node.textContent || "");
-  }
-
-  function sideRowImage(row, selector) {
-    var node = row && row.querySelector && row.querySelector(selector);
-    if (!node) return "";
-    if (node.tagName && node.tagName.toLowerCase() === "img") return text(node.getAttribute("src") || node.src);
-    var img = node.querySelector && node.querySelector("img");
-    return text(img && (img.getAttribute("src") || img.src));
-  }
-
-  function sideAmountNumber(amountText, symbol) {
-    var cleaned = normalizedText(amountText).replace(new RegExp("\\b" + text(symbol).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i"), "");
-    var match = cleaned.match(/-?\d[\d,]*(?:\.\d+)?/);
-    return match ? match[0].replace(/,/g, "") : cleaned;
-  }
-
-  function sideAssetFromInfo(info, group) {
-    var row = info && info.row;
-    var symbol = text(info && info.symbol).toUpperCase();
-    var valueText = sideRowText(row, "[class*='Asset_price__']") || sideRowText(row, "[class*='Asset_value__']");
-    var amountText = sideRowText(row, "[class*='Asset_amount__']");
-    var priceText = sideRowText(row, "[class*='Asset_unit__price__']");
-    var changeText = sideRowText(row, "[class*='Asset_change__']");
-    var tokenIcon = sideRowImage(row, "[class*='TokenIcon_icon']") || sideRowImage(row, "[class*='Asset_token__icon']") || sideRowImage(row, "img");
-    return {
-      symbol: symbol,
-      name: symbol,
-      chainName: group && group.chainName || info.chainName || symbol,
-      chainID: group && group.key === "terra classic" ? "columbus-5" : (group && group.key || info.chainKey || ""),
-      chainId: group && group.key === "terra classic" ? "columbus-5" : (group && group.key || info.chainKey || ""),
-      icon: tokenIcon || info.chainIcon || group && group.chainIcon || "",
-      tokenIcon: tokenIcon || "",
-      chainIcon: info.chainIcon || group && group.chainIcon || "",
-      priceText: priceText,
-      changeText: changeText,
-      valueText: valueText,
-      amount: sideAmountNumber(amountText, symbol),
-      displayAmount: amountText
-    };
-  }
-
-  function groupKeyAliases(group) {
-    var keys = {};
-    function add(value) {
-      value = normalizeGroupKey(value);
-      if (value) keys[value] = true;
-    }
-    add(group && group.key);
-    add(group && group.chainName);
-    add(group && group.nativeSymbol);
-    if (group && group.key === "terra classic") {
-      add("columbus-5");
-      add("terra classic lunc");
-      add("lunc");
-    }
-    if (group && group.nativeSymbol === "DO") {
-      add("do-chain");
-      add("do chain");
-      add("do");
-    }
-    return Object.keys(keys);
-  }
-
-  function rememberSideDetailGroups(groups) {
-    (Array.isArray(groups) ? groups : []).forEach(function (group) {
-      var childInfos = group.children && group.children.length ? group.children : [];
-      if (!childInfos.length) return;
-      var parentInfo = group.parent || group.rows && group.rows[0] || childInfos[0];
-      var detailGroup = {
-        parent: sideAssetFromInfo(parentInfo, group),
-        children: childInfos.map(function (info) { return sideAssetFromInfo(info, group); }),
-        chainId: group.key === "terra classic" ? "columbus-5" : group.key,
-        chainName: group.chainName,
-        icon: group.chainIcon
-      };
-      groupKeyAliases(group).forEach(function (key) {
-        var existing = sideDetailGroupsCache[key];
-        if (existing && Array.isArray(existing.children) && existing.children.length > detailGroup.children.length) return;
-        sideDetailGroupsCache[key] = detailGroup;
-      });
-    });
-    try {
-      window.__doWalletSideDetailGroups = sideDetailGroupsCache;
-    } catch (error) {}
-  }
-
-  function sideRowInfo(row, index) {
-    var symbol = sideSymbolOfRow(row);
-    var meta = sideChainMetaOfRow(row, symbol);
-    return {
-      row: row,
-      index: index,
-      symbol: symbol,
-      chainKey: meta.key || normalizeGroupKey(symbol),
-      chainName: meta.name || symbol,
-      nativeSymbol: meta.nativeSymbol || symbol,
-      chainIcon: meta.icon || ""
-    };
-  }
-
-  function sideRowSignature(info) {
-    return [
-      info.index,
-      info.chainKey,
-      info.chainName,
-      info.nativeSymbol,
-      info.symbol
-    ].join("|");
-  }
-
-  function sideSignatureForInfos(infos) {
-    return infos.map(sideRowSignature).join("||");
-  }
-
-  function findNativeSideAssetLists() {
-    return Array.prototype.slice.call(document.querySelectorAll(SIDE_LIST_SELECTOR)).filter(function (list) {
-      if (!isVisibleElement(list)) return false;
-      var rows = list.querySelectorAll && list.querySelectorAll("article");
-      if (!rows || !rows.length) return false;
-      var node = list;
-      for (var depth = 0; node && depth < 8; depth += 1) {
-        var content = lowerText(node.textContent || "");
-        if (content.indexOf("portfolio value") >= 0 && content.indexOf("assets") >= 0) return true;
-        node = node.parentElement;
-      }
-      return false;
-    });
-  }
-
-  function sideRowsInList(list) {
-    return Array.prototype.slice.call(list.querySelectorAll("article")).filter(function (row) {
-      return row && row.classList && !row.classList.contains("do-wallet-side-l1-synthetic-parent");
-    });
-  }
-
-  function sideGroupsForInfos(infos) {
-    var byKey = {};
-    infos.forEach(function (info) {
-      var key = info.chainKey || normalizeGroupKey(info.symbol);
-      byKey[key] = byKey[key] || {
-        key: key,
-        chainName: info.chainName,
-        nativeSymbol: info.nativeSymbol,
-        chainIcon: info.chainIcon,
-        rows: [],
-        firstIndex: info.index
-      };
-      byKey[key].rows.push(info);
-      byKey[key].firstIndex = Math.min(byKey[key].firstIndex, info.index);
-      if (!byKey[key].chainIcon && info.chainIcon) byKey[key].chainIcon = info.chainIcon;
-      if (!byKey[key].chainName && info.chainName) byKey[key].chainName = info.chainName;
-      if (!byKey[key].nativeSymbol && info.nativeSymbol) byKey[key].nativeSymbol = info.nativeSymbol;
-    });
-
-    return Object.keys(byKey).map(function (key) {
-      var group = byKey[key];
-      group.parent = group.rows.filter(function (info) {
-        return info.nativeSymbol && info.symbol === info.nativeSymbol;
-      })[0] || null;
-      if (group.parent) {
-        group.children = group.rows.filter(function (info) { return info !== group.parent; });
-      } else {
-        group.children = group.rows.slice();
-      }
-      return group;
-    }).sort(function (a, b) {
-      return a.firstIndex - b.firstIndex;
-    });
-  }
-
-  function createSideFallbackIcon(label) {
-    var fallback = document.createElement("span");
-    fallback.className = "do-wallet-side-l1-synthetic-fallback";
-    fallback.textContent = (label || "?").slice(0, 3).toUpperCase();
-    return fallback;
-  }
-
-  function createSideSyntheticParent(group) {
-    var parent = document.createElement("article");
-    parent.className = "do-wallet-side-l1-synthetic-parent";
-    parent.setAttribute("data-do-wallet-l1-synthetic-parent", "1");
-    parent.setAttribute("role", "button");
-    parent.setAttribute("tabindex", "0");
-
-    var left = document.createElement("div");
-    left.className = "do-wallet-side-l1-synthetic-left";
-    if (group.chainIcon) {
-      var icon = document.createElement("img");
-      icon.className = "do-wallet-side-l1-synthetic-icon";
-      icon.src = group.chainIcon;
-      icon.alt = "";
-      icon.loading = "eager";
-      icon.decoding = "async";
-      icon.onerror = function () {
-        if (icon.parentElement) icon.parentElement.replaceChild(createSideFallbackIcon(group.nativeSymbol || group.chainName), icon);
-      };
-      left.appendChild(icon);
-    } else {
-      left.appendChild(createSideFallbackIcon(group.nativeSymbol || group.chainName));
-    }
-
-    var meta = document.createElement("div");
-    var title = document.createElement("strong");
-    title.className = "do-wallet-side-l1-synthetic-title";
-    title.textContent = group.chainName + (group.nativeSymbol && group.chainName.toUpperCase().indexOf(group.nativeSymbol) < 0 ? " (" + group.nativeSymbol + ")" : "");
-    var chain = document.createElement("span");
-    chain.className = "do-wallet-side-l1-synthetic-chain";
-    chain.textContent = group.children.length === 1 ? "1 asset" : group.children.length + " assets";
-    meta.appendChild(title);
-    meta.appendChild(chain);
-    left.appendChild(meta);
-
-    var count = document.createElement("span");
-    count.className = "do-wallet-side-l1-synthetic-count";
-    count.textContent = group.nativeSymbol || "";
-
-    parent.appendChild(left);
-    parent.appendChild(count);
-    parent.addEventListener("click", function () {
-      var target = (group.parent && group.parent.row) || (group.rows && group.rows[0] && group.rows[0].row) || null;
-      if (target && target.click) target.click();
-    });
-    parent.addEventListener("keydown", function (event) {
-      if (!event || (event.key !== "Enter" && event.key !== " ")) return;
-      event.preventDefault();
-      parent.click();
-    });
-    return parent;
-  }
-
-  function markSideRow(info, group, parent, hasChildren) {
-    info.row.classList.remove("do-wallet-side-l1-parent-row", "do-wallet-side-l1-child-row");
-    info.row.setAttribute(SIDE_GROUP_ATTR, VERSION);
-    info.row.setAttribute("data-do-wallet-l1-group", group.chainName || group.key);
-    info.row.setAttribute("data-do-wallet-l1-native-symbol", group.nativeSymbol || "");
-    if (parent && hasChildren) {
-      info.row.classList.add("do-wallet-side-l1-parent-row");
-      info.row.setAttribute("data-do-wallet-l1-child-count", String((group.children || []).length));
-      info.row.removeAttribute("data-do-wallet-l1-parent-symbol");
-    } else if (!parent) {
-      info.row.classList.add("do-wallet-side-l1-child-row");
-      info.row.setAttribute("data-do-wallet-l1-parent-symbol", group.nativeSymbol || "");
-      info.row.removeAttribute("data-do-wallet-l1-child-count");
-    } else {
-      info.row.removeAttribute("data-do-wallet-l1-parent-symbol");
-      info.row.setAttribute("data-do-wallet-l1-child-count", "0");
-    }
-  }
-
-  function applyNativeSidePanelGrouping() {
-    if (sideApplying) return { skipped: true };
-    sideApplying = true;
-    try {
-      var lists = findNativeSideAssetLists();
-      var panelCount = 0;
-      var groupCount = 0;
-      var rowCount = 0;
-      var childCount = 0;
-      var changedCount = 0;
-
-      if (!lists.length) {
-        window.__doWalletSideAssetGroupDebug = {
-          version: VERSION,
-          reason: "no-side-list",
-          checkedAt: new Date().toISOString()
-        };
-        return { panels: 0, groups: 0, rows: 0, changed: 0 };
-      }
-
-      injectStyle();
-      lists.forEach(function (list) {
-        var rows = sideRowsInList(list);
-        if (rows.length < 2) {
-          if (list.getAttribute(SIDE_GROUP_ATTR) === VERSION) {
-            panelCount += 1;
-            rowCount += rows.length;
-          }
-          return;
-        }
-        var infos = rows.map(sideRowInfo);
-        var signature = sideSignatureForInfos(infos);
-        if (list.getAttribute(SIDE_GROUP_ATTR) === VERSION && list.getAttribute(SIDE_SIGNATURE_ATTR) === signature) {
-          panelCount += 1;
-          rowCount += rows.length;
-          return;
-        }
-        if (SIDE_STABLE_DELAY > 0 && list.getAttribute(SIDE_GROUP_ATTR) !== VERSION) {
-          var now = Date.now();
-          var pendingSignature = list.getAttribute(SIDE_PENDING_SIGNATURE_ATTR) || "";
-          var pendingAt = Number(list.getAttribute(SIDE_PENDING_AT_ATTR) || 0);
-          if (pendingSignature !== signature) {
-            list.setAttribute(SIDE_PENDING_SIGNATURE_ATTR, signature);
-            list.setAttribute(SIDE_PENDING_AT_ATTR, String(now));
-            schedule(SIDE_STABLE_DELAY + 100);
-            return;
-          }
-          if (now - pendingAt < SIDE_STABLE_DELAY) {
-            schedule(SIDE_STABLE_DELAY - (now - pendingAt) + 100);
-            return;
-          }
-        }
-
-        var groups = sideGroupsForInfos(infos);
-        rememberSideDetailGroups(groups);
-        var shell = document.createElement("div");
-        shell.className = "do-wallet-side-l1-shell";
-
-        groups.forEach(function (group) {
-          var block = document.createElement("div");
-          block.className = "do-wallet-side-l1-group";
-          block.setAttribute("data-do-wallet-l1-chain", group.chainName || group.key);
-          if (group.parent) {
-            markSideRow(group.parent, group, true, group.children.length > 0);
-            block.appendChild(group.parent.row);
-          } else {
-            block.appendChild(createSideSyntheticParent(group));
-          }
-          group.children.forEach(function (child) {
-            markSideRow(child, group, false, true);
-            block.appendChild(child.row);
-            childCount += 1;
-          });
-          shell.appendChild(block);
-          groupCount += 1;
-        });
-
-        list.innerHTML = "";
-        list.appendChild(shell);
-        list.setAttribute(SIDE_GROUP_ATTR, VERSION);
-        list.setAttribute(SIDE_SIGNATURE_ATTR, signature);
-        list.removeAttribute(SIDE_PENDING_SIGNATURE_ATTR);
-        list.removeAttribute(SIDE_PENDING_AT_ATTR);
-        panelCount += 1;
-        rowCount += rows.length;
-        changedCount += 1;
-      });
-
-      if (panelCount) {
-        document.documentElement.setAttribute("data-do-wallet-side-asset-groups", VERSION);
-      }
-      window.__doWalletSideAssetGroupDebug = {
-        version: VERSION,
-        reason: panelCount ? "rendered" : "no-rows",
-        checkedAt: new Date().toISOString(),
-        panels: panelCount,
-        groups: groupCount,
-        rows: rowCount,
-        children: childCount,
-        changed: changedCount
-      };
-      return { panels: panelCount, groups: groupCount, rows: rowCount, children: childCount, changed: changedCount };
-    } finally {
-      sideApplying = false;
-    }
-  }
-
-  function setTableDebug(reason, details) {
-    window.__doWalletPortfolioTableGroupDebug = Object.assign({
-      version: VERSION,
-      reason: reason,
-      checkedAt: new Date().toISOString()
-    }, details || {});
-  }
-
-  function tableContainerFor(row) {
-    var node = row;
-    while (node && node.parentElement) {
-      if (node.tagName === "TBODY") return node;
-      if (node.tagName === "TABLE") return row.parentElement;
-      node = node.parentElement;
-    }
-    return row.parentElement;
-  }
-
-  function tableRowsIn(container) {
-    return Array.prototype.slice.call(container ? container.children : []).filter(function (child) {
-      return child && child.matches && child.matches(TABLE_ROW_SELECTOR);
-    });
-  }
-
-  function tableRowInfo(row, index) {
-    var cells = row && row.children ? Array.prototype.slice.call(row.children) : [];
-    var symbol = normalizedText(row.dataset && row.dataset.symbol || "");
-    if (!symbol && cells[0]) symbol = normalizedText(cells[0].textContent || "").split(/\s+/)[0] || "";
-    return {
-      row: row,
-      index: index,
-      symbol: symbol.toUpperCase(),
-      chainName: normalizedText(row.dataset && row.dataset.chain || (cells[1] && cells[1].textContent) || ""),
-      denom: normalizedText(row.dataset && row.dataset.denom || ""),
-      amount: normalizedText(row.dataset && row.dataset.amount || (cells[2] && cells[2].textContent) || ""),
-      value: normalizedText(row.dataset && row.dataset.value || (cells[3] && cells[3].textContent) || "")
-    };
-  }
-
-  function tableGroupKey(info) {
-    return normalizeGroupKey(info.chainName || info.denom || info.symbol);
-  }
-
-  function tableRowKey(info) {
-    return [tableGroupKey(info), info.symbol, info.denom, info.amount, info.value, info.index].join("|");
-  }
-
-  function isNativeTableRow(info) {
-    var native = nativeSymbolFor(info.chainName, info.chainName);
-    return !!native && info.symbol === native;
-  }
-
-  function collectTableContainers() {
-    var containers = [];
-    Array.prototype.slice.call(document.querySelectorAll(TABLE_ROW_SELECTOR)).forEach(function (row) {
-      var container = tableContainerFor(row);
-      if (!container) return;
-      if (containers.indexOf(container) < 0) containers.push(container);
-    });
-    return containers;
-  }
-
-  function tableGroupsFor(rows) {
-    var byKey = {};
-    rows.map(tableRowInfo).forEach(function (info) {
-      var key = tableGroupKey(info);
-      if (!key) return;
-      byKey[key] = byKey[key] || {
-        key: key,
-        chainName: info.chainName,
-        rows: [],
-        firstIndex: info.index
-      };
-      byKey[key].rows.push(info);
-      byKey[key].firstIndex = Math.min(byKey[key].firstIndex, info.index);
-    });
-
-    return Object.keys(byKey).map(function (key) {
-      var group = byKey[key];
-      group.parent = group.rows.filter(isNativeTableRow)[0] || group.rows[0];
-      group.children = group.rows.filter(function (info) { return info !== group.parent; });
-      return group;
-    }).sort(function (a, b) {
-      var ap = a.parent && a.parent.symbol === "DO" ? -10000 : a.firstIndex;
-      var bp = b.parent && b.parent.symbol === "DO" ? -10000 : b.firstIndex;
-      return ap - bp;
-    });
-  }
-
-  function markTableGroup(group) {
-    var parentChain = group.chainName || group.key;
-    group.rows.forEach(function (info) {
-      info.row.setAttribute(TABLE_GROUP_ATTR, VERSION);
-      info.row.setAttribute("data-do-wallet-l1-group", parentChain);
-      info.row.classList.remove("do-wallet-l1-parent-row", "do-wallet-l1-child-row");
-      if (info === group.parent) {
-        info.row.classList.add("do-wallet-l1-parent-row");
-        info.row.removeAttribute("data-do-wallet-l1-parent-symbol");
-      } else {
-        info.row.classList.add("do-wallet-l1-child-row");
-        info.row.setAttribute("data-do-wallet-l1-parent-symbol", group.parent ? group.parent.symbol : "");
-      }
-    });
-  }
-
-  function applyPortfolioTableGrouping() {
-    if (tableApplying) return;
-    tableApplying = true;
-    try {
-      var containers = collectTableContainers();
-      var tableCount = 0;
-      var groupedCount = 0;
-      var rowCount = 0;
-      var changedCount = 0;
-
-      containers.forEach(function (container) {
-        var rows = tableRowsIn(container);
-        if (rows.length < 2) return;
-        var groups = tableGroupsFor(rows);
-        var hasChildren = groups.some(function (group) { return group.children.length > 0; });
-        if (!hasChildren) return;
-
-        var desiredInfos = [];
-        groups.forEach(function (group) {
-          markTableGroup(group);
-          desiredInfos.push(group.parent);
-          group.children.forEach(function (child) { desiredInfos.push(child); });
-          groupedCount += group.children.length > 0 ? 1 : 0;
-        });
-
-        var currentSignature = rows.map(function (row, index) {
-          return tableRowKey(tableRowInfo(row, index));
-        }).join(">");
-        var desiredSignature = desiredInfos.map(tableRowKey).join(">");
-        if (currentSignature !== desiredSignature) {
-          var fragment = document.createDocumentFragment();
-          desiredInfos.forEach(function (info) { fragment.appendChild(info.row); });
-          container.appendChild(fragment);
-          changedCount += 1;
-        }
-        tableCount += 1;
-        rowCount += rows.length;
-      });
-
-      if (!tableCount) {
-        setTableDebug("no-table", { tables: containers.length });
-        return;
-      }
-      document.documentElement.setAttribute("data-do-wallet-portfolio-table-groups", VERSION);
-      setTableDebug("rendered", {
-        tables: tableCount,
-        groups: groupedCount,
-        rows: rowCount,
-        changed: changedCount
-      });
-    } finally {
-      tableApplying = false;
-    }
-  }
-
-  function signatureOf(groups) {
-    return groups.map(function (group) {
-      return [
-        upperSymbol(group.parent),
-        valueOf(group.parent),
-        amountOf(group.parent),
-        group.children.map(function (child) {
-          return upperSymbol(child) + ":" + valueOf(child) + ":" + amountOf(child);
-        }).join("|")
-      ].join(":");
-    }).join("||");
-  }
-
-  function render() {
-    if (rendering) return;
-    var startedAt = Date.now();
-    function debug(reason, details) {
-      setDebug(reason, Object.assign({ elapsedMs: Date.now() - startedAt }, details || {}));
-    }
-    if (window.__doWalletL1PortfolioOwnsAssets) {
-      debug("owned-by-l1-portfolio-assets", {});
-      return;
-    }
-    rendering = true;
-    try {
-      var sideResult = applyNativeSidePanelGrouping();
-      var detailResult = applyDetailPanelGrouping();
-      if (sideResult && sideResult.panels > 0) {
-        debug("native-side-rendered", { side: sideResult, detail: detailResult });
-        return;
-      }
-      var snapshot = readSnapshot();
-      if (!snapshot) {
-        debug("no-snapshot", { side: sideResult, detail: detailResult });
-        return;
-      }
-      var groups = groupedRowsFromSnapshot(snapshot);
-      if (!groups.length) {
-        debug("no-groups", { rows: assetArrays(snapshot).length, snapshotKeys: Object.keys(snapshot || {}) });
-        return;
-      }
-      var signature = signatureOf(groups);
-      var sections = findAssetsSections();
-      if (!sections.length) {
-        debug("no-pane", { groups: groups.length });
-        return;
-      }
-      if (signature === lastSignature && document.querySelectorAll("[" + RENDER_ATTR + '="1"]').length >= sections.length) return;
-      injectStyle();
-      sections.forEach(function (section) {
-        var originalManage = Array.prototype.slice.call(section.querySelectorAll("button,a,[role='button']")).filter(function (node) {
-          return (node.textContent || "").indexOf("Manage") >= 0;
-        })[0];
-        section.innerHTML = panelHTML(groups);
-        var manage = section.querySelector(".do-wallet-grouped-manage");
-        if (manage && originalManage) {
-          manage.addEventListener("click", function () {
-            try {
-              originalManage.click();
-            } catch (error) {}
-          });
-        }
-      });
-      lastSignature = signature;
-      window.__doWalletPortfolioGroupPanelState = {
-        version: VERSION,
-        renderedAt: new Date().toISOString(),
-        groups: groups.length,
-        renderedPanels: sections.length,
-        signature: signature
-      };
-      debug("rendered", { groups: groups.length, renderedPanels: sections.length });
-      document.documentElement.setAttribute("data-do-wallet-portfolio-groups", VERSION);
-    } finally {
-      rendering = false;
-    }
-  }
-
-  function hasSnapshot() {
-    return !!readSnapshot();
-  }
-
-  function isOwnInjectedNode(node) {
-    if (!node || node.nodeType !== 1) return false;
-    if (node.id === STYLE_ID) return true;
-    if (node.getAttribute && (
-      node.getAttribute(RENDER_ATTR) === "1" ||
-      node.getAttribute(DETAIL_PANEL_ATTR) === "1" ||
-      node.getAttribute(SIDE_GROUP_ATTR) === VERSION
-    )) return true;
-    var className = text(node.className);
-    if (
-      className.indexOf("do-wallet-grouped-") >= 0 ||
-      className.indexOf("do-wallet-side-l1-") >= 0 ||
-      className.indexOf("do-wallet-detail-l1-") >= 0
-    ) return true;
-    if (node.closest && (
-      node.closest("[" + RENDER_ATTR + '="1"]') ||
-      node.closest("[" + DETAIL_PANEL_ATTR + '="1"]') ||
-      node.closest(".do-wallet-side-l1-shell")
-    )) return true;
-    return false;
-  }
-
-  function nodeTouchesPortfolioSurface(node) {
-    if (!node || node.nodeType !== 1 || isOwnInjectedNode(node)) return false;
-    var selectors = [
-      SIDE_LIST_SELECTOR,
-      TABLE_ROW_SELECTOR,
-      "[class*='AssetList_']",
-      "[class*='Asset_']",
-      "[class*='Dashboard_']",
-      "[class*='Portfolio']",
-      "[class*='Wallet']",
-      "[class*='Receive']",
-      "[class*='Staking']",
-      "[class*='Stake']",
-      "aside",
-      "main"
-    ];
-    for (var i = 0; i < selectors.length; i += 1) {
-      var selector = selectors[i];
-      try {
-        if (node.matches && node.matches(selector)) return true;
-        if (node.querySelector && node.querySelector(selector)) return true;
-      } catch (error) {}
-    }
-    var content = lowerText(node.textContent || "");
-    if (content.length > 12000) return false;
-    return (
-      content.indexOf("portfolio value") >= 0 ||
-      content.indexOf("do-wallet overview") >= 0 ||
-      content.indexOf("all spendable balances") >= 0 ||
-      content.indexOf("search for a chain") >= 0 ||
-      content.indexOf("chains") >= 0
-    );
-  }
-
-  function mutationTouchesPortfolioSurface(mutations) {
-    for (var i = 0; i < mutations.length; i += 1) {
-      var mutation = mutations[i];
-      var nodes = Array.prototype.slice.call(mutation.addedNodes || []).concat(Array.prototype.slice.call(mutation.removedNodes || []));
-      for (var j = 0; j < nodes.length; j += 1) {
-        if (nodeTouchesPortfolioSurface(nodes[j])) return true;
-      }
-    }
-    return false;
-  }
-
-  function ensureObserver() {
-    if (observer) return;
-    try {
-      observer = new MutationObserver(function (mutations) {
-        if (rendering || sideApplying) return;
-        if (mutationTouchesPortfolioSurface(mutations)) schedule(320);
-      });
-      observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-      window.setTimeout(function () {
-        if (!observer) return;
-        observer.disconnect();
-        observer = null;
-      }, 12000);
-    } catch (error) {}
-  }
-
-  function mutationTouchesPortfolioTable(mutations) {
-    for (var i = 0; i < mutations.length; i += 1) {
-      var mutation = mutations[i];
-      var nodes = Array.prototype.slice.call(mutation.addedNodes || []).concat(Array.prototype.slice.call(mutation.removedNodes || []));
-      for (var j = 0; j < nodes.length; j += 1) {
-        var node = nodes[j];
-        if (!node || node.nodeType !== 1) continue;
-        if (node.matches && node.matches(TABLE_ROW_SELECTOR)) return true;
-        if (node.querySelector && node.querySelector(TABLE_ROW_SELECTOR)) return true;
-      }
-    }
-    return false;
-  }
-
-  function ensureTableObserver() {
-    if (tableObserver || !window.MutationObserver) return;
-    var target = document.body || document.documentElement;
-    if (!target) return;
-    try {
-      tableObserver = new MutationObserver(function (mutations) {
-        if (tableApplying) return;
-        if (mutationTouchesPortfolioTable(mutations)) scheduleTableGrouping(80);
-      });
-      tableObserver.observe(target, { childList: true, subtree: true });
-    } catch (error) {}
-  }
-
-  function schedule(delay) {
-    ensureObserver();
-    if (renderTimer) return;
-    renderTimer = setTimeout(function () {
-      renderTimer = null;
-      render();
-    }, delay || 120);
-  }
-
-  function scheduleTableGrouping(delay) {
-    ensureTableObserver();
-    if (tableTimer) return;
-    tableTimer = setTimeout(function () {
-      tableTimer = null;
-      applyPortfolioTableGrouping();
-    }, delay || 120);
-  }
-
-  window.addEventListener("load", function () {
-    schedule(300);
-    scheduleTableGrouping(450);
-  });
-  window.addEventListener("storage", function (event) {
-    if (!event || event.key === SNAPSHOT_KEY) {
-      schedule(60);
-      scheduleTableGrouping(80);
-    }
-  });
-  window.addEventListener("do_wallet_portfolio_snapshot", function () {
-    schedule(60);
-    scheduleTableGrouping(80);
-  });
-  document.addEventListener("click", function () {
-    schedule(120);
-    window.setTimeout(function () { schedule(0); }, 650);
-    window.setTimeout(function () { schedule(0); }, 1300);
-    scheduleTableGrouping(400);
-  }, true);
-
-  schedule(500);
-  scheduleTableGrouping(700);
-})();
-});
-
 runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletL1PortfolioAssets20260625Rewrite1) return;
-  window.__doWalletL1PortfolioAssets20260625Rewrite1 = true;
+  if (window.__doWalletL1PortfolioAssets20260625Rewrite2) return;
+  window.__doWalletL1PortfolioAssets20260625Rewrite2 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioRewrite1";
+  var VERSION = "20260625L1PortfolioRewrite2";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
-  var CACHE_KEY = "do-wallet-l1-portfolio-groups-cache-v1";
+  var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
+  var CACHE_KEY = "do-wallet-l1-portfolio-groups-cache-v2";
+  var LEGACY_CACHE_KEY = "do-wallet-l1-portfolio-groups-cache-v1";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
   var LIST_SELECTOR = "[class*='AssetList_assetlist__list']";
   var TARGET_ATTR = "data-do-wallet-l1-assets-target";
@@ -4518,6 +2560,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   var observer = null;
   var activeKey = "";
   var rendering = false;
+  var lastGroups = [];
 
   var TERRA_CLASSIC_SYMBOLS = {
     LUNC: true,
@@ -4601,7 +2644,11 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     "decentr-mainnet-1": ["Decentr", "DEC", "/img/chains/Decentr.png", 270],
     "juno-1": ["Juno", "JUNO", "/img/chains/Juno.png", 280],
     "kaiyo-1": ["Kujira", "KUJI", "/img/chains/Kujira.png", 290],
-    "mars-1": ["Mars", "MARS", "/img/chains/Mars.png", 300]
+    "mars-1": ["Mars", "MARS", "/img/chains/Mars.png", 300],
+    "migaloo-1": ["Migaloo", "WHALE", "/img/chains/Migaloo.png", 310],
+    "pacific-1": ["Sei", "SEI", "/img/chains/Sei.png", 320],
+    "stride-1": ["Stride", "STRD", "/img/chains/Stride.png", 330],
+    "stafihub-1": ["StaFi Hub", "FIS", "/img/chains/Stafihub.png", 340]
   };
 
   function text(value) {
@@ -4626,6 +2673,10 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     });
   }
 
+  function isObject(value) {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  }
+
   function readJSON(key, fallback) {
     try {
       var raw = window.localStorage && window.localStorage.getItem(key);
@@ -4643,38 +2694,22 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     } catch (error) {}
   }
 
-  function isObject(value) {
-    return Boolean(value && typeof value === "object" && !Array.isArray(value));
-  }
-
-  function isVisible(node) {
-    if (!node || !node.getBoundingClientRect) return false;
-    var rect = node.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-    try {
-      var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
-      if (style && (style.display === "none" || style.visibility === "hidden")) return false;
-    } catch (error) {}
-    return true;
-  }
-
   function firstArray(value, keys) {
-    for (var i = 0; i < keys.length; i += 1) {
-      if (Array.isArray(value && value[keys[i]])) return value[keys[i]];
+    for (var index = 0; index < keys.length; index += 1) {
+      if (Array.isArray(value && value[keys[index]])) return value[keys[index]];
     }
     return [];
   }
 
-  function childrenOf(asset) {
-    return firstArray(asset, ["childAssets", "expandedAssets", "subAssets", "tokens", "children"]);
-  }
-
-  function rawSymbol(asset) {
-    return clean(asset && (asset.symbol || asset.tokenSymbol || asset.ticker || asset.name || asset.denom || asset.token));
+  function numberFrom(value) {
+    if (value == null || value === "") return 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    var match = text(value).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) || 0 : 0;
   }
 
   function symbolOf(asset) {
-    var symbol = rawSymbol(asset);
+    var symbol = clean(asset && (asset.symbol || asset.tokenSymbol || asset.ticker || asset.name || asset.denom || asset.token));
     if (upper(symbol) === "USTC") return "UST";
     return symbol;
   }
@@ -4697,13 +2732,6 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
 
   function iconOf(asset) {
     return clean(asset && (asset.icon || asset.image || asset.logo || asset.logoURI || asset.logoUrl || asset.tokenIcon || asset.chainIcon));
-  }
-
-  function numberFrom(value) {
-    if (value == null || value === "") return 0;
-    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-    var match = text(value).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
-    return match ? Number(match[0]) || 0 : 0;
   }
 
   function amountNumber(asset) {
@@ -4740,7 +2768,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     var number = asset && (asset.change24h || asset.percentChange24h || asset.priceChangePercent || asset.priceChangePercent24h || asset.changePercent);
     number = Number(number);
     if (!Number.isFinite(number) || number === 0) return "";
-    return number.toFixed(2) + "%";
+    return (number > 0 ? "+" : "") + number.toFixed(2) + "%";
   }
 
   function amountText(asset) {
@@ -4768,25 +2796,8 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     var name = lower(rawName);
     var sym = upper(symbol);
     var den = lower(denom);
-    if (
-      id === "do-chain" ||
-      id === "do" ||
-      id === "888" ||
-      id.indexOf("dochain") >= 0 ||
-      name.indexOf("do chain") >= 0 ||
-      den === "udo" ||
-      sym === "DO"
-    ) return "Do-Chain";
-    if (
-      id === "columbus-5" ||
-      id === "terra-classic" ||
-      id === "lunc" ||
-      id === "330" ||
-      name.indexOf("terra classic") >= 0 ||
-      TERRA_CLASSIC_DENOMS[den] ||
-      den.indexOf("terra1") === 0 ||
-      (TERRA_CLASSIC_SYMBOLS[sym] && id !== "phoenix-1" && id !== "osmosis-1" && id !== "Do-Chain")
-    ) return "columbus-5";
+    if (id === "do-chain" || id === "do" || id === "888" || id.indexOf("dochain") >= 0 || name.indexOf("do chain") >= 0 || den === "udo" || sym === "DO") return "Do-Chain";
+    if (id === "columbus-5" || id === "terra-classic" || id === "lunc" || id === "330" || name.indexOf("terra classic") >= 0 || TERRA_CLASSIC_DENOMS[den] || den.indexOf("terra1") === 0 || (TERRA_CLASSIC_SYMBOLS[sym] && id !== "phoenix-1" && id !== "osmosis-1")) return "columbus-5";
     if (id === "phoenix-1" || (sym === "LUNA" && name.indexOf("terra classic") < 0) || name.indexOf("terra (luna)") >= 0) return "phoenix-1";
     if (id === "osmosis-1" || id === "osmosis" || id === "osmo" || sym === "OSMO" || name.indexOf("osmosis") >= 0) return "osmosis-1";
     if (id === "bitcoin" || id === "btc" || id.indexOf("bitcoin") >= 0 || sym === "BTC") return "bitcoin-mainnet";
@@ -4815,6 +2826,10 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     if (id.indexOf("juno") >= 0 || sym === "JUNO" || name.indexOf("juno") >= 0) return "juno-1";
     if (id.indexOf("kujira") >= 0 || sym === "KUJI" || name.indexOf("kujira") >= 0) return "kaiyo-1";
     if (id.indexOf("mars") >= 0 || sym === "MARS" || name.indexOf("mars") >= 0) return "mars-1";
+    if (id.indexOf("migaloo") >= 0 || sym === "WHALE" || name.indexOf("migaloo") >= 0) return "migaloo-1";
+    if (id.indexOf("sei") >= 0 || sym === "SEI" || name.indexOf("sei") >= 0) return "pacific-1";
+    if (id.indexOf("stride") >= 0 || sym === "STRD" || name.indexOf("stride") >= 0) return "stride-1";
+    if (id.indexOf("stafi") >= 0 || sym === "FIS" || name.indexOf("stafi") >= 0) return "stafihub-1";
     return rawID || rawName || sym || den;
   }
 
@@ -4846,16 +2861,16 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     var symbol = upper(symbolOf(asset));
     if (!symbol || /^[0-9.]+$/.test(symbol)) return false;
     if (symbol === "DO" && meta && meta.key === "Do-Chain") return true;
-    if (valueNumber(asset) > 0 || amountNumber(asset) > 0) return true;
-    return false;
+    return valueNumber(asset) > 0 || amountNumber(asset) > 0 || clean(asset.valueText) !== "$-" || clean(asset.amountText) !== "";
   }
 
   function sourcePriority(source) {
-    if (source === "dom") return 1;
-    if (source === "snapshot-flat") return 2;
-    if (source === "snapshot-child") return 3;
-    if (source === "snapshot-group") return 4;
-    if (source === "cache") return 5;
+    if (source === "snapshot-flat") return 1;
+    if (source === "snapshot-child") return 2;
+    if (source === "snapshot-group") return 3;
+    if (source === "dom") return 4;
+    if (source === "memory") return 5;
+    if (source === "cache") return 6;
     return 9;
   }
 
@@ -4867,12 +2882,12 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       source: source,
       sourcePriority: sourcePriority(source),
       index: Number(index) || 0,
-      symbol: symbol,
-      name: clean(asset && asset.name) || symbol,
+      symbol: upper(symbol),
+      name: clean(asset && asset.name) || upper(symbol),
       chainID: meta.key,
       chainName: meta.name,
       nativeSymbol: meta.nativeSymbol,
-      denom: denomOf(asset),
+      denom: denomOf(asset) || upper(symbol),
       category: categoryOf(asset),
       icon: iconOf(asset) || meta.icon,
       chainIcon: clean(asset && asset.chainIcon) || meta.icon,
@@ -4884,8 +2899,12 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       changeText: percentText(asset),
       raw: asset
     };
-    if (upper(normalized.symbol) === "USTC") normalized.symbol = "UST";
+    if (normalized.symbol === "USTC") normalized.symbol = "UST";
     return normalized;
+  }
+
+  function childrenOf(asset) {
+    return firstArray(asset, ["childAssets", "expandedAssets", "subAssets", "tokens", "children"]);
   }
 
   function assetIdentity(asset) {
@@ -4907,7 +2926,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     return left.index <= right.index ? left : right;
   }
 
-  function collectSnapshotAssets(snapshot) {
+  function collectSnapshotAssets(snapshot, sourceName) {
     var rows = [];
     var order = 0;
     function pushAsset(asset, source) {
@@ -4917,13 +2936,9 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
         kids.forEach(function (child) {
           pushAsset(child, "snapshot-child");
         });
-        if (!asset.isChainGroup && !asset.portfolioGroup) {
-          var self = normalizeAsset(asset, source || "snapshot-flat", order += 1);
-          if (assetIsDisplayable(self, chainMeta(self))) rows.push(self);
-        }
-        return;
+        if (asset.isChainGroup || asset.portfolioGroup || asset.groupedUnderChain) return;
       }
-      var normalized = normalizeAsset(asset, source || "snapshot-flat", order += 1);
+      var normalized = normalizeAsset(asset, source || sourceName || "snapshot-flat", order += 1);
       if (assetIsDisplayable(normalized, chainMeta(normalized))) rows.push(normalized);
     }
 
@@ -4938,7 +2953,8 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       "unGroupedPortfolioAssets",
       "sourcePortfolioAssets",
       "rawTokenPortfolioAssets",
-      "detailPortfolioAssets"
+      "detailPortfolioAssets",
+      "staking"
     ].forEach(function (key) {
       if (!Array.isArray(snapshot && snapshot[key])) return;
       snapshot[key].forEach(function (asset) { pushAsset(asset, "snapshot-flat"); });
@@ -4971,19 +2987,55 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     }).join("|"));
   }
 
-  function cacheGroupsToAssets(cache, currentWalletKey) {
+  function collectSnapshots(currentSnapshot) {
+    var snapshots = [];
+    var seen = {};
+    function add(snapshot) {
+      if (!isObject(snapshot)) return;
+      var key = clean(walletKey(snapshot) || snapshot.updatedAt || JSON.stringify(Object.keys(snapshot).slice(0, 12)));
+      if (seen[key]) return;
+      seen[key] = true;
+      snapshots.push(snapshot);
+    }
+    add(currentSnapshot);
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) {
+      Object.keys(byWallet).forEach(function (key) {
+        add(byWallet[key]);
+      });
+    }
+    return snapshots;
+  }
+
+  function cacheGroupsToAssets(cache, currentWalletKey, baseGroupCount) {
     if (!isObject(cache) || !Array.isArray(cache.groups)) return [];
-    if (cache.version && cache.version !== VERSION) return [];
-    if (cache.walletKey && currentWalletKey && cache.walletKey !== currentWalletKey) return [];
+    if (cache.version && cache.version !== VERSION && cache.version !== "20260625L1PortfolioRewrite1") return [];
+    if (cache.walletKey && currentWalletKey && cache.walletKey !== currentWalletKey && baseGroupCount > 1) return [];
     var rows = [];
     cache.groups.forEach(function (group, groupIndex) {
       (Array.isArray(group.assets) ? group.assets : []).forEach(function (asset, index) {
         var normalized = normalizeAsset(Object.assign({}, asset, {
           chainID: group.key,
           chainName: group.name,
+          chainIcon: asset.chainIcon || group.icon,
           icon: asset.icon || group.icon
         }), "cache", groupIndex * 1000 + index);
         if (assetIsDisplayable(normalized, chainMeta(normalized))) rows.push(normalized);
+      });
+    });
+    return rows;
+  }
+
+  function groupsToMemoryRows(groups) {
+    var rows = [];
+    groups.forEach(function (group, groupIndex) {
+      group.assets.forEach(function (asset, index) {
+        rows.push(normalizeAsset(Object.assign({}, asset, {
+          chainID: group.key,
+          chainName: group.name,
+          chainIcon: asset.chainIcon || group.icon,
+          icon: asset.icon || group.icon
+        }), "memory", groupIndex * 1000 + index));
       });
     });
     return rows;
@@ -5065,10 +3117,9 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     rows.forEach(function (row) {
       var meta = chainMeta(row);
       if (!meta || !meta.key) return;
-      var key = meta.key;
-      if (!groups[key]) {
-        groups[key] = {
-          key: key,
+      if (!groups[meta.key]) {
+        groups[meta.key] = {
+          key: meta.key,
           name: meta.name,
           nativeSymbol: meta.nativeSymbol,
           icon: row.chainIcon || meta.icon || row.icon,
@@ -5077,7 +3128,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
           assetsByKey: {}
         };
       }
-      var group = groups[key];
+      var group = groups[meta.key];
       group.firstIndex = Math.min(group.firstIndex, row.index);
       if (!group.icon && (row.chainIcon || row.icon)) group.icon = row.chainIcon || row.icon;
       var rowKey = assetIdentity(row);
@@ -5096,12 +3147,8 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       var total = assets.reduce(function (sum, asset) {
         return sum + (Number(asset.value) || 0);
       }, 0);
-      var parent = assets.filter(function (asset) {
-        return upper(asset.symbol) === upper(group.nativeSymbol);
-      })[0] || assets[0];
       return Object.assign(group, {
         assets: assets,
-        parent: parent,
         totalValue: total,
         totalValueText: formatUSD(total),
         signature: assets.map(function (asset) {
@@ -5115,6 +3162,12 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       var bHasValue = b.totalValue > 0 ? 0 : 1;
       return (aHasValue - bHasValue) || (a.priority - b.priority) || (a.firstIndex - b.firstIndex) || a.name.localeCompare(b.name);
     });
+  }
+
+  function richness(groups) {
+    var assetCount = groups.reduce(function (sum, group) { return sum + group.assets.length; }, 0);
+    var valueCount = groups.reduce(function (sum, group) { return sum + (group.totalValue > 0 ? 1 : 0); }, 0);
+    return groups.length * 1000 + assetCount * 20 + valueCount;
   }
 
   function serializableGroups(groups) {
@@ -5132,6 +3185,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
             name: asset.name,
             chainID: asset.chainID,
             chainName: asset.chainName,
+            nativeSymbol: asset.nativeSymbol,
             denom: asset.denom,
             category: asset.category,
             icon: asset.icon,
@@ -5159,8 +3213,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   }
 
   function renderIcon(src, label, className) {
-    var fallback = fallbackIcon(label, className, false);
-    if (!src) return fallback;
+    if (!src) return fallbackIcon(label, className, false);
     return '<img class="' + className + '" src="' + escapeHTML(src) + '" alt="" loading="eager" decoding="async" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\';" />' + fallbackIcon(label, className, true);
   }
 
@@ -5209,28 +3262,27 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     var signature = groupsSignature(groups, "list");
     if (list.getAttribute(SIGNATURE_ATTR) === signature && !list.hasAttribute(DETAIL_ATTR)) return;
     list.removeAttribute(DETAIL_ATTR);
+    list.setAttribute(TARGET_ATTR, "1");
     list.setAttribute(SIGNATURE_ATTR, signature);
-    list.innerHTML = [
-      '<div class="do-wallet-l1-portfolio-shell">',
-      groups.map(groupRowHTML).join(""),
-      "</div>"
-    ].join("");
+    list.innerHTML = '<div class="do-wallet-l1-portfolio-shell">' + groups.map(groupRowHTML).join("") + "</div>";
   }
 
-  function renderDetail(list, group, groups) {
+  function renderDetail(list, group) {
     var signature = groupsSignature([group], "detail");
     if (list.getAttribute(SIGNATURE_ATTR) === signature && list.getAttribute(DETAIL_ATTR) === group.key) return;
+    list.setAttribute(TARGET_ATTR, "1");
     list.setAttribute(DETAIL_ATTR, group.key);
     list.setAttribute(SIGNATURE_ATTR, signature);
     var count = group.assets.length === 1 ? "1 asset" : group.assets.length + " assets";
     list.innerHTML = [
       '<div class="do-wallet-l1-portfolio-detail">',
       '  <button type="button" class="do-wallet-l1-portfolio-back" data-do-wallet-l1-back="1">Back</button>',
-      '  <div class="do-wallet-l1-portfolio-summary">',
-      renderIcon(group.icon, group.nativeSymbol, "do-wallet-l1-portfolio-summary-icon"),
-      '    <strong>' + escapeHTML(group.name) + "</strong>",
-      '    <span>' + escapeHTML(group.totalValueText) + "</span>",
-      '    <small>' + escapeHTML(count) + "</small>",
+      '  <div class="do-wallet-l1-portfolio-chain-head">',
+      '    <span class="do-wallet-l1-portfolio-left">',
+      renderIcon(group.icon, group.nativeSymbol, "do-wallet-l1-portfolio-icon"),
+      '      <span class="do-wallet-l1-portfolio-meta"><strong>' + escapeHTML(group.name) + "</strong><small>" + escapeHTML(count) + "</small></span>",
+      "    </span>",
+      '    <span class="do-wallet-l1-portfolio-right"><strong>' + escapeHTML(group.totalValueText) + "</strong><small>" + escapeHTML(group.nativeSymbol) + "</small></span>",
       "  </div>",
       '  <div class="do-wallet-l1-portfolio-coins-title">Coins</div>',
       '  <div class="do-wallet-l1-portfolio-coins">',
@@ -5238,6 +3290,17 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       "  </div>",
       "</div>"
     ].join("");
+  }
+
+  function isVisible(node) {
+    if (!node || !node.getBoundingClientRect) return false;
+    var rect = node.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    try {
+      var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
+      if (style && (style.display === "none" || style.visibility === "hidden")) return false;
+    } catch (error) {}
+    return true;
   }
 
   function findAssetLists() {
@@ -5254,15 +3317,42 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     });
   }
 
-  function collectAllRows(lists, snapshot, cache) {
-    var rows = [];
-    var key = walletKey(snapshot);
-    rows = rows.concat(collectSnapshotAssets(snapshot));
-    lists.forEach(function (list) {
-      rows = rows.concat(collectDomAssets(list));
+  function collectRows(lists) {
+    var currentSnapshot = readJSON(SNAPSHOT_KEY, null);
+    var currentWalletKey = walletKey(currentSnapshot);
+    var baseRows = [];
+    collectSnapshots(currentSnapshot).forEach(function (snapshot) {
+      baseRows = baseRows.concat(collectSnapshotAssets(snapshot, "snapshot-flat"));
     });
-    rows = rows.concat(cacheGroupsToAssets(cache, key));
-    return rows;
+    lists.forEach(function (list) {
+      baseRows = baseRows.concat(collectDomAssets(list));
+    });
+
+    var baseGroups = buildGroups(baseRows);
+    var cacheRows = [];
+    cacheRows = cacheRows.concat(cacheGroupsToAssets(readJSON(CACHE_KEY, null), currentWalletKey, baseGroups.length));
+    cacheRows = cacheRows.concat(cacheGroupsToAssets(readJSON(LEGACY_CACHE_KEY, null), currentWalletKey, baseGroups.length));
+    cacheRows = cacheRows.concat(groupsToMemoryRows(lastGroups));
+    return {
+      walletKey: currentWalletKey,
+      baseRows: baseRows,
+      allRows: baseRows.concat(cacheRows),
+      baseGroups: baseGroups
+    };
+  }
+
+  function bestGroups(lists) {
+    var collected = collectRows(lists);
+    var groups = buildGroups(collected.allRows);
+    if (lastGroups.length && richness(lastGroups) > richness(groups)) {
+      groups = buildGroups(collected.allRows.concat(groupsToMemoryRows(lastGroups)));
+    }
+    return {
+      walletKey: collected.walletKey,
+      groups: groups,
+      baseGroups: collected.baseGroups,
+      rowCount: collected.allRows.length
+    };
   }
 
   function render(reason) {
@@ -5275,37 +3365,36 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
         setDebug("no-assets-list", { reason: reason });
         return;
       }
-      lists.forEach(function (list) {
-        list.setAttribute(TARGET_ATTR, "1");
-      });
-      var snapshot = readJSON(SNAPSHOT_KEY, null);
-      var cache = readJSON(CACHE_KEY, null);
-      var rows = collectAllRows(lists, snapshot, cache);
-      var groups = buildGroups(rows);
-      if (!groups.length && cache && Array.isArray(cache.groups)) {
-        groups = buildGroups(cacheGroupsToAssets(cache, walletKey(snapshot)));
-      }
+
+      var result = bestGroups(lists);
+      var groups = result.groups;
       if (!groups.length) {
-        setDebug("no-groups", { reason: reason, rows: rows.length });
+        setDebug("no-groups", { reason: reason, rows: result.rowCount });
         return;
       }
+
+      lastGroups = groups;
       writeJSON(CACHE_KEY, {
         version: VERSION,
         updatedAt: Date.now(),
-        walletKey: walletKey(snapshot),
+        walletKey: result.walletKey,
         groups: serializableGroups(groups)
       });
+
       lists.forEach(function (list) {
         var group = activeKey && groups.filter(function (item) { return item.key === activeKey; })[0];
-        if (group) renderDetail(list, group, groups);
+        if (activeKey && !group) activeKey = "";
+        if (group) renderDetail(list, group);
         else renderList(list, groups);
       });
+
       document.documentElement.setAttribute("data-do-wallet-l1-assets-ready", VERSION);
       setDebug("rendered", {
         reason: reason,
         lists: lists.length,
         groups: groups.length,
-        rows: rows.length,
+        baseGroups: result.baseGroups.length,
+        rows: result.rowCount,
         activeKey: activeKey
       });
     } finally {
@@ -5365,17 +3454,17 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     style.id = STYLE_ID;
     style.textContent = [
       "html{--do-wallet-l1-font-weight:var(--bold,500);}",
-      "[" + TARGET_ATTR + "='1']>article{visibility:hidden!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;pointer-events:none!important;}",
+      "[" + TARGET_ATTR + "='1']>article{display:none!important;}",
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-detail{box-sizing:border-box;width:100%;font-family:inherit;color:#fff;}",
-      ".do-wallet-l1-portfolio-shell{display:flex;flex-direction:column;gap:0;}",
-      ".do-wallet-l1-portfolio-row{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px 10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;}",
+      ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-coins{display:flex;flex-direction:column;gap:0;}",
+      ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px 10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;}",
+      ".do-wallet-l1-portfolio-row{cursor:pointer;}",
       ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
       ".do-wallet-l1-portfolio-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;}",
       ".do-wallet-l1-portfolio-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:84px;max-width:45%;text-align:right;white-space:nowrap;}",
-      ".do-wallet-l1-portfolio-icon,.do-wallet-l1-portfolio-coin-icon,.do-wallet-l1-portfolio-summary-icon{display:block;flex:0 0 auto;border-radius:50%;object-fit:cover;background:#2c2140;}",
+      ".do-wallet-l1-portfolio-icon,.do-wallet-l1-portfolio-coin-icon{display:block;flex:0 0 auto;border-radius:50%;object-fit:cover;background:#2c2140;}",
       ".do-wallet-l1-portfolio-icon{width:34px;height:34px;}",
       ".do-wallet-l1-portfolio-coin-icon{width:30px;height:30px;}",
-      ".do-wallet-l1-portfolio-summary-icon{width:58px;height:58px;}",
       ".do-wallet-l1-portfolio-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-meta{display:flex;flex-direction:column;gap:5px;min-width:0;}",
       ".do-wallet-l1-portfolio-meta strong,.do-wallet-l1-portfolio-right strong{font-weight:var(--do-wallet-l1-font-weight);line-height:1.08;letter-spacing:0;}",
@@ -5385,17 +3474,13 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-meta em.negative{color:#ff4b55;}",
       ".do-wallet-l1-portfolio-meta em.positive{color:#00c68f;}",
       ".do-wallet-l1-portfolio-right strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;max-width:100%;}",
-      ".do-wallet-l1-portfolio-detail{min-height:440px;padding:0 0 16px;}",
-      ".do-wallet-l1-portfolio-back{display:inline-flex;align-items:center;margin:0 0 14px;padding:8px 2px;border:0;background:transparent;color:#fff;font:inherit;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);cursor:pointer;}",
+      ".do-wallet-l1-portfolio-detail{min-height:360px;padding:0 0 16px;}",
+      ".do-wallet-l1-portfolio-back{display:inline-flex;align-items:center;margin:0 0 8px;padding:8px 2px;border:0;background:transparent;color:#fff;font:inherit;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);cursor:pointer;}",
       ".do-wallet-l1-portfolio-back:before{content:'<';display:inline-block;margin-right:10px;font-size:18px;line-height:1;}",
-      ".do-wallet-l1-portfolio-summary{display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;padding:4px 8px 22px;border-bottom:1px solid rgba(135,57,190,.26);}",
-      ".do-wallet-l1-portfolio-summary strong{font-size:17px;line-height:1.12;font-weight:var(--do-wallet-l1-font-weight);}",
-      ".do-wallet-l1-portfolio-summary span{font-size:22px;line-height:1.05;font-weight:var(--do-wallet-l1-font-weight);}",
-      ".do-wallet-l1-portfolio-summary small{font-size:12px;color:#c7baf0;font-weight:var(--do-wallet-l1-font-weight);}",
+      ".do-wallet-l1-portfolio-chain-head{background:rgba(163,60,255,.06);border-top:1px solid rgba(135,57,190,.18);}",
       ".do-wallet-l1-portfolio-coins-title{padding:18px 10px 8px;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
-      ".do-wallet-l1-portfolio-coins{display:flex;flex-direction:column;}",
-      ".do-wallet-l1-portfolio-coin{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:10px;border-bottom:1px solid rgba(135,57,190,.24);}",
-      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}.do-wallet-l1-portfolio-summary-icon{width:52px;height:52px}}"
+      ".do-wallet-l1-portfolio-coin{min-height:58px;}",
+      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}}"
     ].join("\n");
     document.head.appendChild(style);
     try {
@@ -5422,7 +3507,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   }, true);
 
   window.addEventListener("storage", function (event) {
-    if (!event || event.key === SNAPSHOT_KEY || event.key === CACHE_KEY) schedule(40, "storage");
+    if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY || event.key === CACHE_KEY || event.key === LEGACY_CACHE_KEY) schedule(40, "storage");
   });
   window.addEventListener("do_wallet_portfolio_snapshot", function () { schedule(40, "snapshot"); });
   window.addEventListener("load", function () { schedule(20, "load"); });

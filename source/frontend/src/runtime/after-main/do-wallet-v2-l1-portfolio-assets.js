@@ -1,13 +1,15 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletL1PortfolioAssets20260625Rewrite1) return;
-  window.__doWalletL1PortfolioAssets20260625Rewrite1 = true;
+  if (window.__doWalletL1PortfolioAssets20260625Rewrite2) return;
+  window.__doWalletL1PortfolioAssets20260625Rewrite2 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioRewrite1";
+  var VERSION = "20260625L1PortfolioRewrite2";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
-  var CACHE_KEY = "do-wallet-l1-portfolio-groups-cache-v1";
+  var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
+  var CACHE_KEY = "do-wallet-l1-portfolio-groups-cache-v2";
+  var LEGACY_CACHE_KEY = "do-wallet-l1-portfolio-groups-cache-v1";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
   var LIST_SELECTOR = "[class*='AssetList_assetlist__list']";
   var TARGET_ATTR = "data-do-wallet-l1-assets-target";
@@ -17,6 +19,7 @@
   var observer = null;
   var activeKey = "";
   var rendering = false;
+  var lastGroups = [];
 
   var TERRA_CLASSIC_SYMBOLS = {
     LUNC: true,
@@ -100,7 +103,11 @@
     "decentr-mainnet-1": ["Decentr", "DEC", "/img/chains/Decentr.png", 270],
     "juno-1": ["Juno", "JUNO", "/img/chains/Juno.png", 280],
     "kaiyo-1": ["Kujira", "KUJI", "/img/chains/Kujira.png", 290],
-    "mars-1": ["Mars", "MARS", "/img/chains/Mars.png", 300]
+    "mars-1": ["Mars", "MARS", "/img/chains/Mars.png", 300],
+    "migaloo-1": ["Migaloo", "WHALE", "/img/chains/Migaloo.png", 310],
+    "pacific-1": ["Sei", "SEI", "/img/chains/Sei.png", 320],
+    "stride-1": ["Stride", "STRD", "/img/chains/Stride.png", 330],
+    "stafihub-1": ["StaFi Hub", "FIS", "/img/chains/Stafihub.png", 340]
   };
 
   function text(value) {
@@ -125,6 +132,10 @@
     });
   }
 
+  function isObject(value) {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  }
+
   function readJSON(key, fallback) {
     try {
       var raw = window.localStorage && window.localStorage.getItem(key);
@@ -142,38 +153,22 @@
     } catch (error) {}
   }
 
-  function isObject(value) {
-    return Boolean(value && typeof value === "object" && !Array.isArray(value));
-  }
-
-  function isVisible(node) {
-    if (!node || !node.getBoundingClientRect) return false;
-    var rect = node.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-    try {
-      var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
-      if (style && (style.display === "none" || style.visibility === "hidden")) return false;
-    } catch (error) {}
-    return true;
-  }
-
   function firstArray(value, keys) {
-    for (var i = 0; i < keys.length; i += 1) {
-      if (Array.isArray(value && value[keys[i]])) return value[keys[i]];
+    for (var index = 0; index < keys.length; index += 1) {
+      if (Array.isArray(value && value[keys[index]])) return value[keys[index]];
     }
     return [];
   }
 
-  function childrenOf(asset) {
-    return firstArray(asset, ["childAssets", "expandedAssets", "subAssets", "tokens", "children"]);
-  }
-
-  function rawSymbol(asset) {
-    return clean(asset && (asset.symbol || asset.tokenSymbol || asset.ticker || asset.name || asset.denom || asset.token));
+  function numberFrom(value) {
+    if (value == null || value === "") return 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    var match = text(value).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) || 0 : 0;
   }
 
   function symbolOf(asset) {
-    var symbol = rawSymbol(asset);
+    var symbol = clean(asset && (asset.symbol || asset.tokenSymbol || asset.ticker || asset.name || asset.denom || asset.token));
     if (upper(symbol) === "USTC") return "UST";
     return symbol;
   }
@@ -196,13 +191,6 @@
 
   function iconOf(asset) {
     return clean(asset && (asset.icon || asset.image || asset.logo || asset.logoURI || asset.logoUrl || asset.tokenIcon || asset.chainIcon));
-  }
-
-  function numberFrom(value) {
-    if (value == null || value === "") return 0;
-    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-    var match = text(value).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
-    return match ? Number(match[0]) || 0 : 0;
   }
 
   function amountNumber(asset) {
@@ -239,7 +227,7 @@
     var number = asset && (asset.change24h || asset.percentChange24h || asset.priceChangePercent || asset.priceChangePercent24h || asset.changePercent);
     number = Number(number);
     if (!Number.isFinite(number) || number === 0) return "";
-    return number.toFixed(2) + "%";
+    return (number > 0 ? "+" : "") + number.toFixed(2) + "%";
   }
 
   function amountText(asset) {
@@ -267,25 +255,8 @@
     var name = lower(rawName);
     var sym = upper(symbol);
     var den = lower(denom);
-    if (
-      id === "do-chain" ||
-      id === "do" ||
-      id === "888" ||
-      id.indexOf("dochain") >= 0 ||
-      name.indexOf("do chain") >= 0 ||
-      den === "udo" ||
-      sym === "DO"
-    ) return "Do-Chain";
-    if (
-      id === "columbus-5" ||
-      id === "terra-classic" ||
-      id === "lunc" ||
-      id === "330" ||
-      name.indexOf("terra classic") >= 0 ||
-      TERRA_CLASSIC_DENOMS[den] ||
-      den.indexOf("terra1") === 0 ||
-      (TERRA_CLASSIC_SYMBOLS[sym] && id !== "phoenix-1" && id !== "osmosis-1" && id !== "Do-Chain")
-    ) return "columbus-5";
+    if (id === "do-chain" || id === "do" || id === "888" || id.indexOf("dochain") >= 0 || name.indexOf("do chain") >= 0 || den === "udo" || sym === "DO") return "Do-Chain";
+    if (id === "columbus-5" || id === "terra-classic" || id === "lunc" || id === "330" || name.indexOf("terra classic") >= 0 || TERRA_CLASSIC_DENOMS[den] || den.indexOf("terra1") === 0 || (TERRA_CLASSIC_SYMBOLS[sym] && id !== "phoenix-1" && id !== "osmosis-1")) return "columbus-5";
     if (id === "phoenix-1" || (sym === "LUNA" && name.indexOf("terra classic") < 0) || name.indexOf("terra (luna)") >= 0) return "phoenix-1";
     if (id === "osmosis-1" || id === "osmosis" || id === "osmo" || sym === "OSMO" || name.indexOf("osmosis") >= 0) return "osmosis-1";
     if (id === "bitcoin" || id === "btc" || id.indexOf("bitcoin") >= 0 || sym === "BTC") return "bitcoin-mainnet";
@@ -314,6 +285,10 @@
     if (id.indexOf("juno") >= 0 || sym === "JUNO" || name.indexOf("juno") >= 0) return "juno-1";
     if (id.indexOf("kujira") >= 0 || sym === "KUJI" || name.indexOf("kujira") >= 0) return "kaiyo-1";
     if (id.indexOf("mars") >= 0 || sym === "MARS" || name.indexOf("mars") >= 0) return "mars-1";
+    if (id.indexOf("migaloo") >= 0 || sym === "WHALE" || name.indexOf("migaloo") >= 0) return "migaloo-1";
+    if (id.indexOf("sei") >= 0 || sym === "SEI" || name.indexOf("sei") >= 0) return "pacific-1";
+    if (id.indexOf("stride") >= 0 || sym === "STRD" || name.indexOf("stride") >= 0) return "stride-1";
+    if (id.indexOf("stafi") >= 0 || sym === "FIS" || name.indexOf("stafi") >= 0) return "stafihub-1";
     return rawID || rawName || sym || den;
   }
 
@@ -345,16 +320,16 @@
     var symbol = upper(symbolOf(asset));
     if (!symbol || /^[0-9.]+$/.test(symbol)) return false;
     if (symbol === "DO" && meta && meta.key === "Do-Chain") return true;
-    if (valueNumber(asset) > 0 || amountNumber(asset) > 0) return true;
-    return false;
+    return valueNumber(asset) > 0 || amountNumber(asset) > 0 || clean(asset.valueText) !== "$-" || clean(asset.amountText) !== "";
   }
 
   function sourcePriority(source) {
-    if (source === "dom") return 1;
-    if (source === "snapshot-flat") return 2;
-    if (source === "snapshot-child") return 3;
-    if (source === "snapshot-group") return 4;
-    if (source === "cache") return 5;
+    if (source === "snapshot-flat") return 1;
+    if (source === "snapshot-child") return 2;
+    if (source === "snapshot-group") return 3;
+    if (source === "dom") return 4;
+    if (source === "memory") return 5;
+    if (source === "cache") return 6;
     return 9;
   }
 
@@ -366,12 +341,12 @@
       source: source,
       sourcePriority: sourcePriority(source),
       index: Number(index) || 0,
-      symbol: symbol,
-      name: clean(asset && asset.name) || symbol,
+      symbol: upper(symbol),
+      name: clean(asset && asset.name) || upper(symbol),
       chainID: meta.key,
       chainName: meta.name,
       nativeSymbol: meta.nativeSymbol,
-      denom: denomOf(asset),
+      denom: denomOf(asset) || upper(symbol),
       category: categoryOf(asset),
       icon: iconOf(asset) || meta.icon,
       chainIcon: clean(asset && asset.chainIcon) || meta.icon,
@@ -383,8 +358,12 @@
       changeText: percentText(asset),
       raw: asset
     };
-    if (upper(normalized.symbol) === "USTC") normalized.symbol = "UST";
+    if (normalized.symbol === "USTC") normalized.symbol = "UST";
     return normalized;
+  }
+
+  function childrenOf(asset) {
+    return firstArray(asset, ["childAssets", "expandedAssets", "subAssets", "tokens", "children"]);
   }
 
   function assetIdentity(asset) {
@@ -406,7 +385,7 @@
     return left.index <= right.index ? left : right;
   }
 
-  function collectSnapshotAssets(snapshot) {
+  function collectSnapshotAssets(snapshot, sourceName) {
     var rows = [];
     var order = 0;
     function pushAsset(asset, source) {
@@ -416,13 +395,9 @@
         kids.forEach(function (child) {
           pushAsset(child, "snapshot-child");
         });
-        if (!asset.isChainGroup && !asset.portfolioGroup) {
-          var self = normalizeAsset(asset, source || "snapshot-flat", order += 1);
-          if (assetIsDisplayable(self, chainMeta(self))) rows.push(self);
-        }
-        return;
+        if (asset.isChainGroup || asset.portfolioGroup || asset.groupedUnderChain) return;
       }
-      var normalized = normalizeAsset(asset, source || "snapshot-flat", order += 1);
+      var normalized = normalizeAsset(asset, source || sourceName || "snapshot-flat", order += 1);
       if (assetIsDisplayable(normalized, chainMeta(normalized))) rows.push(normalized);
     }
 
@@ -437,7 +412,8 @@
       "unGroupedPortfolioAssets",
       "sourcePortfolioAssets",
       "rawTokenPortfolioAssets",
-      "detailPortfolioAssets"
+      "detailPortfolioAssets",
+      "staking"
     ].forEach(function (key) {
       if (!Array.isArray(snapshot && snapshot[key])) return;
       snapshot[key].forEach(function (asset) { pushAsset(asset, "snapshot-flat"); });
@@ -470,19 +446,55 @@
     }).join("|"));
   }
 
-  function cacheGroupsToAssets(cache, currentWalletKey) {
+  function collectSnapshots(currentSnapshot) {
+    var snapshots = [];
+    var seen = {};
+    function add(snapshot) {
+      if (!isObject(snapshot)) return;
+      var key = clean(walletKey(snapshot) || snapshot.updatedAt || JSON.stringify(Object.keys(snapshot).slice(0, 12)));
+      if (seen[key]) return;
+      seen[key] = true;
+      snapshots.push(snapshot);
+    }
+    add(currentSnapshot);
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) {
+      Object.keys(byWallet).forEach(function (key) {
+        add(byWallet[key]);
+      });
+    }
+    return snapshots;
+  }
+
+  function cacheGroupsToAssets(cache, currentWalletKey, baseGroupCount) {
     if (!isObject(cache) || !Array.isArray(cache.groups)) return [];
-    if (cache.version && cache.version !== VERSION) return [];
-    if (cache.walletKey && currentWalletKey && cache.walletKey !== currentWalletKey) return [];
+    if (cache.version && cache.version !== VERSION && cache.version !== "20260625L1PortfolioRewrite1") return [];
+    if (cache.walletKey && currentWalletKey && cache.walletKey !== currentWalletKey && baseGroupCount > 1) return [];
     var rows = [];
     cache.groups.forEach(function (group, groupIndex) {
       (Array.isArray(group.assets) ? group.assets : []).forEach(function (asset, index) {
         var normalized = normalizeAsset(Object.assign({}, asset, {
           chainID: group.key,
           chainName: group.name,
+          chainIcon: asset.chainIcon || group.icon,
           icon: asset.icon || group.icon
         }), "cache", groupIndex * 1000 + index);
         if (assetIsDisplayable(normalized, chainMeta(normalized))) rows.push(normalized);
+      });
+    });
+    return rows;
+  }
+
+  function groupsToMemoryRows(groups) {
+    var rows = [];
+    groups.forEach(function (group, groupIndex) {
+      group.assets.forEach(function (asset, index) {
+        rows.push(normalizeAsset(Object.assign({}, asset, {
+          chainID: group.key,
+          chainName: group.name,
+          chainIcon: asset.chainIcon || group.icon,
+          icon: asset.icon || group.icon
+        }), "memory", groupIndex * 1000 + index));
       });
     });
     return rows;
@@ -564,10 +576,9 @@
     rows.forEach(function (row) {
       var meta = chainMeta(row);
       if (!meta || !meta.key) return;
-      var key = meta.key;
-      if (!groups[key]) {
-        groups[key] = {
-          key: key,
+      if (!groups[meta.key]) {
+        groups[meta.key] = {
+          key: meta.key,
           name: meta.name,
           nativeSymbol: meta.nativeSymbol,
           icon: row.chainIcon || meta.icon || row.icon,
@@ -576,7 +587,7 @@
           assetsByKey: {}
         };
       }
-      var group = groups[key];
+      var group = groups[meta.key];
       group.firstIndex = Math.min(group.firstIndex, row.index);
       if (!group.icon && (row.chainIcon || row.icon)) group.icon = row.chainIcon || row.icon;
       var rowKey = assetIdentity(row);
@@ -595,12 +606,8 @@
       var total = assets.reduce(function (sum, asset) {
         return sum + (Number(asset.value) || 0);
       }, 0);
-      var parent = assets.filter(function (asset) {
-        return upper(asset.symbol) === upper(group.nativeSymbol);
-      })[0] || assets[0];
       return Object.assign(group, {
         assets: assets,
-        parent: parent,
         totalValue: total,
         totalValueText: formatUSD(total),
         signature: assets.map(function (asset) {
@@ -614,6 +621,12 @@
       var bHasValue = b.totalValue > 0 ? 0 : 1;
       return (aHasValue - bHasValue) || (a.priority - b.priority) || (a.firstIndex - b.firstIndex) || a.name.localeCompare(b.name);
     });
+  }
+
+  function richness(groups) {
+    var assetCount = groups.reduce(function (sum, group) { return sum + group.assets.length; }, 0);
+    var valueCount = groups.reduce(function (sum, group) { return sum + (group.totalValue > 0 ? 1 : 0); }, 0);
+    return groups.length * 1000 + assetCount * 20 + valueCount;
   }
 
   function serializableGroups(groups) {
@@ -631,6 +644,7 @@
             name: asset.name,
             chainID: asset.chainID,
             chainName: asset.chainName,
+            nativeSymbol: asset.nativeSymbol,
             denom: asset.denom,
             category: asset.category,
             icon: asset.icon,
@@ -658,8 +672,7 @@
   }
 
   function renderIcon(src, label, className) {
-    var fallback = fallbackIcon(label, className, false);
-    if (!src) return fallback;
+    if (!src) return fallbackIcon(label, className, false);
     return '<img class="' + className + '" src="' + escapeHTML(src) + '" alt="" loading="eager" decoding="async" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\';" />' + fallbackIcon(label, className, true);
   }
 
@@ -708,28 +721,27 @@
     var signature = groupsSignature(groups, "list");
     if (list.getAttribute(SIGNATURE_ATTR) === signature && !list.hasAttribute(DETAIL_ATTR)) return;
     list.removeAttribute(DETAIL_ATTR);
+    list.setAttribute(TARGET_ATTR, "1");
     list.setAttribute(SIGNATURE_ATTR, signature);
-    list.innerHTML = [
-      '<div class="do-wallet-l1-portfolio-shell">',
-      groups.map(groupRowHTML).join(""),
-      "</div>"
-    ].join("");
+    list.innerHTML = '<div class="do-wallet-l1-portfolio-shell">' + groups.map(groupRowHTML).join("") + "</div>";
   }
 
-  function renderDetail(list, group, groups) {
+  function renderDetail(list, group) {
     var signature = groupsSignature([group], "detail");
     if (list.getAttribute(SIGNATURE_ATTR) === signature && list.getAttribute(DETAIL_ATTR) === group.key) return;
+    list.setAttribute(TARGET_ATTR, "1");
     list.setAttribute(DETAIL_ATTR, group.key);
     list.setAttribute(SIGNATURE_ATTR, signature);
     var count = group.assets.length === 1 ? "1 asset" : group.assets.length + " assets";
     list.innerHTML = [
       '<div class="do-wallet-l1-portfolio-detail">',
       '  <button type="button" class="do-wallet-l1-portfolio-back" data-do-wallet-l1-back="1">Back</button>',
-      '  <div class="do-wallet-l1-portfolio-summary">',
-      renderIcon(group.icon, group.nativeSymbol, "do-wallet-l1-portfolio-summary-icon"),
-      '    <strong>' + escapeHTML(group.name) + "</strong>",
-      '    <span>' + escapeHTML(group.totalValueText) + "</span>",
-      '    <small>' + escapeHTML(count) + "</small>",
+      '  <div class="do-wallet-l1-portfolio-chain-head">',
+      '    <span class="do-wallet-l1-portfolio-left">',
+      renderIcon(group.icon, group.nativeSymbol, "do-wallet-l1-portfolio-icon"),
+      '      <span class="do-wallet-l1-portfolio-meta"><strong>' + escapeHTML(group.name) + "</strong><small>" + escapeHTML(count) + "</small></span>",
+      "    </span>",
+      '    <span class="do-wallet-l1-portfolio-right"><strong>' + escapeHTML(group.totalValueText) + "</strong><small>" + escapeHTML(group.nativeSymbol) + "</small></span>",
       "  </div>",
       '  <div class="do-wallet-l1-portfolio-coins-title">Coins</div>',
       '  <div class="do-wallet-l1-portfolio-coins">',
@@ -737,6 +749,17 @@
       "  </div>",
       "</div>"
     ].join("");
+  }
+
+  function isVisible(node) {
+    if (!node || !node.getBoundingClientRect) return false;
+    var rect = node.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    try {
+      var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
+      if (style && (style.display === "none" || style.visibility === "hidden")) return false;
+    } catch (error) {}
+    return true;
   }
 
   function findAssetLists() {
@@ -753,15 +776,42 @@
     });
   }
 
-  function collectAllRows(lists, snapshot, cache) {
-    var rows = [];
-    var key = walletKey(snapshot);
-    rows = rows.concat(collectSnapshotAssets(snapshot));
-    lists.forEach(function (list) {
-      rows = rows.concat(collectDomAssets(list));
+  function collectRows(lists) {
+    var currentSnapshot = readJSON(SNAPSHOT_KEY, null);
+    var currentWalletKey = walletKey(currentSnapshot);
+    var baseRows = [];
+    collectSnapshots(currentSnapshot).forEach(function (snapshot) {
+      baseRows = baseRows.concat(collectSnapshotAssets(snapshot, "snapshot-flat"));
     });
-    rows = rows.concat(cacheGroupsToAssets(cache, key));
-    return rows;
+    lists.forEach(function (list) {
+      baseRows = baseRows.concat(collectDomAssets(list));
+    });
+
+    var baseGroups = buildGroups(baseRows);
+    var cacheRows = [];
+    cacheRows = cacheRows.concat(cacheGroupsToAssets(readJSON(CACHE_KEY, null), currentWalletKey, baseGroups.length));
+    cacheRows = cacheRows.concat(cacheGroupsToAssets(readJSON(LEGACY_CACHE_KEY, null), currentWalletKey, baseGroups.length));
+    cacheRows = cacheRows.concat(groupsToMemoryRows(lastGroups));
+    return {
+      walletKey: currentWalletKey,
+      baseRows: baseRows,
+      allRows: baseRows.concat(cacheRows),
+      baseGroups: baseGroups
+    };
+  }
+
+  function bestGroups(lists) {
+    var collected = collectRows(lists);
+    var groups = buildGroups(collected.allRows);
+    if (lastGroups.length && richness(lastGroups) > richness(groups)) {
+      groups = buildGroups(collected.allRows.concat(groupsToMemoryRows(lastGroups)));
+    }
+    return {
+      walletKey: collected.walletKey,
+      groups: groups,
+      baseGroups: collected.baseGroups,
+      rowCount: collected.allRows.length
+    };
   }
 
   function render(reason) {
@@ -774,37 +824,36 @@
         setDebug("no-assets-list", { reason: reason });
         return;
       }
-      lists.forEach(function (list) {
-        list.setAttribute(TARGET_ATTR, "1");
-      });
-      var snapshot = readJSON(SNAPSHOT_KEY, null);
-      var cache = readJSON(CACHE_KEY, null);
-      var rows = collectAllRows(lists, snapshot, cache);
-      var groups = buildGroups(rows);
-      if (!groups.length && cache && Array.isArray(cache.groups)) {
-        groups = buildGroups(cacheGroupsToAssets(cache, walletKey(snapshot)));
-      }
+
+      var result = bestGroups(lists);
+      var groups = result.groups;
       if (!groups.length) {
-        setDebug("no-groups", { reason: reason, rows: rows.length });
+        setDebug("no-groups", { reason: reason, rows: result.rowCount });
         return;
       }
+
+      lastGroups = groups;
       writeJSON(CACHE_KEY, {
         version: VERSION,
         updatedAt: Date.now(),
-        walletKey: walletKey(snapshot),
+        walletKey: result.walletKey,
         groups: serializableGroups(groups)
       });
+
       lists.forEach(function (list) {
         var group = activeKey && groups.filter(function (item) { return item.key === activeKey; })[0];
-        if (group) renderDetail(list, group, groups);
+        if (activeKey && !group) activeKey = "";
+        if (group) renderDetail(list, group);
         else renderList(list, groups);
       });
+
       document.documentElement.setAttribute("data-do-wallet-l1-assets-ready", VERSION);
       setDebug("rendered", {
         reason: reason,
         lists: lists.length,
         groups: groups.length,
-        rows: rows.length,
+        baseGroups: result.baseGroups.length,
+        rows: result.rowCount,
         activeKey: activeKey
       });
     } finally {
@@ -864,17 +913,17 @@
     style.id = STYLE_ID;
     style.textContent = [
       "html{--do-wallet-l1-font-weight:var(--bold,500);}",
-      "[" + TARGET_ATTR + "='1']>article{visibility:hidden!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;pointer-events:none!important;}",
+      "[" + TARGET_ATTR + "='1']>article{display:none!important;}",
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-detail{box-sizing:border-box;width:100%;font-family:inherit;color:#fff;}",
-      ".do-wallet-l1-portfolio-shell{display:flex;flex-direction:column;gap:0;}",
-      ".do-wallet-l1-portfolio-row{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px 10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;}",
+      ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-coins{display:flex;flex-direction:column;gap:0;}",
+      ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px 10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;}",
+      ".do-wallet-l1-portfolio-row{cursor:pointer;}",
       ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
       ".do-wallet-l1-portfolio-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;}",
       ".do-wallet-l1-portfolio-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:84px;max-width:45%;text-align:right;white-space:nowrap;}",
-      ".do-wallet-l1-portfolio-icon,.do-wallet-l1-portfolio-coin-icon,.do-wallet-l1-portfolio-summary-icon{display:block;flex:0 0 auto;border-radius:50%;object-fit:cover;background:#2c2140;}",
+      ".do-wallet-l1-portfolio-icon,.do-wallet-l1-portfolio-coin-icon{display:block;flex:0 0 auto;border-radius:50%;object-fit:cover;background:#2c2140;}",
       ".do-wallet-l1-portfolio-icon{width:34px;height:34px;}",
       ".do-wallet-l1-portfolio-coin-icon{width:30px;height:30px;}",
-      ".do-wallet-l1-portfolio-summary-icon{width:58px;height:58px;}",
       ".do-wallet-l1-portfolio-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-meta{display:flex;flex-direction:column;gap:5px;min-width:0;}",
       ".do-wallet-l1-portfolio-meta strong,.do-wallet-l1-portfolio-right strong{font-weight:var(--do-wallet-l1-font-weight);line-height:1.08;letter-spacing:0;}",
@@ -884,17 +933,13 @@
       ".do-wallet-l1-portfolio-meta em.negative{color:#ff4b55;}",
       ".do-wallet-l1-portfolio-meta em.positive{color:#00c68f;}",
       ".do-wallet-l1-portfolio-right strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;max-width:100%;}",
-      ".do-wallet-l1-portfolio-detail{min-height:440px;padding:0 0 16px;}",
-      ".do-wallet-l1-portfolio-back{display:inline-flex;align-items:center;margin:0 0 14px;padding:8px 2px;border:0;background:transparent;color:#fff;font:inherit;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);cursor:pointer;}",
+      ".do-wallet-l1-portfolio-detail{min-height:360px;padding:0 0 16px;}",
+      ".do-wallet-l1-portfolio-back{display:inline-flex;align-items:center;margin:0 0 8px;padding:8px 2px;border:0;background:transparent;color:#fff;font:inherit;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);cursor:pointer;}",
       ".do-wallet-l1-portfolio-back:before{content:'<';display:inline-block;margin-right:10px;font-size:18px;line-height:1;}",
-      ".do-wallet-l1-portfolio-summary{display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;padding:4px 8px 22px;border-bottom:1px solid rgba(135,57,190,.26);}",
-      ".do-wallet-l1-portfolio-summary strong{font-size:17px;line-height:1.12;font-weight:var(--do-wallet-l1-font-weight);}",
-      ".do-wallet-l1-portfolio-summary span{font-size:22px;line-height:1.05;font-weight:var(--do-wallet-l1-font-weight);}",
-      ".do-wallet-l1-portfolio-summary small{font-size:12px;color:#c7baf0;font-weight:var(--do-wallet-l1-font-weight);}",
+      ".do-wallet-l1-portfolio-chain-head{background:rgba(163,60,255,.06);border-top:1px solid rgba(135,57,190,.18);}",
       ".do-wallet-l1-portfolio-coins-title{padding:18px 10px 8px;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
-      ".do-wallet-l1-portfolio-coins{display:flex;flex-direction:column;}",
-      ".do-wallet-l1-portfolio-coin{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:10px;border-bottom:1px solid rgba(135,57,190,.24);}",
-      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}.do-wallet-l1-portfolio-summary-icon{width:52px;height:52px}}"
+      ".do-wallet-l1-portfolio-coin{min-height:58px;}",
+      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}}"
     ].join("\n");
     document.head.appendChild(style);
     try {
@@ -921,7 +966,7 @@
   }, true);
 
   window.addEventListener("storage", function (event) {
-    if (!event || event.key === SNAPSHOT_KEY || event.key === CACHE_KEY) schedule(40, "storage");
+    if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY || event.key === CACHE_KEY || event.key === LEGACY_CACHE_KEY) schedule(40, "storage");
   });
   window.addEventListener("do_wallet_portfolio_snapshot", function () { schedule(40, "snapshot"); });
   window.addEventListener("load", function () { schedule(20, "load"); });
