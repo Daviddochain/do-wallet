@@ -10833,11 +10833,14 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable1";
+  var VERSION = "20260625L1PortfolioStable2";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
   var LIST_SELECTOR = "[class*='AssetList_assetlist__list']";
+  var HOST_ATTR = "data-do-wallet-l1-assets-host";
+  var PANE_ATTR = "data-do-wallet-l1-assets-pane";
+  var NATIVE_HIDDEN_ATTR = "data-do-wallet-l1-native-hidden";
   var TARGET_ATTR = "data-do-wallet-l1-assets-target";
   var SIGNATURE_ATTR = "data-do-wallet-l1-assets-signature";
   var DETAIL_ATTR = "data-do-wallet-l1-assets-detail";
@@ -11370,15 +11373,30 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='grid';\" />" + fallbackIcon(label, className, true);
   }
 
+  function nativeAssetForGroup(group) {
+    var native = upper(group && group.nativeSymbol);
+    var assets = Array.isArray(group && group.assets) ? group.assets : [];
+    return assets.filter(function (asset) {
+      return upper(asset.symbol) === native;
+    })[0] || assets[0] || null;
+  }
+
   function groupRowHTML(group) {
     var count = group.assets.length === 1 ? "1 asset" : group.assets.length + " assets";
+    var native = nativeAssetForGroup(group) || {};
+    var label = clean(native.symbol) || clean(group.nativeSymbol) || clean(group.name);
+    var price = clean(native.priceText);
+    var change = clean(native.changeText);
+    var changeClass = change.indexOf("-") >= 0 ? "negative" : "positive";
+    var amount = clean(native.amountText);
+    if (amount && upper(amount).indexOf(upper(label)) < 0) amount += " " + label;
     return [
       '<button type="button" class="do-wallet-l1-portfolio-row" data-do-wallet-l1-key="' + escapeHTML(group.key) + '">',
       '  <span class="do-wallet-l1-portfolio-left">',
       renderIcon(group.icon, group.nativeSymbol, "do-wallet-l1-portfolio-icon"),
-      '    <span class="do-wallet-l1-portfolio-meta"><strong>' + escapeHTML(group.name) + "</strong><small>" + escapeHTML(count) + "</small></span>",
+      '    <span class="do-wallet-l1-portfolio-meta"><strong>' + escapeHTML(label) + (price ? ' <small>' + escapeHTML(price) + "</small>" : "") + "</strong>" + (change ? '<em class="' + changeClass + '">' + escapeHTML(change) + "</em>" : "<small>" + escapeHTML(count) + "</small>") + "</span>",
       "  </span>",
-      '  <span class="do-wallet-l1-portfolio-right"><strong>' + escapeHTML(group.totalValueText) + "</strong><small>" + escapeHTML(group.nativeSymbol) + "</small></span>",
+      '  <span class="do-wallet-l1-portfolio-right"><strong>' + escapeHTML(group.totalValueText) + "</strong><small>" + escapeHTML(amount || count) + "</small></span>",
       "</button>"
     ].join("");
   }
@@ -11447,11 +11465,102 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     return true;
   }
 
+  function visibleRect(node) {
+    if (!isVisible(node)) return null;
+    return node.getBoundingClientRect();
+  }
+
+  function nodeText(node) {
+    return clean(node && (node.innerText || node.textContent || ""));
+  }
+
+  function findRightWalletPane() {
+    var viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+    var nodes = Array.prototype.slice.call(document.querySelectorAll("aside,section,article,div"));
+    var best = null;
+    nodes.forEach(function (node) {
+      if (!node || node.hasAttribute && node.hasAttribute(HOST_ATTR)) return;
+      var rect = visibleRect(node);
+      if (!rect || rect.width < 260 || rect.height < 360) return;
+      if (viewportWidth && rect.left < viewportWidth * 0.45 && rect.width < viewportWidth * 0.72) return;
+      var value = nodeText(node);
+      if (!/\bPortfolio value\b/i.test(value) || !/\bAssets\b/i.test(value)) return;
+      if (!/\bSend\b/i.test(value) || !/\bReceive\b/i.test(value)) return;
+      if (/\bMarkets\b/i.test(value) && rect.width > viewportWidth * 0.6) return;
+      var score = rect.left * 100000 + Math.min(rect.width * rect.height, 500000);
+      if (!best || score > best.score) best = { node: node, score: score };
+    });
+    if (best && best.node) best.node.setAttribute(PANE_ATTR, "1");
+    return best && best.node || null;
+  }
+
+  function isAssetsHeaderNode(node) {
+    if (!node || node.hasAttribute && node.hasAttribute(HOST_ATTR)) return false;
+    return /^Assets$/i.test(nodeText(node));
+  }
+
+  function findAssetsHeader(pane) {
+    if (!pane) return null;
+    var nodes = Array.prototype.slice.call(pane.querySelectorAll("h1,h2,h3,h4,strong,span,div,p"));
+    return nodes.filter(isAssetsHeaderNode).sort(function (a, b) {
+      return (visibleRect(a) || { top: 99999 }).top - (visibleRect(b) || { top: 99999 }).top;
+    })[0] || null;
+  }
+
+  function headerRowFor(header, pane) {
+    var row = header;
+    for (var depth = 0; row && row !== pane && depth < 6; depth += 1) {
+      var rect = visibleRect(row);
+      var value = nodeText(row);
+      if (rect && rect.width >= 160 && rect.height <= 96 && /\bAssets\b/i.test(value)) return row;
+      row = row.parentElement;
+    }
+    return header.parentElement || header;
+  }
+
+  function hideNativeAssetSiblings(host) {
+    if (!host || !host.parentElement) return;
+    var node = host.nextElementSibling;
+    while (node) {
+      if (!node.hasAttribute || !node.hasAttribute(HOST_ATTR)) {
+        node.setAttribute(NATIVE_HIDDEN_ATTR, "1");
+      }
+      node = node.nextElementSibling;
+    }
+  }
+
+  function ensureOwnedAssetHost() {
+    var pane = findRightWalletPane();
+    if (!pane) return null;
+    var existing = pane.querySelector("[" + HOST_ATTR + "='1']");
+    if (existing && document.documentElement.contains(existing)) {
+      hideNativeAssetSiblings(existing);
+      return existing;
+    }
+
+    var list = Array.prototype.slice.call(pane.querySelectorAll(LIST_SELECTOR)).filter(isVisible)[0];
+    if (list) {
+      list.setAttribute(HOST_ATTR, "1");
+      return list;
+    }
+
+    var header = findAssetsHeader(pane);
+    if (!header) return null;
+    var row = headerRowFor(header, pane);
+    var host = document.createElement("div");
+    host.setAttribute(HOST_ATTR, "1");
+    host.className = "do-wallet-l1-portfolio-owned-host";
+    if (row && row.parentElement) row.parentElement.insertBefore(host, row.nextSibling);
+    else pane.appendChild(host);
+    hideNativeAssetSiblings(host);
+    return host;
+  }
+
   function findAssetLists() {
-    return Array.prototype.slice.call(document.querySelectorAll(LIST_SELECTOR)).filter(function (list) {
+    var lists = Array.prototype.slice.call(document.querySelectorAll(LIST_SELECTOR)).filter(function (list) {
       if (!isVisible(list)) return false;
       var node = list;
-      for (var depth = 0; node && depth < 8; depth += 1) {
+      for (var depth = 0; node && depth < 14; depth += 1) {
         var content = lower(node.textContent || "");
         if (content.indexOf("search for a chain") >= 0 || content.indexOf("receive") === 0) return false;
         if (content.indexOf("portfolio value") >= 0 && content.indexOf("assets") >= 0) return true;
@@ -11459,6 +11568,9 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       }
       return false;
     });
+    var owned = ensureOwnedAssetHost();
+    if (owned && lists.indexOf(owned) < 0) lists.unshift(owned);
+    return lists;
   }
 
   function injectStyle() {
@@ -11469,7 +11581,9 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     style.id = STYLE_ID;
     style.textContent = [
       "html{--do-wallet-l1-font-weight:var(--bold,500);}",
+      "[" + NATIVE_HIDDEN_ATTR + "='1']{display:none!important;}",
       "[" + TARGET_ATTR + "='1']>article{display:none!important;}",
+      "[" + HOST_ATTR + "='1'],.do-wallet-l1-portfolio-owned-host{box-sizing:border-box;width:100%;}",
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-detail{box-sizing:border-box;width:100%;font-family:inherit;color:#fff;}",
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-coins{display:flex;flex-direction:column;gap:0;}",
       ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;}",
@@ -11515,14 +11629,14 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     rendering = true;
     try {
       injectStyle();
-      var lists = findAssetLists();
-      if (!lists.length) {
-        setDebug("no-assets-list", { reason: reason });
-        return;
-      }
       var groups = buildGroups();
       if (!groups.length) {
         setDebug("no-groups", { reason: reason });
+        return;
+      }
+      var lists = findAssetLists();
+      if (!lists.length) {
+        setDebug("no-assets-list", { reason: reason });
         return;
       }
       lists.forEach(function (list) {
