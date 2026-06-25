@@ -8594,11 +8594,19 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     return isDo(derived) ? derived : "";
   }
 
+  function deriveTerraAddressFromDo(value) {
+    value = clean(value);
+    if (isTerra(value)) return value;
+    if (!isDo(value)) return "";
+    var derived = reencodeBech32Address(value, "terra");
+    return isTerra(derived) ? derived : "";
+  }
+
   function normalizeAddressForChain(chainID, value) {
     var address = clean(value);
     if (!address) return "";
     if (chainID === "Do-Chain") return isDo(address) ? address : "";
-    if (chainID === "columbus-5" || chainID === "phoenix-1") return isTerra(address) ? address : "";
+    if (chainID === "columbus-5" || chainID === "phoenix-1") return isTerra(address) ? address : deriveTerraAddressFromDo(address);
     return address;
   }
 
@@ -8685,7 +8693,14 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       if (chainID && chains[chainID] && isPublicAddress(address)) map[chainID] = address;
     });
     raw.forEach(function (address) {
-      if (isDo(address)) map["Do-Chain"] = map["Do-Chain"] || address;
+      if (isDo(address)) {
+        map["Do-Chain"] = map["Do-Chain"] || address;
+        var terraFromDo = deriveTerraAddressFromDo(address);
+        if (terraFromDo) {
+          map["columbus-5"] = map["columbus-5"] || terraFromDo;
+          map["phoenix-1"] = map["phoenix-1"] || terraFromDo;
+        }
+      }
       else if (isTerra(address)) {
         map["columbus-5"] = map["columbus-5"] || address;
         map["phoenix-1"] = map["phoenix-1"] || address;
@@ -8701,6 +8716,13 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       else if (isTron(address)) map["tron-mainnet"] = map["tron-mainnet"] || address;
       else if (isXrp(address)) map["xrp-ledger-mainnet"] = map["xrp-ledger-mainnet"] || address;
     });
+    if (map["Do-Chain"]) {
+      var terraFromMappedDo = deriveTerraAddressFromDo(map["Do-Chain"]);
+      if (terraFromMappedDo) {
+        map["columbus-5"] = map["columbus-5"] || terraFromMappedDo;
+        map["phoenix-1"] = map["phoenix-1"] || terraFromMappedDo;
+      }
+    }
 
     var decoded = raw.map(function (address) {
       return { address: address, decoded: bech32Decode(address) };
@@ -9033,7 +9055,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   function chainIDsForPublicAddress(address) {
     address = clean(address);
     if (!address) return [];
-    if (isDo(address)) return ["Do-Chain"];
+    if (isDo(address)) return ["Do-Chain", "columbus-5", "phoenix-1"];
     if (isTerra(address)) return ["columbus-5", "phoenix-1"];
     if (isSecret(address)) return ["secret-4"];
     if (isDungeon(address)) return ["dungeon-1"];
@@ -11100,7 +11122,10 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
 
     values.forEach(function (value) {
       var address = clean(value);
-      if (isDo(address)) changed = setAliases(addresses, ["Do-Chain"], address) || changed;
+      if (isDo(address)) {
+        changed = setAliases(addresses, ["Do-Chain"], address) || changed;
+        changed = setAliases(addresses, ["columbus-5", "phoenix-1"], deriveTerraAddressFromDo(address)) || changed;
+      }
       else if (isTerra(address)) changed = setAliases(addresses, ["columbus-5", "phoenix-1"], address) || changed;
       else if (isSecret(address)) changed = setAliases(addresses, ["secret-4"], address) || changed;
       else if (isDungeon(address)) changed = setAliases(addresses, ["dungeon-1", "dungeon"], address) || changed;
@@ -11124,6 +11149,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       delete addresses["Do-Chain"];
       changed = true;
     }
+    if (explicitDo) changed = setAliases(addresses, ["columbus-5", "phoenix-1"], deriveTerraAddressFromDo(explicitDo)) || changed;
 
     REMOVED_ADDRESS_ALIASES.concat(DISPLAY_ALIAS_KEYS).forEach(function (key) {
       if (Object.prototype.hasOwnProperty.call(addresses, key)) {
