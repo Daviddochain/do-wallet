@@ -2,7 +2,7 @@
   "name": "Do-Wallet",
   "version": "2.0.0",
   "date": "2026-06-25",
-  "build": "20260625SourceRuntime34",
+  "build": "20260625SourceRuntime35",
   "storagePolicy": "preserve-client-local-storage",
   "activeTree": "source/frontend",
   "styles": [
@@ -25,6 +25,7 @@
     "do-wallet-v2-extension-authority.js",
     "do-wallet-v2-network-compat.js",
     "do-wallet-v2-wallet-priority.js",
+    "do-wallet-v2-do-chain-storage-priority.js",
     "do-wallet-v2-native-do-asset.js",
     "do-wallet-v2-governance-route-guard.js",
     "do-wallet-v2-governance-chain-select.js",
@@ -49,7 +50,6 @@
     "do-wallet-v2-swap-redemption.js",
     "do-wallet-v2-onramper-config.js",
     "do-wallet-v2-onramper-ramp.js",
-    "do-wallet-v2-markets-priority.js",
     "do-wallet-v2-delete-extension-sync.js"
   ],
   "standaloneAfterMain": [

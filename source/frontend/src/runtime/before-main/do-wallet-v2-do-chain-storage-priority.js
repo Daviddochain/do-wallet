@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletMarketsPriority20260625Fast1) return;
-  window.__doWalletMarketsPriority20260625Fast1 = true;
+  if (window.__doWalletDoChainStoragePriority20260625Stable1) return;
+  window.__doWalletDoChainStoragePriority20260625Stable1 = true;
 
   var DO_CHAIN_ID = "Do-Chain";
   var LEGACY_DO_IDS = ["Do-Chain", "do-chain", "dochain"];
@@ -183,7 +183,7 @@
     if (changed) {
       try {
         window.dispatchEvent(new CustomEvent("do_wallet_chain_assets_update", {
-          detail: { source: "dochain-markets-fast-storage-20260625", updatedAt: Date.now() }
+          detail: { source: "dochain-storage-priority-20260625", updatedAt: Date.now() }
         }));
       } catch (error) {}
     }
@@ -202,7 +202,7 @@
 
   window.addEventListener("storage", run);
 
-  window.doWalletMarketsPriority = {
+  window.doWalletDoChainStoragePriority = {
     run: run,
     seedDoFirstStorage: seedDoFirstStorage
   };
