@@ -11107,7 +11107,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable7";
+  var VERSION = "20260625L1PortfolioStable8";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
@@ -11339,6 +11339,11 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     return clean(asset && (asset.icon || asset.image || asset.logo || asset.logoURI || asset.logoUrl || asset.tokenIcon || asset.chainIcon));
   }
 
+  function displayIconFor(asset, meta, symbol) {
+    if ((meta && meta.key) === "Do-Chain" || upper(symbol) === "DO") return (meta && meta.icon) || "/do-logo.jpg";
+    return iconOf(asset) || (meta && meta.icon) || "";
+  }
+
   function canonicalChain(rawID, rawName, symbol, denom) {
     var id = lower(rawID);
     var name = lower(rawName);
@@ -11472,8 +11477,8 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       nativeSymbol: meta.nativeSymbol,
       denom: denomOf(asset) || symbol,
       category: category,
-      icon: iconOf(asset) || meta.icon,
-      chainIcon: clean(asset && asset.chainIcon) || meta.icon,
+      icon: displayIconFor(asset, meta, symbol),
+      chainIcon: meta.key === "Do-Chain" ? meta.icon : (clean(asset && asset.chainIcon) || meta.icon),
       amount: amountNumber(asset),
       amountText: amountText(asset, symbol),
       value: value,
@@ -12012,9 +12017,10 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
       ".do-wallet-l1-portfolio-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;}",
       ".do-wallet-l1-portfolio-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:84px;max-width:45%;text-align:right;white-space:nowrap;}",
-      ".do-wallet-l1-portfolio-icon,.do-wallet-l1-portfolio-coin-icon{display:block;flex:0 0 auto;border-radius:50%;object-fit:cover;background:#2c2140;}",
-      ".do-wallet-l1-portfolio-icon{width:34px;height:34px;}",
-      ".do-wallet-l1-portfolio-coin-icon{width:30px;height:30px;}",
+      "[" + HOST_ATTR + "='1'] img,.do-wallet-l1-portfolio-owned-host img{display:block!important;object-fit:cover!important;border-radius:50%!important;}",
+      ".do-wallet-l1-portfolio-icon,.do-wallet-l1-portfolio-coin-icon{display:block!important;flex:0 0 auto!important;border-radius:50%!important;object-fit:cover!important;background:#2c2140;overflow:hidden!important;}",
+      ".do-wallet-l1-portfolio-icon{width:34px!important;height:34px!important;min-width:34px!important;max-width:34px!important;min-height:34px!important;max-height:34px!important;}",
+      ".do-wallet-l1-portfolio-coin-icon{width:30px!important;height:30px!important;min-width:30px!important;max-width:30px!important;min-height:30px!important;max-height:30px!important;}",
       ".do-wallet-l1-portfolio-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-meta{display:flex;flex-direction:column;gap:5px;min-width:0;}",
       ".do-wallet-l1-portfolio-meta strong,.do-wallet-l1-portfolio-right strong{font-weight:var(--do-wallet-l1-font-weight);line-height:1.08;letter-spacing:0;}",

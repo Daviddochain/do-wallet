@@ -190,6 +190,27 @@
   min-width: 0 !important;
 }
 
+/*
+  Asset rows sometimes receive the full 1024px Do logo from restored token data.
+  Clamp every icon inside the portfolio asset list so one image cannot stretch
+  the right wallet drawer.
+*/
+[class*="AssetList_assetlist__list"] img,
+[class*="Asset_asset__"] img,
+.do-wallet-l1-portfolio-owned-host img,
+[data-do-wallet-l1-assets-host="1"] img {
+  display: block !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  overflow: hidden !important;
+}
+
 /* Keep narrow portfolio/detail drawers readable for long L2 token values. */
 .do-wallet-panel-supplement-row,
 .do-wallet-snapshot-row {
