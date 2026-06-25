@@ -5,8 +5,8 @@
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable13";
-  var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
+  var VERSION = "20260625L1PortfolioStable14";
+  var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";

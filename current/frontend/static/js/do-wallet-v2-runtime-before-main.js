@@ -7447,7 +7447,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   var AUTH_KEY = "do-wallet-extension-authority.v1";
   var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
   var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
-  var SNAPSHOT_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
+  var SNAPSHOT_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var PORTFOLIO_ADDRESS_HINTS_KEY = "do-wallet-portfolio-address-hints.v1";
   var PAGE_TARGET = "do-wallet-page";
   var CONTENT_TARGET = "do-wallet-content";
@@ -8217,14 +8217,17 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       });
     }
     var changed = preservePortfolioAddressHints(snapshots);
+    var removed = 0;
+    removed += removeJSON(SNAPSHOT_KEY) ? 1 : 0;
+    removed += removeJSON(SNAPSHOTS_BY_WALLET_KEY) ? 1 : 0;
     writeJSON(SNAPSHOT_RESET_KEY, SNAPSHOT_SCHEMA_VERSION);
     markStatus("portfolio-cache-cleared-for-schema", {
       schemaVersion: SNAPSHOT_SCHEMA_VERSION,
       migrated: Boolean(changed),
-      removedKeys: 0,
+      removedKeys: removed,
       retainedKeys: snapshots.length,
     });
-    return changed;
+    return changed || removed > 0;
   }
 
   function ensureOrdered(list) {
@@ -11288,8 +11291,8 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable13";
-  var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
+  var VERSION = "20260625L1PortfolioStable14";
+  var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
