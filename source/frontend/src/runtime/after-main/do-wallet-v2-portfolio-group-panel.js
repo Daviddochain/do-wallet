@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins4) return;
-  window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins4 = true;
+  if (window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins5) return;
+  window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins5 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
@@ -16,8 +16,8 @@
   var SIDE_PENDING_AT_ATTR = "data-do-wallet-l1-side-pending-at";
   var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
   var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
-  var SIDE_STABLE_DELAY = 700;
-  var VERSION = "20260625SideL1DetailCoins4";
+  var SIDE_STABLE_DELAY = 0;
+  var VERSION = "20260625SideL1DetailCoins5";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
@@ -1098,7 +1098,6 @@
       ".do-wallet-side-l1-parent-row{background:rgba(163,60,255,.045);}",
       ".do-wallet-side-l1-parent-row[data-do-wallet-l1-child-count]:not([data-do-wallet-l1-child-count='0']){cursor:pointer;}",
       ".do-wallet-side-l1-child-row{display:none!important;}",
-      "[" + SIDE_PENDING_SIGNATURE_ATTR + "]{opacity:0!important;pointer-events:none!important;}",
       ".do-wallet-side-l1-synthetic-parent{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:14px 0;background:rgba(163,60,255,.045);}",
       ".do-wallet-side-l1-synthetic-left{display:flex;align-items:center;gap:12px;min-width:0;}",
       ".do-wallet-side-l1-synthetic-icon,.do-wallet-side-l1-synthetic-fallback{width:28px;height:28px;border-radius:50%;background:#2c2140;flex:0 0 auto;}",
