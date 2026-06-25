@@ -6,6 +6,9 @@
     <meta name="Do-Wallet" content="Do-Wallet" />
     <meta name="description" content="Do-Wallet is a web wallet for Do Chain and supported networks." />
     <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Do-Wallet" />
     <meta name="twitter:description" content="Do-Wallet is a web wallet for Do Chain and supported networks." />
@@ -16,11 +19,11 @@
     <link rel="icon" id="favicon" href="/do-logo.jpg" />
     <title>Do-Wallet</title>
     <script>
-      window.__DO_WALLET_BUILD__ = "20260625SourceRuntime37";
+      window.__DO_WALLET_BUILD__ = "20260625SourceRuntime38";
       window.__DO_WALLET_SINGLE_PORTFOLIO_WRITER__ = "do-wallet-v2-multichain-assets";
       window.__DO_WALLET_RECEIVE_CONTROLLER__ = "do-wallet-v2-receive-addresses";
       (function () {
-        var resetVersion = window.__DO_WALLET_BUILD__ || "20260625SourceRuntime37";
+        var resetVersion = window.__DO_WALLET_BUILD__ || "20260625SourceRuntime38";
         var resetKey = "do-wallet-browser-display-reset-version";
         var explicitClear = {};
         var protectedKeys = {
@@ -76,43 +79,59 @@
       })();
       if ("serviceWorker" in navigator) {
         (function () {
-          var resetVersion = window.__DO_WALLET_BUILD__ || "20260625SourceRuntime37";
-          var cacheResetKey = "do-wallet-cache-reset-version";
+          function clearBrowserCaches() {
+            if (!("caches" in window)) return Promise.resolve();
+            return window.caches.keys().then(function (keys) {
+              return Promise.all(
+                keys.map(function (key) {
+                  return window.caches.delete(key);
+                })
+              );
+            });
+          }
           try {
-            if (window.localStorage && window.localStorage.getItem(cacheResetKey) === resetVersion) return;
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage("DO_WALLET_CLEAR_SERVICE_WORKER");
+            }
           } catch (error) {}
           navigator.serviceWorker
             .getRegistrations()
             .then(function (registrations) {
-              registrations.forEach(function (registration) {
-                registration.unregister();
-              });
-              if ("caches" in window) {
-                return window.caches.keys().then(function (keys) {
-                  return Promise.all(
-                    keys.map(function (key) {
-                      return window.caches.delete(key);
-                    })
-                  );
-                });
-              }
+              return Promise.all(
+                registrations.map(function (registration) {
+                  return registration.unregister();
+                })
+              );
             })
-            .then(function () {
-              try {
-                if (window.localStorage) window.localStorage.setItem(cacheResetKey, resetVersion);
-              } catch (error) {}
-            })
-            .catch(function () {});
+            .then(clearBrowserCaches)
+            .catch(clearBrowserCaches);
+          window.addEventListener("load", clearBrowserCaches, { once: true });
+          document.documentElement.setAttribute("data-do-wallet-cache-policy", "no-service-worker");
+          window.__DO_WALLET_CACHE_POLICY__ = "no-service-worker";
+          window.__DO_WALLET_CACHE_POLICY_BUILD__ = window.__DO_WALLET_BUILD__ || "20260625SourceRuntime38";
         })();
+      } else {
+        document.documentElement.setAttribute("data-do-wallet-cache-policy", "no-service-worker-api");
+      }
+      if ("caches" in window) {
+        window.caches.keys()
+          .then(function (keys) {
+            return Promise.all(
+              keys.map(function (key) {
+                return window.caches.delete(key);
+              })
+            );
+          })
+            .catch(function () {});
       }
     </script>
-    <link rel="stylesheet" href="/static/css/do-wallet-v2-styles.css?v=20260625SourceRuntime37" />
+    <link rel="stylesheet" href="/static/css/do-wallet-v2-styles.css?v=20260625SourceRuntime38" />
   </head>
   <body>
     <div id="station"><div id="do-wallet"></div></div>
-    <script defer src="/static/js/do-wallet-v2-runtime-before-main.js?v=20260625SourceRuntime37"></script>
-    <script defer src="/static/js/do-wallet-v2-main.js?v=20260625SourceRuntime37"></script>
-    <script defer src="/static/js/do-wallet-v2-mfa-onboarding.js?v=20260625SourceRuntime37"></script>
-    <script defer src="/static/js/do-wallet-v2-runtime-after-main.js?v=20260625SourceRuntime37"></script>
+    <script defer src="/static/js/do-wallet-v2-runtime-before-main.js?v=20260625SourceRuntime38"></script>
+    <script defer src="/static/js/do-wallet-v2-main.js?v=20260625SourceRuntime38"></script>
+    <script defer src="/static/js/do-wallet-v2-mfa-onboarding.js?v=20260625SourceRuntime38"></script>
+    <script defer src="/static/js/do-wallet-v2-runtime-after-main.js?v=20260625SourceRuntime38"></script>
   </body>
 </html>
