@@ -1,14 +1,21 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletL1PortfolioAssetsStable20260625) return;
-  window.__doWalletL1PortfolioAssetsStable20260625 = true;
+  if (window.__doWalletL1PortfolioAssetsRewrite20260625) return;
+  window.__doWalletL1PortfolioAssetsRewrite20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable14";
+  var VERSION = "20260625L1PortfolioRewrite1";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
+  var PORTFOLIO_ADDRESS_HINTS_KEY = "do-wallet-portfolio-address-hints.v1";
+  var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
+  var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
+  var BRIDGE_KEY = "do-wallet-bridge-wallet";
+  var AUTH_KEY = "do-wallet-extension-authority.v1";
+  var BACKEND_PORTFOLIO_SNAPSHOT_PATH = "/station-assets/api/portfolio/snapshot?v=" + VERSION;
+  var BACKEND_REFRESH_MS = 45000;
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
   var LIST_SELECTOR = "[class*='AssetList_assetlist__list']";
   var HOST_ATTR = "data-do-wallet-l1-assets-host";
@@ -20,7 +27,13 @@
   var activeKey = "";
   var renderTimer = null;
   var rendering = false;
-  var lastPaneAssets = [];
+  var backendRows = [];
+  var backendSignature = "";
+  var backendFailureSignature = "";
+  var backendPending = false;
+  var backendPromise = null;
+  var backendLastStartedAt = 0;
+  var waitingForFullPortfolio = false;
 
   var FLAT_KEYS = [
     "rawSpendableAssets",
@@ -197,6 +210,377 @@
     } catch (error) {
       return fallback;
     }
+  }
+
+  function writeJSON(key, value) {
+    try {
+      if (window.localStorage) window.localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  var BECH32_ALPHABET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  var BECH32_INDEX = {};
+  BECH32_ALPHABET.split("").forEach(function (char, index) {
+    BECH32_INDEX[char] = index;
+  });
+
+  function bech32Polymod(values) {
+    var chk = 1;
+    var generators = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+    values.forEach(function (value) {
+      var top = chk >> 25;
+      chk = ((chk & 0x1ffffff) << 5) ^ value;
+      for (var index = 0; index < 5; index += 1) {
+        if ((top >> index) & 1) chk ^= generators[index];
+      }
+    });
+    return chk;
+  }
+
+  function bech32HrpExpand(prefix) {
+    var out = [];
+    for (var index = 0; index < prefix.length; index += 1) out.push(prefix.charCodeAt(index) >> 5);
+    out.push(0);
+    for (var low = 0; low < prefix.length; low += 1) out.push(prefix.charCodeAt(low) & 31);
+    return out;
+  }
+
+  function bech32Decode(address) {
+    var value = clean(address).toLowerCase();
+    var separator = value.lastIndexOf("1");
+    if (separator <= 0 || separator + 7 > value.length) return null;
+    var prefix = value.slice(0, separator);
+    var words = [];
+    for (var index = separator + 1; index < value.length; index += 1) {
+      var word = BECH32_INDEX[value.charAt(index)];
+      if (word === undefined) return null;
+      words.push(word);
+    }
+    if (bech32Polymod(bech32HrpExpand(prefix).concat(words)) !== 1) return null;
+    return { prefix: prefix, words: words.slice(0, -6) };
+  }
+
+  function bech32Encode(prefix, words) {
+    var cleanPrefix = clean(prefix).toLowerCase();
+    if (!cleanPrefix || !Array.isArray(words) || !words.length) return "";
+    var polymod = bech32Polymod(bech32HrpExpand(cleanPrefix).concat(words).concat([0, 0, 0, 0, 0, 0])) ^ 1;
+    var checksum = [];
+    for (var index = 0; index < 6; index += 1) checksum.push((polymod >> (5 * (5 - index))) & 31);
+    return cleanPrefix + "1" + words.concat(checksum).map(function (word) {
+      return BECH32_ALPHABET.charAt(word);
+    }).join("");
+  }
+
+  function reencodeBech32Address(address, prefix) {
+    var decoded = bech32Decode(address);
+    return decoded ? bech32Encode(prefix, decoded.words) : "";
+  }
+
+  function walletFromPayload(payload) {
+    if (!isObject(payload)) return null;
+    return isObject(payload.wallet) ? payload.wallet : payload;
+  }
+
+  function activeWalletFromStorage() {
+    var selectedWallet = walletFromPayload(readJSON(SELECTED_WALLET_KEY, null));
+    if (selectedWallet) return selectedWallet;
+    var storedUser = walletFromPayload(readJSON("user", null));
+    if (storedUser) return storedUser;
+    var bridgeWallet = walletFromPayload(readJSON(BRIDGE_KEY, null));
+    if (bridgeWallet) return bridgeWallet;
+    var authWallet = walletFromPayload(readJSON(AUTH_KEY, null));
+    if (authWallet) return authWallet;
+    var recovered = readJSON(RECOVERED_WALLETS_KEY, []);
+    if (Array.isArray(recovered) && recovered.length) {
+      return recovered.map(walletFromPayload).filter(Boolean).sort(function (left, right) {
+        return Number(right.walletPriority || 0) - Number(left.walletPriority || 0);
+      })[0] || null;
+    }
+    return null;
+  }
+
+  function canonicalAddressHint(hint) {
+    var key = canonicalChain(hint || "", "", "", "");
+    return CHAIN_META[key] ? key : "";
+  }
+
+  function addressChainIDs(address, hint) {
+    var value = clean(address);
+    var lowerValue = value.toLowerCase();
+    var hinted = canonicalAddressHint(hint);
+    var chains = hinted ? [hinted] : [];
+    function add(chainID) {
+      if (chainID && chains.indexOf(chainID) < 0) chains.push(chainID);
+    }
+    if (/^do1[023456789acdefghjklmnpqrstuvwxyz]{20,90}$/i.test(value)) add("Do-Chain");
+    if (/^terra1[023456789acdefghjklmnpqrstuvwxyz]{20,90}$/i.test(value)) {
+      add("columbus-5");
+      add("phoenix-1");
+    }
+    if (/^osmo1[023456789acdefghjklmnpqrstuvwxyz]{20,90}$/i.test(value)) add("osmosis-1");
+    if (/^cosmos1/i.test(value)) add("cosmoshub-4");
+    if (/^secret1/i.test(value)) add("secret-4");
+    if (/^dungeon1/i.test(value)) add("dungeon-1");
+    if (/^akash1/i.test(value)) add("akashnet-2");
+    if (/^archway1/i.test(value)) add("archway-1");
+    if (/^axelar1/i.test(value)) add("axelar-dojo-1");
+    if (/^swth1/i.test(value)) add("carbon-1");
+    if (/^cheqd1/i.test(value)) add("cheqd-mainnet-1");
+    if (/^chihuahua1/i.test(value)) add("chihuahua-1");
+    if (/^cre1/i.test(value)) add("crescent-1");
+    if (/^decentr1/i.test(value)) add("decentr-mainnet-1");
+    if (/^juno1/i.test(value)) add("juno-1");
+    if (/^kujira1/i.test(value)) add("kaiyo-1");
+    if (/^mars1/i.test(value)) add("mars-1");
+    if (/^migaloo1/i.test(value)) add("migaloo-1");
+    if (/^sei1/i.test(value)) add("pacific-1");
+    if (/^stride1/i.test(value)) add("stride-1");
+    if (/^stafi1/i.test(value)) add("stafihub-1");
+    if (/^0x[a-f0-9]{40}$/i.test(value)) {
+      add("ethereum-mainnet");
+      add("bnb-smart-chain-mainnet");
+      add("arbitrum-one");
+      add("avalanche-c-chain");
+      add("base-mainnet");
+      add("polygon-mainnet");
+      add("optimism-mainnet");
+    }
+    if (/^(bc1|[13])[a-z0-9]{25,90}$/i.test(value)) add("bitcoin-mainnet");
+    if (/^addr1[023456789acdefghjklmnpqrstuvwxyz]{20,120}$/i.test(value)) add("cardano-mainnet");
+    if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(value)) add("tron-mainnet");
+    if (/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(value)) add("xrp-ledger-mainnet");
+    if (!chains.length && lowerValue.length >= 32 && lowerValue.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(value)) add("solana-mainnet");
+    return chains;
+  }
+
+  function addAddress(addressMap, chainID, address) {
+    var value = clean(address);
+    if (!value) return;
+    var key = canonicalAddressHint(chainID);
+    if (!key) {
+      addressChainIDs(value, "").forEach(function (candidate) { addAddress(addressMap, candidate, value); });
+      return;
+    }
+    if (!addressMap[key]) addressMap[key] = value;
+  }
+
+  function addAddressValue(addressMap, value, hint) {
+    if (typeof value !== "string") return;
+    var patterns = [
+      /\b(?:do|terra|osmo|cosmos|secret|dungeon|akash|archway|axelar|swth|cheqd|chihuahua|cre|decentr|juno|kujira|mars|migaloo|sei|stride|stafi)[a-z0-9-]*1[023456789acdefghjklmnpqrstuvwxyz]{20,90}\b/gi,
+      /\b0x[a-fA-F0-9]{40}\b/g,
+      /\b(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,90}\b/g,
+      /\baddr1[023456789acdefghjklmnpqrstuvwxyz]{20,120}\b/gi,
+      /\bT[1-9A-HJ-NP-Za-km-z]{33}\b/g,
+      /\br[1-9A-HJ-NP-Za-km-z]{24,34}\b/g
+    ];
+    patterns.forEach(function (pattern) {
+      var match;
+      pattern.lastIndex = 0;
+      while ((match = pattern.exec(value))) {
+        addressChainIDs(match[0], hint).forEach(function (chainID) {
+          addAddress(addressMap, chainID, match[0]);
+        });
+      }
+    });
+  }
+
+  function addAddressesFromMap(addressMap, value, hint) {
+    if (!value) return;
+    if (typeof value === "string") {
+      addAddressValue(addressMap, value, hint);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(function (item) { addAddressesFromMap(addressMap, item, hint); });
+      return;
+    }
+    if (!isObject(value)) return;
+    Object.keys(value).forEach(function (key) {
+      var item = value[key];
+      if (typeof item === "string") addAddressValue(addressMap, item, key);
+      else if (isObject(item) && typeof item.address === "string") addAddressValue(addressMap, item.address, item.chainID || item.chainId || item.network || key);
+      else if (Array.isArray(item)) addAddressesFromMap(addressMap, item, key);
+    });
+  }
+
+  function scanObjectForAddresses(value, addressMap, depth) {
+    if (depth > 5 || value == null) return;
+    if (typeof value === "string") {
+      addAddressValue(addressMap, value, "");
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(function (item) { scanObjectForAddresses(item, addressMap, depth + 1); });
+      return;
+    }
+    if (!isObject(value)) return;
+    addAddressesFromMap(addressMap, value.addresses, "");
+    addAddressesFromMap(addressMap, value.addressMap, "");
+    addAddressesFromMap(addressMap, value.activeAddresses, "");
+    addAddressesFromMap(addressMap, value.allAddresses, "");
+    addAddressValue(addressMap, value.address, value.chainID || value.chainId || value.network || value.chain);
+    Object.keys(value).forEach(function (key) {
+      if (/mnemonic|seed|private|password|secret/i.test(key)) return;
+      scanObjectForAddresses(value[key], addressMap, depth + 1);
+    });
+  }
+
+  function collectAddressMap() {
+    var addressMap = {};
+    collectSnapshots().forEach(function (snapshot) {
+      scanObjectForAddresses(snapshot, addressMap, 0);
+    });
+    [
+      readJSON(PORTFOLIO_ADDRESS_HINTS_KEY, null),
+      activeWalletFromStorage(),
+      readJSON(SELECTED_WALLET_KEY, null),
+      readJSON("user", null),
+      readJSON(BRIDGE_KEY, null),
+      readJSON(AUTH_KEY, null),
+      readJSON(RECOVERED_WALLETS_KEY, null)
+    ].forEach(function (item) {
+      scanObjectForAddresses(item, addressMap, 0);
+    });
+    try {
+      if (window.localStorage) {
+        for (var index = 0; index < window.localStorage.length; index += 1) {
+          var key = window.localStorage.key(index);
+          if (!key || /mnemonic|seed|private|password|secret/i.test(key)) continue;
+          var raw = window.localStorage.getItem(key) || "";
+          if (raw.length > 250000) continue;
+          addAddressValue(addressMap, raw, key);
+        }
+      }
+    } catch (error) {}
+    if (addressMap["Do-Chain"]) {
+      var terra = reencodeBech32Address(addressMap["Do-Chain"], "terra");
+      if (terra) {
+        addAddress(addressMap, "columbus-5", terra);
+        addAddress(addressMap, "phoenix-1", terra);
+      }
+    }
+    if (addressMap["columbus-5"]) {
+      var doAddress = reencodeBech32Address(addressMap["columbus-5"], "do");
+      if (doAddress) addAddress(addressMap, "Do-Chain", doAddress);
+    }
+    return addressMap;
+  }
+
+  function addressMapSignature(addressMap) {
+    return Object.keys(addressMap || {}).sort().map(function (key) {
+      return key + ":" + addressMap[key];
+    }).join("|");
+  }
+
+  function backendWalletPayload(addressMap) {
+    var active = activeWalletFromStorage() || {};
+    var wallet = Object.assign({}, active);
+    wallet.addresses = Object.assign({}, addressMap);
+    wallet.addressMap = Object.assign({}, addressMap);
+    wallet.address = wallet.address || addressMap["Do-Chain"] || addressMap["columbus-5"] || Object.keys(addressMap).map(function (key) { return addressMap[key]; })[0] || "";
+    wallet.name = clean(wallet.name || wallet.walletName || wallet.label || wallet.id || "Do Wallet");
+    return {
+      version: VERSION,
+      wallet: wallet,
+      wallets: [wallet],
+      addressMap: Object.assign({}, addressMap)
+    };
+  }
+
+  function backendRowCount(snapshot) {
+    return collectAssetsFromSnapshot(snapshot).length;
+  }
+
+  function persistBackendSnapshot(snapshot, addressMap) {
+    if (!isObject(snapshot)) return;
+    var current = readJSON(SNAPSHOT_KEY, null);
+    if (backendRowCount(current) > backendRowCount(snapshot)) return;
+    var wallet = isObject(snapshot.wallet) ? Object.assign({}, snapshot.wallet) : {};
+    wallet.addresses = Object.assign({}, addressMap);
+    wallet.addressMap = Object.assign({}, addressMap);
+    var stored = Object.assign({}, snapshot, {
+      schemaVersion: PORTFOLIO_SCHEMA_VERSION,
+      source: "do-wallet-l1-portfolio-rewrite",
+      wallet: wallet,
+      addresses: Object.assign({}, addressMap),
+      activeAddresses: Object.assign({}, addressMap),
+      updatedAt: Date.now()
+    });
+    writeJSON(SNAPSHOT_KEY, stored);
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (!isObject(byWallet)) byWallet = {};
+    [wallet.address, wallet.name, addressMap["Do-Chain"], addressMap["columbus-5"]].forEach(function (key) {
+      key = clean(key).toLowerCase();
+      if (key) byWallet[key] = stored;
+    });
+    writeJSON(SNAPSHOTS_BY_WALLET_KEY, byWallet);
+    try {
+      window.dispatchEvent(new CustomEvent("do_wallet_portfolio_snapshot", { detail: stored }));
+    } catch (error) {}
+  }
+
+  function shouldFetchBackend(rows, addressMap) {
+    var signature = addressMapSignature(addressMap);
+    if (!signature || backendFailureSignature === signature) return false;
+    if (backendPending && backendSignature === signature) return true;
+    if (backendRows.length && backendSignature === signature) return false;
+    var expectedChains = Object.keys(addressMap || {}).filter(function (key) {
+      return Boolean(CHAIN_META[key]);
+    });
+    var rowChains = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (asset) {
+      if (asset && asset.chainID) rowChains[asset.chainID] = true;
+    });
+    if (addressMap["columbus-5"] && !rowChains["columbus-5"]) return true;
+    if (addressMap["osmosis-1"] && !rowChains["osmosis-1"]) return true;
+    if (expectedChains.length > 1 && Object.keys(rowChains).length <= 1) return true;
+    if (expectedChains.length > 1 && rows.length <= 1) return true;
+    return false;
+  }
+
+  function requestBackendPortfolio(addressMap) {
+    if (!window.fetch) return null;
+    var signature = addressMapSignature(addressMap);
+    var now = Date.now();
+    if (!signature) return null;
+    if (backendPending && backendSignature === signature) return backendPromise;
+    if (backendRows.length && backendSignature === signature && now - backendLastStartedAt < BACKEND_REFRESH_MS) return null;
+    backendSignature = signature;
+    backendFailureSignature = "";
+    backendPending = true;
+    backendLastStartedAt = now;
+    backendPromise = window.fetch(BACKEND_PORTFOLIO_SNAPSHOT_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(backendWalletPayload(addressMap)),
+      credentials: "same-origin"
+    }).then(function (response) {
+      if (!response.ok) throw new Error("portfolio snapshot " + response.status);
+      return response.json();
+    }).then(function (payload) {
+      var snapshot = isObject(payload && payload.snapshot) ? payload.snapshot : payload;
+      var rows = collectAssetsFromSnapshot(snapshot);
+      if (!rows.length) throw new Error("portfolio snapshot empty");
+      backendRows = rows;
+      persistBackendSnapshot(snapshot, addressMap);
+      setDebug("backend-loaded", {
+        chains: Object.keys(addressMap).length,
+        rows: rows.length,
+        stats: payload && payload.stats
+      });
+    }).catch(function (error) {
+      backendFailureSignature = signature;
+      setDebug("backend-failed", { message: error && error.message || String(error) });
+    }).finally(function () {
+      backendPending = false;
+      waitingForFullPortfolio = false;
+      schedule(0, "backend-finished");
+    });
+    return backendPromise;
   }
 
   function numberFrom(value) {
@@ -506,23 +890,6 @@
     return 4;
   }
 
-  function rowChainCount(rows) {
-    var seen = {};
-    (Array.isArray(rows) ? rows : []).forEach(function (asset) {
-      var meta = metaFor(asset);
-      if (meta && meta.key) seen[meta.key] = true;
-    });
-    return Object.keys(seen).length;
-  }
-
-  function rowQuality(rows) {
-    rows = Array.isArray(rows) ? rows : [];
-    var valued = rows.filter(function (asset) {
-      return Number(asset && asset.value) > 0 || Boolean(asset && asset.valueText && asset.valueText !== "$-" && asset.valueText !== "$0");
-    }).length;
-    return rows.length + (rowChainCount(rows) * 20) + (valued * 3);
-  }
-
   function mergeRows(primary, secondary) {
     var out = [];
     var byKey = {};
@@ -544,10 +911,13 @@
     collectSnapshots().forEach(function (snapshot) {
       snapshotRows = snapshotRows.concat(collectAssetsFromSnapshot(snapshot));
     });
-    var paneRows = collectAssetsFromPane(findRightWalletPane());
-    var rows = mergeRows(snapshotRows, paneRows);
+    var addressMap = collectAddressMap();
+    var rows = mergeRows(snapshotRows, backendRows);
+    var needsBackend = shouldFetchBackend(rows, addressMap);
+    if (needsBackend) requestBackendPortfolio(addressMap);
+    waitingForFullPortfolio = Boolean(needsBackend && !backendRows.length && backendFailureSignature !== addressMapSignature(addressMap));
+    if (waitingForFullPortfolio) return [];
     if (!rows.length) return [];
-    if (paneRows.length && rowQuality(paneRows) > rowQuality(snapshotRows)) rows = mergeRows(paneRows, snapshotRows);
     return groupAssets(rows);
   }
 
@@ -639,7 +1009,7 @@
   function groupRowHTML(group) {
     var count = group.assets.length === 1 ? "1 asset" : group.assets.length + " assets";
     var native = nativeAssetForGroup(group) || {};
-    var label = clean(native.symbol) || clean(group.nativeSymbol) || clean(group.name);
+    var label = clean(group.name) || clean(native.symbol) || clean(group.nativeSymbol);
     var price = clean(native.priceText);
     var change = clean(native.changeText);
     var changeClass = change.indexOf("-") >= 0 ? "negative" : "positive";
@@ -727,126 +1097,6 @@
 
   function nodeText(node) {
     return clean(node && (node.innerText || node.textContent || ""));
-  }
-
-  function dollarTexts(value) {
-    var matches = clean(value).match(/\$-|\$\s*[0-9][0-9,]*(?:\.[0-9]+)?/g);
-    return matches || [];
-  }
-
-  function firstAssetSymbol(value) {
-    var words = clean(value).match(/\b[A-Z][A-Z0-9]{1,11}\b/g) || [];
-    var known = {
-      DO: true,
-      BTC: true,
-      ETH: true,
-      BNB: true,
-      SOL: true,
-      OSMO: true,
-      LUNA: true,
-      ADA: true,
-      TRX: true,
-      XRP: true,
-      AVAX: true,
-      MATIC: true,
-      OP: true,
-      ATOM: true,
-      SCRT: true,
-      DGN: true,
-      AKT: true,
-      ARCH: true,
-      AXL: true,
-      SWTH: true,
-      CHEQ: true,
-      HUAHUA: true,
-      CRE: true,
-      DEC: true,
-      JUNO: true,
-      KUJI: true,
-      MARS: true,
-      WHALE: true,
-      SEI: true,
-      STRD: true,
-      FIS: true
-    };
-    for (var index = 0; index < words.length; index += 1) {
-      var word = upper(words[index]);
-      if (TERRA_CLASSIC_SYMBOLS[word] || known[word]) return word === "USTC" ? "UST" : word;
-    }
-    return "";
-  }
-
-  function amountTextFromRow(value, symbol) {
-    var matches = clean(value).match(/[0-9][0-9,]*(?:\.[0-9]+)?\s+[A-Z][A-Z0-9]{1,11}\b/g) || [];
-    var wanted = upper(symbol);
-    for (var index = matches.length - 1; index >= 0; index -= 1) {
-      var textValue = clean(matches[index]);
-      var parts = textValue.split(/\s+/);
-      if (!wanted || upper(parts[parts.length - 1]) === wanted) return textValue;
-    }
-    return "";
-  }
-
-  function paneRowCandidate(node, paneRect) {
-    if (!node || node.hasAttribute && (node.hasAttribute(HOST_ATTR) || node.hasAttribute(NATIVE_HIDDEN_ATTR))) return false;
-    if (node.closest && node.closest("[" + HOST_ATTR + "='1']")) return false;
-    var rect = visibleRect(node);
-    if (!rect || rect.width < 160 || rect.height < 28 || rect.height > 110) return false;
-    if (paneRect && (rect.left < paneRect.left - 8 || rect.right > paneRect.right + 8)) return false;
-    var value = nodeText(node);
-    if (!value || value.length > 260) return false;
-    if (/^(Assets|Manage|Send|Receive|Buy \/ Sell|Burn DO|Portfolio value)$/i.test(value)) return false;
-    if (value.indexOf("Search for a chain") >= 0) return false;
-    var symbol = firstAssetSymbol(value);
-    if (!symbol) return false;
-    if (!dollarTexts(value).length && !amountTextFromRow(value, symbol)) return false;
-    return true;
-  }
-
-  function parsePaneAssetRow(node, index) {
-    var value = nodeText(node);
-    var symbol = firstAssetSymbol(value);
-    if (!symbol) return null;
-    var dollars = dollarTexts(value);
-    var price = dollars.length > 1 ? dollars[0] : "";
-    var valueTextValue = dollars.length ? dollars[dollars.length - 1].replace(/\$\s+/, "$") : "";
-    var changeMatch = value.match(/[+-]\s*\d+(?:\.\d+)?%/);
-    var amount = amountTextFromRow(value, symbol);
-    var chainID = canonicalChain("", "", symbol, symbol);
-    var meta = CHAIN_META[chainID] || [];
-    return normalizeAsset({
-      source: "portfolio-pane",
-      category: "wallet",
-      chainID: chainID,
-      chainName: meta[0] || chainID,
-      symbol: symbol,
-      name: symbol,
-      denom: symbol,
-      amountText: amount,
-      valueText: valueTextValue,
-      priceText: price,
-      changeText: changeMatch ? clean(changeMatch[0]).replace(/\s+/g, "") : "",
-      icon: meta[2] || "",
-      chainIcon: meta[2] || ""
-    }, "portfolio-pane", 10000 + index);
-  }
-
-  function collectAssetsFromPane(pane) {
-    if (!pane) return lastPaneAssets.slice();
-    var paneRect = visibleRect(pane);
-    var rows = [];
-    var seen = {};
-    Array.prototype.slice.call(pane.querySelectorAll("button,article,li,[role='button'],a,div")).forEach(function (node, index) {
-      if (!paneRowCandidate(node, paneRect)) return;
-      var asset = parsePaneAssetRow(node, index);
-      if (!isDisplayable(asset)) return;
-      var key = assetIdentity(asset);
-      if (seen[key]) return;
-      seen[key] = true;
-      rows.push(asset);
-    });
-    if (rows.length) lastPaneAssets = rows;
-    return (rows.length ? rows : lastPaneAssets).slice();
   }
 
   function findRightWalletPane() {
@@ -1000,6 +1250,9 @@
       ".do-wallet-l1-portfolio-meta em.positive{color:#00c68f;}",
       ".do-wallet-l1-portfolio-right strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;max-width:100%;}",
       ".do-wallet-l1-portfolio-detail{min-height:360px;padding:0 0 16px;}",
+      ".do-wallet-l1-portfolio-waiting{display:flex;flex-direction:column;gap:6px;padding:18px 10px;color:#fff;border-bottom:1px solid rgba(135,57,190,.26);}",
+      ".do-wallet-l1-portfolio-waiting strong{font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
+      ".do-wallet-l1-portfolio-waiting small{font-size:12px;color:#c7baf0;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-back{display:inline-flex;align-items:center;margin:0 0 8px;padding:8px 2px;border:0;background:transparent;color:#fff;font:inherit;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);cursor:pointer;}",
       ".do-wallet-l1-portfolio-back:before{content:'<';display:inline-block;margin-right:10px;font-size:18px;line-height:1;}",
       ".do-wallet-l1-portfolio-chain-head{background:rgba(163,60,255,.06);border-top:1px solid rgba(135,57,190,.18);}",
@@ -1020,6 +1273,20 @@
     } catch (error) {}
   }
 
+  function renderWaiting(list) {
+    list.removeAttribute(DETAIL_ATTR);
+    list.setAttribute(TARGET_ATTR, "1");
+    list.setAttribute(SIGNATURE_ATTR, "waiting:" + VERSION);
+    list.innerHTML = [
+      '<div class="do-wallet-l1-portfolio-shell">',
+      '  <div class="do-wallet-l1-portfolio-waiting">',
+      '    <strong>Loading assets</strong>',
+      '    <small>Getting the full wallet portfolio...</small>',
+      "  </div>",
+      "</div>"
+    ].join("");
+  }
+
   function render(reason) {
     if (rendering) return;
     rendering = true;
@@ -1027,6 +1294,12 @@
       injectStyle();
       var groups = buildGroups();
       if (!groups.length) {
+        if (waitingForFullPortfolio || backendPending) {
+          var waitingLists = findAssetLists();
+          waitingLists.forEach(renderWaiting);
+          setDebug("waiting-for-backend", { reason: reason, pending: backendPending });
+          return;
+        }
         var restored = restoreNativeAssets();
         setDebug("no-groups", { reason: reason, restored: restored });
         return;
@@ -1048,7 +1321,8 @@
         lists: lists.length,
         groups: groups.length,
         rows: groups.reduce(function (sum, group) { return sum + group.assets.length; }, 0),
-        activeKey: activeKey
+        activeKey: activeKey,
+        backendRows: backendRows.length
       });
     } finally {
       rendering = false;
@@ -1091,10 +1365,21 @@
   }, true);
 
   window.addEventListener("storage", function (event) {
-    if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY) schedule(0, "storage");
+    if (!event || [
+      SNAPSHOT_KEY,
+      SNAPSHOTS_BY_WALLET_KEY,
+      PORTFOLIO_ADDRESS_HINTS_KEY,
+      SELECTED_WALLET_KEY,
+      RECOVERED_WALLETS_KEY,
+      BRIDGE_KEY,
+      AUTH_KEY,
+      "user",
+      "keys"
+    ].indexOf(event.key) >= 0) schedule(0, "storage");
   });
   window.addEventListener("do_wallet_portfolio_snapshot", function () { schedule(0, "snapshot"); });
   window.addEventListener("load", function () { schedule(0, "load"); });
+  window.addEventListener("focus", function () { schedule(0, "focus"); });
 
   try {
     var observer = new MutationObserver(function (mutations) {
@@ -1106,5 +1391,12 @@
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () { schedule(0, "dom-ready"); }, { once: true });
   }
+  window.doWalletL1PortfolioAssets = {
+    version: VERSION,
+    render: function () { schedule(0, "manual"); },
+    groups: function () { return buildGroups(); },
+    addresses: collectAddressMap,
+    refresh: function () { return requestBackendPortfolio(collectAddressMap()); }
+  };
   schedule(0, "install");
 })();
