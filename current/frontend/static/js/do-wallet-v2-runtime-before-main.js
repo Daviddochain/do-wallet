@@ -821,7 +821,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     { chainID: "avalanche-c-chain", label: "Avalanche C-Chain", coinType: "60", kind: "evm", path: "m/44'/60'/0'/0/0", export: "EVM private key" },
     { chainID: "bitcoin-mainnet", label: "Bitcoin", coinType: "0", kind: "bitcoin", prefix: "bc", path: "m/84'/0'/0'/0/0", export: "BTC WIF private key" },
     { chainID: "solana-mainnet", label: "Solana", coinType: "501", kind: "solana", path: "m/44'/501'/0'/0'", export: "SOL private key" },
-    { chainID: "cardano-mainnet", label: "Cardano", coinType: "1815", kind: "cardano", prefix: "addr", path: "m/44'/1815'/0'/0/0", export: "Cardano account key" },
+    { chainID: "cardano-mainnet", label: "Cardano", coinType: "1815", kind: "cardano", prefix: "addr", path: "m/1852'/1815'/0'/0/0 + m/1852'/1815'/0'/2/0", export: "Cardano account key" },
     { chainID: "tron-mainnet", label: "Tron", coinType: "195", kind: "tron", path: "m/44'/195'/0'/0/0", export: "TRX private key" },
     { chainID: "xrp-ledger-mainnet", label: "XRP Ledger", coinType: "144", kind: "xrp", path: "m/44'/144'/0'/0/0", export: "XRP private key" }
   ];
@@ -1302,6 +1302,25 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     return "m/44'/0'/0'/0/" + normalizedWalletIndex({ index: index });
   }
 
+  function chainCoinTypeForWallet(wallet, chain) {
+    if (!chain) return "";
+    if ((chain.chainID === "columbus-5" || chain.chainID === "phoenix-1") && wallet && wallet.legacy) return "118";
+    return String(chain.coinType || "");
+  }
+
+  function derivationPathForWallet(wallet, chain) {
+    if (!chain) return "";
+    var index = normalizedWalletIndex(wallet);
+    if (chain.chainID === "bitcoin-mainnet") return bitcoinPathForIndex(index);
+    if (chain.kind === "solana") return "m/44'/501'/" + index + "'/0'";
+    if (chain.kind === "cardano") {
+      return "m/1852'/1815'/" + index + "'/0/0 + m/1852'/1815'/" + index + "'/2/0";
+    }
+    var coinType = chainCoinTypeForWallet(wallet, chain);
+    if (!coinType) return chain.path || "";
+    return "m/44'/" + coinType + "'/0'/0/" + index;
+  }
+
   function bitcoinAddressFromBip84Seed(seedHex, index) {
     try {
       if (!seedHex || typeof window.doWalletBitcoinBip84FromSeed !== "function") return "";
@@ -1361,7 +1380,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     var walletIndexForPaths = normalizedWalletIndex(normalizedWallet);
     var chains = DERIVED_CHAIN_EXPORTS.map(function (chain) {
       var isBitcoin = chain.chainID === "bitcoin-mainnet";
-      var path = isBitcoin ? bitcoinPathForIndex(walletIndexForPaths) : chain.path;
+      var path = derivationPathForWallet(normalizedWallet, chain);
       var address = isBitcoin
         ? (bitcoinAddressFromBip84Seed(seedHex, walletIndexForPaths) || chainAddressForWallet(normalizedWallet, chain))
         : chainAddressForWallet(normalizedWallet, chain);
@@ -1412,7 +1431,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
         return {
           chainID: chain.chainID,
           label: chain.label,
-          derivationPath: chain.path,
+          derivationPath: derivationPathForWallet(next, chain),
           export: chain.export
         };
       });
@@ -1726,7 +1745,19 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
         separateBackupRequired: false,
         oneMasterSeedPhrase: true,
         seedPhraseRecoverability: seedPhraseRecoverability(wallet),
-        exportOptions: DERIVED_CHAIN_EXPORTS
+        exportOptions: DERIVED_CHAIN_EXPORTS.map(function (chain) {
+          var path = derivationPathForWallet(wallet, chain);
+          return {
+            chainID: chain.chainID,
+            label: chain.label,
+            coinType: chain.coinType,
+            prefix: chain.prefix,
+            kind: chain.kind,
+            path: path,
+            derivationPath: path,
+            export: chain.export
+          };
+        })
       };
     }
     if (kind === "chain-private-keys" || kind === "legacy-single-key") {
@@ -1907,7 +1938,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
         return {
           chainID: chain.chainID,
           label: chain.label,
-          derivationPath: chain.path,
+          derivationPath: derivationPathForWallet(wallet, chain),
           export: chain.export
         };
       }) : undefined
