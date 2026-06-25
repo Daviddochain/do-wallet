@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsRewrite20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioRewrite2";
+  var VERSION = "20260625L1PortfolioRewrite3";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -990,12 +990,12 @@
   }
 
   function fallbackIcon(label, className, hidden) {
-    return '<span class="' + className + ' do-wallet-l1-portfolio-fallback"' + (hidden ? ' style="display:none"' : "") + ">" + escapeHTML((label || "?").slice(0, 3).toUpperCase()) + "</span>";
+    return '<span class="' + className + ' do-wallet-l1-portfolio-fallback" aria-hidden="true"' + (hidden ? ' hidden style="display:none!important"' : "") + ">" + escapeHTML((label || "?").slice(0, 3).toUpperCase()) + "</span>";
   }
 
   function renderIcon(src, label, className) {
     if (!src) return fallbackIcon(label, className, false);
-    return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.display='none';if(this.nextElementSibling){this.nextElementSibling.style.display='grid';}\" />" + fallbackIcon(label, className, true);
+    return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.setProperty('display','none','important');var fallback=this.nextElementSibling;if(fallback){fallback.hidden=false;fallback.style.setProperty('display','grid','important');}\" />" + fallbackIcon(label, className, true);
   }
 
   function nativeAssetForGroup(group) {
@@ -1240,7 +1240,8 @@
       ".do-wallet-l1-portfolio-icon,.do-wallet-l1-portfolio-coin-icon{display:block!important;flex:0 0 auto!important;border-radius:50%!important;object-fit:cover!important;background:#2c2140;overflow:hidden!important;}",
       ".do-wallet-l1-portfolio-icon{width:34px!important;height:34px!important;min-width:34px!important;max-width:34px!important;min-height:34px!important;max-height:34px!important;}",
       ".do-wallet-l1-portfolio-coin-icon{width:30px!important;height:30px!important;min-width:30px!important;max-width:30px!important;min-height:30px!important;max-height:30px!important;}",
-      ".do-wallet-l1-portfolio-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--do-wallet-l1-font-weight);}",
+      ".do-wallet-l1-portfolio-fallback{display:grid!important;place-items:center;color:#fff;font-size:10px;line-height:1;font-weight:var(--do-wallet-l1-font-weight);}",
+      ".do-wallet-l1-portfolio-fallback[hidden]{display:none!important;}",
       ".do-wallet-l1-portfolio-meta{display:flex;flex-direction:column;gap:5px;min-width:0;}",
       ".do-wallet-l1-portfolio-meta strong,.do-wallet-l1-portfolio-right strong{font-weight:var(--do-wallet-l1-font-weight);line-height:1.08;letter-spacing:0;}",
       ".do-wallet-l1-portfolio-meta strong{font-size:15px;white-space:normal;overflow:hidden;text-overflow:ellipsis;}",
