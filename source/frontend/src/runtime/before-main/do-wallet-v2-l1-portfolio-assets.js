@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable5";
+  var VERSION = "20260625L1PortfolioStable7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
@@ -74,6 +74,29 @@
     SET: true,
     SGT: true,
     THT: true
+  };
+
+  var TERRA_CLASSIC_SYMBOL_ALIASES = {
+    USTC: "UST",
+    AUTC: "AUT",
+    CATC: "CAT",
+    CHTC: "CHT",
+    CNTC: "CNT",
+    DKTC: "DKT",
+    EUTC: "EUT",
+    GPTC: "GBT",
+    HKTC: "HKT",
+    IDTC: "IDT",
+    INTC: "INT",
+    JPTC: "JPT",
+    KRTC: "KRT",
+    MYTC: "MYT",
+    NOTC: "NOT",
+    PHTC: "PHT",
+    SDRC: "SDT",
+    SETC: "SET",
+    SGTC: "SGT",
+    THTC: "THT"
   };
 
   var TERRA_CLASSIC_DENOMS = {
@@ -190,7 +213,7 @@
   function symbolOf(asset) {
     var symbol = clean(asset && (asset.symbol || asset.tokenSymbol || asset.ticker || asset.name || asset.denom || asset.token));
     symbol = upper(symbol);
-    if (symbol === "USTC") return "UST";
+    if (TERRA_CLASSIC_SYMBOL_ALIASES[symbol]) return TERRA_CLASSIC_SYMBOL_ALIASES[symbol];
     return symbol;
   }
 
@@ -219,8 +242,9 @@
     var name = lower(rawName);
     var sym = upper(symbol);
     var den = lower(denom);
+    var terraClassicContext = id === "columbus-5" || id === "terra-classic" || id === "lunc" || id === "330" || name.indexOf("terra classic") >= 0 || TERRA_CLASSIC_DENOMS[den] || den.indexOf("terra1") === 0 || (TERRA_CLASSIC_SYMBOLS[sym] && id !== "phoenix-1" && id !== "osmosis-1");
+    if (terraClassicContext) return "columbus-5";
     if (id === "do-chain" || id === "dochain-1" || id === "do" || id === "888" || id.indexOf("dochain") >= 0 || name.indexOf("do chain") >= 0 || den === "udo" || sym === "DO") return "Do-Chain";
-    if (id === "columbus-5" || id === "terra-classic" || id === "lunc" || id === "330" || name.indexOf("terra classic") >= 0 || TERRA_CLASSIC_DENOMS[den] || den.indexOf("terra1") === 0 || (TERRA_CLASSIC_SYMBOLS[sym] && id !== "phoenix-1" && id !== "osmosis-1")) return "columbus-5";
     if (id === "phoenix-1" || (sym === "LUNA" && name.indexOf("terra classic") < 0) || name.indexOf("terra (luna)") >= 0) return "phoenix-1";
     if (id === "osmosis-1" || id === "osmosis" || id === "osmo" || sym === "OSMO" || name.indexOf("osmosis") >= 0) return "osmosis-1";
     if (id.indexOf("bitcoin") >= 0 || id === "btc" || sym === "BTC") return "bitcoin-mainnet";
@@ -394,6 +418,13 @@
     return leftKeys.some(function (key) { return rightKeys.indexOf(key) >= 0; });
   }
 
+  function snapshotContainsAssetRows(snapshot) {
+    if (!isObject(snapshot)) return false;
+    return FLAT_KEYS.concat(GROUP_KEYS).some(function (key) {
+      return Array.isArray(snapshot[key]) && snapshot[key].length > 0;
+    });
+  }
+
   function collectSnapshots() {
     var current = readJSON(SNAPSHOT_KEY, null);
     var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
@@ -410,7 +441,7 @@
     if (isObject(byWallet)) {
       Object.keys(byWallet).forEach(function (key) {
         var snapshot = byWallet[key];
-        if (!isObject(current) || snapshotsRelated(current, snapshot)) add(snapshot);
+        if (!isObject(current) || snapshotsRelated(current, snapshot) || snapshotContainsAssetRows(snapshot)) add(snapshot);
       });
     }
     return snapshots;

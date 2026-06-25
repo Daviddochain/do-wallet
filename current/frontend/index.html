@@ -19,11 +19,11 @@
     <link rel="icon" id="favicon" href="/do-logo.jpg" />
     <title>Do-Wallet</title>
     <script>
-      window.__DO_WALLET_BUILD__ = "20260625SourceRuntime40";
+      window.__DO_WALLET_BUILD__ = "20260625SourceRuntime42";
       window.__DO_WALLET_SINGLE_PORTFOLIO_WRITER__ = "do-wallet-v2-multichain-assets";
       window.__DO_WALLET_RECEIVE_CONTROLLER__ = "do-wallet-v2-receive-addresses";
       (function () {
-        var resetVersion = window.__DO_WALLET_BUILD__ || "20260625SourceRuntime40";
+        var resetVersion = window.__DO_WALLET_BUILD__ || "20260625SourceRuntime42";
         var resetKey = "do-wallet-browser-display-reset-version";
         var explicitClear = {};
         var protectedKeys = {
@@ -108,7 +108,7 @@
           window.addEventListener("load", clearBrowserCaches, { once: true });
           document.documentElement.setAttribute("data-do-wallet-cache-policy", "no-service-worker");
           window.__DO_WALLET_CACHE_POLICY__ = "no-service-worker";
-          window.__DO_WALLET_CACHE_POLICY_BUILD__ = window.__DO_WALLET_BUILD__ || "20260625SourceRuntime40";
+          window.__DO_WALLET_CACHE_POLICY_BUILD__ = window.__DO_WALLET_BUILD__ || "20260625SourceRuntime42";
         })();
       } else {
         document.documentElement.setAttribute("data-do-wallet-cache-policy", "no-service-worker-api");
@@ -125,13 +125,13 @@
             .catch(function () {});
       }
     </script>
-    <link rel="stylesheet" href="/static/css/do-wallet-v2-styles.css?v=20260625SourceRuntime40" />
+    <link rel="stylesheet" href="/static/css/do-wallet-v2-styles.css?v=20260625SourceRuntime42" />
   </head>
   <body>
     <div id="station"><div id="do-wallet"></div></div>
-    <script defer src="/static/js/do-wallet-v2-runtime-before-main.js?v=20260625SourceRuntime40"></script>
-    <script defer src="/static/js/do-wallet-v2-main.js?v=20260625SourceRuntime40"></script>
-    <script defer src="/static/js/do-wallet-v2-mfa-onboarding.js?v=20260625SourceRuntime40"></script>
-    <script defer src="/static/js/do-wallet-v2-runtime-after-main.js?v=20260625SourceRuntime40"></script>
+    <script defer src="/static/js/do-wallet-v2-runtime-before-main.js?v=20260625SourceRuntime42"></script>
+    <script defer src="/static/js/do-wallet-v2-main.js?v=20260625SourceRuntime42"></script>
+    <script defer src="/static/js/do-wallet-v2-mfa-onboarding.js?v=20260625SourceRuntime42"></script>
+    <script defer src="/static/js/do-wallet-v2-runtime-after-main.js?v=20260625SourceRuntime42"></script>
   </body>
 </html>
