@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsRewrite20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioRewrite3";
+  var VERSION = "20260625L1PortfolioRewrite4";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -1047,15 +1047,18 @@
 
   function renderList(list, groups) {
     var signature = groupsSignature(groups, "list");
+    updateAssetHostScrollBounds(list);
     if (list.getAttribute(SIGNATURE_ATTR) === signature && !list.hasAttribute(DETAIL_ATTR)) return;
     list.removeAttribute(DETAIL_ATTR);
     list.setAttribute(TARGET_ATTR, "1");
     list.setAttribute(SIGNATURE_ATTR, signature);
     list.innerHTML = '<div class="do-wallet-l1-portfolio-shell">' + groups.map(groupRowHTML).join("") + "</div>";
+    updateAssetHostScrollBounds(list);
   }
 
   function renderDetail(list, group) {
     var signature = groupsSignature([group], "detail");
+    updateAssetHostScrollBounds(list);
     if (list.getAttribute(SIGNATURE_ATTR) === signature && list.getAttribute(DETAIL_ATTR) === group.key) return;
     var count = group.assets.length === 1 ? "1 asset" : group.assets.length + " assets";
     list.setAttribute(TARGET_ATTR, "1");
@@ -1077,6 +1080,7 @@
       "  </div>",
       "</div>"
     ].join("");
+    updateAssetHostScrollBounds(list);
   }
 
   function isVisible(node) {
@@ -1097,6 +1101,20 @@
 
   function nodeText(node) {
     return clean(node && (node.innerText || node.textContent || ""));
+  }
+
+  function updateAssetHostScrollBounds(host) {
+    if (!host || !host.getBoundingClientRect) return;
+    try {
+      var rect = host.getBoundingClientRect();
+      var viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+      if (!viewportHeight) return;
+      var maxHeight = Math.max(260, Math.floor(viewportHeight - rect.top - 10));
+      host.style.setProperty("--do-wallet-l1-assets-max-height", maxHeight + "px");
+      host.style.maxHeight = maxHeight + "px";
+      host.style.overflow = "hidden";
+      host.style.minHeight = "0";
+    } catch (error) {}
   }
 
   function findRightWalletPane() {
@@ -1180,6 +1198,7 @@
     if (!pane) return null;
     var existing = pane.querySelector("[" + HOST_ATTR + "='1']");
     if (existing && document.documentElement.contains(existing)) {
+      updateAssetHostScrollBounds(existing);
       hideNativeAssetSiblings(existing, pane);
       return existing;
     }
@@ -1191,6 +1210,7 @@
     host.className = "do-wallet-l1-portfolio-owned-host";
     if (row && row.parentElement) row.parentElement.insertBefore(host, row.nextSibling);
     else pane.appendChild(host);
+    updateAssetHostScrollBounds(host);
     hideNativeAssetSiblings(host, pane);
     return host;
   }
@@ -1228,9 +1248,10 @@
       "[" + NATIVE_HIDDEN_ATTR + "='1']{display:none!important;}",
       "[" + PANE_ATTR + "='1'] [class*='Asset_asset__'] img,[" + PANE_ATTR + "='1'] [class*='AssetList_assetlist__list'] img{display:block!important;width:34px!important;height:34px!important;min-width:34px!important;max-width:34px!important;min-height:34px!important;max-height:34px!important;border-radius:50%!important;object-fit:cover!important;overflow:hidden!important;}",
       "[" + TARGET_ATTR + "='1']>article{display:none!important;}",
-      "[" + HOST_ATTR + "='1'],.do-wallet-l1-portfolio-owned-host{box-sizing:border-box;width:100%;}",
+      "[" + HOST_ATTR + "='1'],.do-wallet-l1-portfolio-owned-host{box-sizing:border-box;width:100%;max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));min-height:0;overflow:hidden!important;}",
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-detail{box-sizing:border-box;width:100%;font-family:inherit;color:#fff;}",
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-coins{display:flex;flex-direction:column;gap:0;}",
+      ".do-wallet-l1-portfolio-shell{max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:8px;}",
       ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;}",
       ".do-wallet-l1-portfolio-row{cursor:pointer;}",
       ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
@@ -1250,7 +1271,7 @@
       ".do-wallet-l1-portfolio-meta em.negative{color:#ff4b55;}",
       ".do-wallet-l1-portfolio-meta em.positive{color:#00c68f;}",
       ".do-wallet-l1-portfolio-right strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;max-width:100%;}",
-      ".do-wallet-l1-portfolio-detail{min-height:360px;padding:0 0 16px;}",
+      ".do-wallet-l1-portfolio-detail{display:flex;flex-direction:column;max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));min-height:0;padding:0 0 16px;overflow:hidden;}",
       ".do-wallet-l1-portfolio-waiting{display:flex;flex-direction:column;gap:6px;padding:18px 10px;color:#fff;border-bottom:1px solid rgba(135,57,190,.26);}",
       ".do-wallet-l1-portfolio-waiting strong{font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-waiting small{font-size:12px;color:#c7baf0;font-weight:var(--do-wallet-l1-font-weight);}",
@@ -1258,6 +1279,7 @@
       ".do-wallet-l1-portfolio-back:before{content:'<';display:inline-block;margin-right:10px;font-size:18px;line-height:1;}",
       ".do-wallet-l1-portfolio-chain-head{background:rgba(163,60,255,.06);border-top:1px solid rgba(135,57,190,.18);}",
       ".do-wallet-l1-portfolio-coins-title{padding:18px 10px 8px;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
+      ".do-wallet-l1-portfolio-coins{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:8px;}",
       ".do-wallet-l1-portfolio-coin{min-height:58px;}",
       "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}}"
     ].join("\n");
@@ -1278,6 +1300,7 @@
     list.removeAttribute(DETAIL_ATTR);
     list.setAttribute(TARGET_ATTR, "1");
     list.setAttribute(SIGNATURE_ATTR, "waiting:" + VERSION);
+    updateAssetHostScrollBounds(list);
     list.innerHTML = [
       '<div class="do-wallet-l1-portfolio-shell">',
       '  <div class="do-wallet-l1-portfolio-waiting">',
@@ -1381,6 +1404,7 @@
   window.addEventListener("do_wallet_portfolio_snapshot", function () { schedule(0, "snapshot"); });
   window.addEventListener("load", function () { schedule(0, "load"); });
   window.addEventListener("focus", function () { schedule(0, "focus"); });
+  window.addEventListener("resize", function () { schedule(0, "resize"); });
 
   try {
     var observer = new MutationObserver(function (mutations) {
