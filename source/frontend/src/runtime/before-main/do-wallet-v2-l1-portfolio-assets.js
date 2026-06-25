@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable4";
+  var VERSION = "20260625L1PortfolioStable5";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
@@ -472,6 +472,7 @@
     collectSnapshots().forEach(function (snapshot) {
       rows = rows.concat(collectAssetsFromSnapshot(snapshot));
     });
+    rows = rows.concat(collectAssetsFromPane(findRightWalletPane()));
     return groupAssets(rows);
   }
 
@@ -817,7 +818,7 @@
     return header.parentElement || header;
   }
 
-  function hideNativeAssetSiblings(host) {
+  function hideNativeAssetSiblings(host, pane) {
     if (!host || !host.parentElement) return;
     var node = host.nextElementSibling;
     while (node) {
@@ -826,6 +827,13 @@
       }
       node = node.nextElementSibling;
     }
+    if (pane && pane.querySelectorAll) {
+      Array.prototype.slice.call(pane.querySelectorAll(LIST_SELECTOR)).forEach(function (list) {
+        if (list !== host && !(list.closest && list.closest("[" + HOST_ATTR + "='1']"))) {
+          list.setAttribute(NATIVE_HIDDEN_ATTR, "1");
+        }
+      });
+    }
   }
 
   function ensureOwnedAssetHost() {
@@ -833,43 +841,24 @@
     if (!pane) return null;
     var existing = pane.querySelector("[" + HOST_ATTR + "='1']");
     if (existing && document.documentElement.contains(existing)) {
-      hideNativeAssetSiblings(existing);
+      hideNativeAssetSiblings(existing, pane);
       return existing;
     }
 
-    var list = Array.prototype.slice.call(pane.querySelectorAll(LIST_SELECTOR)).filter(isVisible)[0];
-    if (list) {
-      list.setAttribute(HOST_ATTR, "1");
-      return list;
-    }
-
     var header = findAssetsHeader(pane);
-    if (!header) return null;
-    var row = headerRowFor(header, pane);
+    var row = header ? headerRowFor(header, pane) : null;
     var host = document.createElement("div");
     host.setAttribute(HOST_ATTR, "1");
     host.className = "do-wallet-l1-portfolio-owned-host";
     if (row && row.parentElement) row.parentElement.insertBefore(host, row.nextSibling);
     else pane.appendChild(host);
-    hideNativeAssetSiblings(host);
+    hideNativeAssetSiblings(host, pane);
     return host;
   }
 
   function findAssetLists() {
-    var lists = Array.prototype.slice.call(document.querySelectorAll(LIST_SELECTOR)).filter(function (list) {
-      if (!isVisible(list)) return false;
-      var node = list;
-      for (var depth = 0; node && depth < 14; depth += 1) {
-        var content = lower(node.textContent || "");
-        if (content.indexOf("search for a chain") >= 0 || content.indexOf("receive") === 0) return false;
-        if (content.indexOf("portfolio value") >= 0 && content.indexOf("assets") >= 0) return true;
-        node = node.parentElement;
-      }
-      return false;
-    });
     var owned = ensureOwnedAssetHost();
-    if (owned && lists.indexOf(owned) < 0) lists.unshift(owned);
-    return lists;
+    return owned ? [owned] : [];
   }
 
   function injectStyle() {
