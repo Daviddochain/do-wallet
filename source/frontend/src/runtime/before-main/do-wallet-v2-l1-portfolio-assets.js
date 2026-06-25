@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsRewrite20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioRewrite1";
+  var VERSION = "20260625L1PortfolioRewrite2";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -143,11 +143,11 @@
   var CHAIN_META = {
     "Do-Chain": ["Do Chain", "DO", DO_PORTFOLIO_ICON, 10],
     "columbus-5": ["Terra Classic (LUNC)", "LUNC", "/img/chains/TerraClassic.svg", 20],
-    "osmosis-1": ["Osmosis", "OSMO", "/img/chains/Osmosis.png", 30],
+    "osmosis-1": ["Osmosis", "OSMO", "/img/chains/Osmosis.svg", 30],
     "phoenix-1": ["Terra (LUNA)", "LUNA", "/img/chains/Terra.svg", 40],
     "bitcoin-mainnet": ["Bitcoin", "BTC", "/img/chains/Bitcoin.svg", 50],
     "ethereum-mainnet": ["Ethereum", "ETH", "/img/chains/Ethereum.svg", 60],
-    "bnb-smart-chain-mainnet": ["BNB Smart Chain", "BNB", "/img/chains/Bnb.svg", 70],
+    "bnb-smart-chain-mainnet": ["BNB Smart Chain", "BNB", "/img/chains/BNB.svg", 70],
     "solana-mainnet": ["Solana", "SOL", "/img/chains/Solana.svg", 80],
     "arbitrum-one": ["Arbitrum One", "ETH", "/img/chains/Arbitrum.svg", 90],
     "avalanche-c-chain": ["Avalanche C-Chain", "AVAX", "/img/chains/Avalanche.svg", 100],
@@ -156,25 +156,25 @@
     "optimism-mainnet": ["Optimism", "OP", "/img/chains/Optimism.svg", 130],
     "cardano-mainnet": ["Cardano", "ADA", "/img/chains/Cardano.svg", 140],
     "tron-mainnet": ["Tron", "TRX", "/img/chains/Tron.svg", 150],
-    "xrp-ledger-mainnet": ["XRP Ledger", "XRP", "/img/chains/Xrp.svg", 160],
-    "cosmoshub-4": ["Cosmos", "ATOM", "/img/chains/Cosmos.png", 170],
+    "xrp-ledger-mainnet": ["XRP Ledger", "XRP", "/img/chains/XRP.svg", 160],
+    "cosmoshub-4": ["Cosmos", "ATOM", "/img/chains/Cosmos.svg", 170],
     "secret-4": ["Secret Network", "SCRT", "/img/chains/Secret.png", 180],
-    "dungeon-1": ["Dungeon Chain", "DGN", "https://raw.githubusercontent.com/cosmos/chain-registry/master/dungeon/images/DGN.png", 190],
-    "akashnet-2": ["Akash", "AKT", "/img/chains/Akash.png", 200],
+    "dungeon-1": ["Dungeon Chain", "DGN", "/img/chains/Dungeon.png", 190],
+    "akashnet-2": ["Akash", "AKT", "/img/chains/Akash.svg", 200],
     "archway-1": ["Archway", "ARCH", "/img/chains/Archway.png", 210],
-    "axelar-dojo-1": ["Axelar", "AXL", "/img/chains/Axelar.png", 220],
-    "carbon-1": ["Carbon", "SWTH", "/img/chains/Carbon.png", 230],
-    "cheqd-mainnet-1": ["cheqd", "CHEQ", "/img/chains/Cheqd.png", 240],
-    "chihuahua-1": ["Chihuahua", "HUAHUA", "/img/chains/Chihuahua.png", 250],
-    "crescent-1": ["Crescent", "CRE", "/img/chains/Crescent.png", 260],
-    "decentr-mainnet-1": ["Decentr", "DEC", "/img/chains/Decentr.png", 270],
-    "juno-1": ["Juno", "JUNO", "/img/chains/Juno.png", 280],
+    "axelar-dojo-1": ["Axelar", "AXL", "/img/chains/Axelar.svg", 220],
+    "carbon-1": ["Carbon", "SWTH", "/img/chains/Carbon.svg", 230],
+    "cheqd-mainnet-1": ["cheqd", "CHEQ", "/img/chains/Cheqd.svg", 240],
+    "chihuahua-1": ["Chihuahua", "HUAHUA", "/img/chains/Huahua.png", 250],
+    "crescent-1": ["Crescent", "CRE", "/img/chains/Crescent.svg", 260],
+    "decentr-mainnet-1": ["Decentr", "DEC", "/img/chains/Decentr.svg", 270],
+    "juno-1": ["Juno", "JUNO", "/img/chains/Juno.svg", 280],
     "kaiyo-1": ["Kujira", "KUJI", "/img/chains/Kujira.png", 290],
-    "mars-1": ["Mars", "MARS", "/img/chains/Mars.png", 300],
-    "migaloo-1": ["Migaloo", "WHALE", "/img/chains/Migaloo.png", 310],
-    "pacific-1": ["Sei", "SEI", "/img/chains/Sei.png", 320],
+    "mars-1": ["Mars", "MARS", "/img/chains/Mars.svg", 300],
+    "migaloo-1": ["Migaloo", "WHALE", "/img/chains/Migaloo.svg", 310],
+    "pacific-1": ["Sei", "SEI", "/img/chains/sei.svg", 320],
     "stride-1": ["Stride", "STRD", "/img/chains/Stride.png", 330],
-    "stafihub-1": ["StaFi Hub", "FIS", "/img/chains/Stafihub.png", 340]
+    "stafihub-1": ["StaFi Hub", "FIS", "/img/chains/StaFiHub.png", 340]
   };
 
   function text(value) {
@@ -995,7 +995,7 @@
 
   function renderIcon(src, label, className) {
     if (!src) return fallbackIcon(label, className, false);
-    return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.visibility='hidden';\" />";
+    return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.display='none';if(this.nextElementSibling){this.nextElementSibling.style.display='grid';}\" />" + fallbackIcon(label, className, true);
   }
 
   function nativeAssetForGroup(group) {
