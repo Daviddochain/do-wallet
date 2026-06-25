@@ -2542,8 +2542,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins2) return;
-  window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins2 = true;
+  if (window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins3) return;
+  window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins3 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
@@ -2557,8 +2557,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   var SIDE_PENDING_AT_ATTR = "data-do-wallet-l1-side-pending-at";
   var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
   var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
-  var SIDE_STABLE_DELAY = 1000;
-  var VERSION = "20260625SideL1DetailCoins2";
+  var SIDE_STABLE_DELAY = 0;
+  var VERSION = "20260625SideL1DetailCoins3";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
@@ -2573,6 +2573,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   var groupRowsCacheValue = [];
   var detailGroupsCacheRaw = "";
   var detailGroupsCacheValue = [];
+  var sideDetailGroupsCache = {};
 
   function setDebug(reason, details) {
     window.__doWalletPortfolioGroupPanelDebug = Object.assign({
@@ -3022,28 +3023,66 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     };
   }
 
+  function capturedSideDetailGroups() {
+    var cache = sideDetailGroupsCache || {};
+    try {
+      if (window.__doWalletSideDetailGroups) cache = Object.assign({}, window.__doWalletSideDetailGroups, cache);
+    } catch (error) {}
+    var out = [];
+    var seen = {};
+    Object.keys(cache).forEach(function (key) {
+      var group = cache[key];
+      if (!group || !Array.isArray(group.children) || !group.children.length) return;
+      var groupKey = detailGroupKey(group);
+      if (seen[groupKey]) return;
+      seen[groupKey] = true;
+      out.push(group);
+    });
+    return out;
+  }
+
+  function sideDetailGroupsSignature() {
+    return capturedSideDetailGroups().map(function (group) {
+      return detailGroupKey(group) + ":" + detailChildrenFor(group).map(function (child) {
+        return assetIdentity(child);
+      }).join("|");
+    }).join("||");
+  }
+
+  function replaceOrAppendDetailGroup(groups, nextGroup) {
+    if (!nextGroup || !detailChildrenFor(nextGroup).length) return groups;
+    var nextKey = lowerText(nextGroup.chainId || chainGroupKeyOf(nextGroup.parent));
+    var nextSymbol = upperSymbol(nextGroup.parent);
+    var replaced = false;
+    groups = groups.map(function (group) {
+      var key = lowerText(group && (group.chainId || chainGroupKeyOf(group.parent)));
+      var symbol = upperSymbol(group && group.parent);
+      var sameTerra = (nextKey === "columbus-5" || nextSymbol === "LUNC") && (key === "columbus-5" || symbol === "LUNC");
+      var sameDo = (nextKey === "do-chain" || nextSymbol === "DO") && (key === "do-chain" || symbol === "DO");
+      if (sameTerra || sameDo || (nextKey && key === nextKey) || (nextSymbol && symbol === nextSymbol)) {
+        replaced = true;
+        return nextGroup;
+      }
+      return group;
+    });
+    if (!replaced) groups.push(nextGroup);
+    return groups;
+  }
+
   function detailGroupsFromSnapshot(snapshot) {
     if (!snapshot) return [];
-    if (snapshotCacheRaw && detailGroupsCacheRaw === snapshotCacheRaw) return detailGroupsCacheValue;
+    var cacheKey = (snapshotCacheRaw || signatureOf(groupedRowsFromSnapshot(snapshot))) + "::" + sideDetailGroupsSignature();
+    if (detailGroupsCacheRaw === cacheKey) return detailGroupsCacheValue;
     var groups = groupedRowsFromSnapshot(snapshot).slice();
     var terraGroup = syntheticTerraClassicDetailGroup(snapshot);
-    if (terraGroup && detailChildrenFor(terraGroup).length) {
-      var replaced = false;
-      groups = groups.map(function (group) {
-        var key = lowerText(group && (group.chainId || chainGroupKeyOf(group.parent)));
-        var symbol = upperSymbol(group && group.parent);
-        if (key === "columbus-5" || symbol === "LUNC") {
-          replaced = true;
-          return terraGroup;
-        }
-        return group;
-      });
-      if (!replaced) groups.push(terraGroup);
-    }
+    groups = replaceOrAppendDetailGroup(groups, terraGroup);
+    capturedSideDetailGroups().forEach(function (group) {
+      groups = replaceOrAppendDetailGroup(groups, group);
+    });
     detailGroupsCacheValue = groups.filter(function (group) {
       return detailChildrenFor(group).length > 0;
     });
-    detailGroupsCacheRaw = snapshotCacheRaw || signatureOf(detailGroupsCacheValue);
+    detailGroupsCacheRaw = cacheKey;
     return detailGroupsCacheValue;
   }
 
@@ -3324,6 +3363,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     var price = priceOf(asset);
     var pct = percentOf(asset);
     var amount = amountOf(asset);
+    var amountDisplay = amount ? (new RegExp("\\b" + symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(String(amount)) ? String(amount) : amount + " " + symbol) : "";
     var value = valueOf(asset);
     return [
       '<div class="do-wallet-detail-l1-coin">',
@@ -3336,7 +3376,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       "  </div>",
       '  <div class="do-wallet-detail-l1-coin-right">',
       '    <strong>' + escapeHTML(value) + "</strong>",
-      '    <span>' + escapeHTML(amount ? amount + " " + symbol : "") + "</span>",
+      '    <span>' + escapeHTML(amountDisplay) + "</span>",
       "  </div>",
       "</div>"
     ].join("");
@@ -3695,6 +3735,93 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     };
   }
 
+  function sideRowText(row, selector) {
+    var node = row && row.querySelector && row.querySelector(selector);
+    return normalizedText(node && node.textContent || "");
+  }
+
+  function sideRowImage(row, selector) {
+    var node = row && row.querySelector && row.querySelector(selector);
+    if (!node) return "";
+    if (node.tagName && node.tagName.toLowerCase() === "img") return text(node.getAttribute("src") || node.src);
+    var img = node.querySelector && node.querySelector("img");
+    return text(img && (img.getAttribute("src") || img.src));
+  }
+
+  function sideAmountNumber(amountText, symbol) {
+    var cleaned = normalizedText(amountText).replace(new RegExp("\\b" + text(symbol).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i"), "");
+    var match = cleaned.match(/-?\d[\d,]*(?:\.\d+)?/);
+    return match ? match[0].replace(/,/g, "") : cleaned;
+  }
+
+  function sideAssetFromInfo(info, group) {
+    var row = info && info.row;
+    var symbol = text(info && info.symbol).toUpperCase();
+    var valueText = sideRowText(row, "[class*='Asset_price__']") || sideRowText(row, "[class*='Asset_value__']");
+    var amountText = sideRowText(row, "[class*='Asset_amount__']");
+    var priceText = sideRowText(row, "[class*='Asset_unit__price__']");
+    var changeText = sideRowText(row, "[class*='Asset_change__']");
+    var tokenIcon = sideRowImage(row, "[class*='TokenIcon_icon']") || sideRowImage(row, "[class*='Asset_token__icon']") || sideRowImage(row, "img");
+    return {
+      symbol: symbol,
+      name: symbol,
+      chainName: group && group.chainName || info.chainName || symbol,
+      chainID: group && group.key === "terra classic" ? "columbus-5" : (group && group.key || info.chainKey || ""),
+      chainId: group && group.key === "terra classic" ? "columbus-5" : (group && group.key || info.chainKey || ""),
+      icon: tokenIcon || info.chainIcon || group && group.chainIcon || "",
+      tokenIcon: tokenIcon || "",
+      chainIcon: info.chainIcon || group && group.chainIcon || "",
+      priceText: priceText,
+      changeText: changeText,
+      valueText: valueText,
+      amount: sideAmountNumber(amountText, symbol),
+      displayAmount: amountText
+    };
+  }
+
+  function groupKeyAliases(group) {
+    var keys = {};
+    function add(value) {
+      value = normalizeGroupKey(value);
+      if (value) keys[value] = true;
+    }
+    add(group && group.key);
+    add(group && group.chainName);
+    add(group && group.nativeSymbol);
+    if (group && group.key === "terra classic") {
+      add("columbus-5");
+      add("terra classic lunc");
+      add("lunc");
+    }
+    if (group && group.nativeSymbol === "DO") {
+      add("do-chain");
+      add("do chain");
+      add("do");
+    }
+    return Object.keys(keys);
+  }
+
+  function rememberSideDetailGroups(groups) {
+    (Array.isArray(groups) ? groups : []).forEach(function (group) {
+      var childInfos = group.children && group.children.length ? group.children : [];
+      if (!childInfos.length) return;
+      var parentInfo = group.parent || group.rows && group.rows[0] || childInfos[0];
+      var detailGroup = {
+        parent: sideAssetFromInfo(parentInfo, group),
+        children: childInfos.map(function (info) { return sideAssetFromInfo(info, group); }),
+        chainId: group.key === "terra classic" ? "columbus-5" : group.key,
+        chainName: group.chainName,
+        icon: group.chainIcon
+      };
+      groupKeyAliases(group).forEach(function (key) {
+        sideDetailGroupsCache[key] = detailGroup;
+      });
+    });
+    try {
+      window.__doWalletSideDetailGroups = sideDetailGroupsCache;
+    } catch (error) {}
+  }
+
   function sideRowInfo(row, index) {
     var symbol = sideSymbolOfRow(row);
     var meta = sideChainMetaOfRow(row, symbol);
@@ -3884,7 +4011,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
           rowCount += rows.length;
           return;
         }
-        if (list.getAttribute(SIDE_GROUP_ATTR) !== VERSION) {
+        if (SIDE_STABLE_DELAY > 0 && list.getAttribute(SIDE_GROUP_ATTR) !== VERSION) {
           var now = Date.now();
           var pendingSignature = list.getAttribute(SIDE_PENDING_SIGNATURE_ATTR) || "";
           var pendingAt = Number(list.getAttribute(SIDE_PENDING_AT_ATTR) || 0);
@@ -3901,6 +4028,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
         }
 
         var groups = sideGroupsForInfos(infos);
+        rememberSideDetailGroups(groups);
         var shell = document.createElement("div");
         shell.className = "do-wallet-side-l1-shell";
 
