@@ -12,7 +12,8 @@
   var AUTH_KEY = "do-wallet-extension-authority.v1";
   var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
   var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
-  var SNAPSHOT_SCHEMA_VERSION = "20260625FullWalletPortfolio4";
+  var SNAPSHOT_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
+  var PORTFOLIO_ADDRESS_HINTS_KEY = "do-wallet-portfolio-address-hints.v1";
   var PAGE_TARGET = "do-wallet-page";
   var CONTENT_TARGET = "do-wallet-content";
   var PORTFOLIO_REFRESH_MS = 120000;
@@ -45,6 +46,7 @@
   [
     SNAPSHOT_KEY,
     SNAPSHOTS_BY_WALLET_KEY,
+    PORTFOLIO_ADDRESS_HINTS_KEY,
     BRIDGE_KEY,
     AUTH_KEY,
     RECOVERED_WALLETS_KEY,
@@ -770,32 +772,23 @@
 
   function clearPortfolioSnapshotsOnceForSchema() {
     if (readJSON(SNAPSHOT_RESET_KEY, "") === SNAPSHOT_SCHEMA_VERSION) return false;
-    var changed = false;
-    var migrated = false;
     var snapshot = readJSON(SNAPSHOT_KEY, null);
-    if (snapshotHasDisplayRows(snapshot)) {
-      snapshot.schemaVersion = SNAPSHOT_SCHEMA_VERSION;
-      changed = writeJSON(SNAPSHOT_KEY, snapshot) || changed;
-      migrated = true;
-    }
     var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    var snapshots = [];
+    if (isObject(snapshot)) snapshots.push(snapshot);
     if (isObject(byWallet)) {
       Object.keys(byWallet).forEach(function (key) {
-        if (!snapshotHasDisplayRows(byWallet[key])) return;
-        byWallet[key].schemaVersion = SNAPSHOT_SCHEMA_VERSION;
-        migrated = true;
+        if (isObject(byWallet[key])) snapshots.push(byWallet[key]);
       });
-      if (migrated) changed = writeJSON(SNAPSHOTS_BY_WALLET_KEY, byWallet) || changed;
     }
-    if (!migrated) {
-      changed = removeJSON(SNAPSHOT_KEY) || changed;
-      changed = removeJSON(SNAPSHOTS_BY_WALLET_KEY) || changed;
-    }
+    preservePortfolioAddressHints(snapshots);
+    var changed = removeJSON(SNAPSHOT_KEY) || false;
+    changed = removeJSON(SNAPSHOTS_BY_WALLET_KEY) || changed;
     writeJSON(SNAPSHOT_RESET_KEY, SNAPSHOT_SCHEMA_VERSION);
     markStatus("portfolio-cache-cleared-for-schema", {
       schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-      migrated: migrated,
-      removedKeys: !migrated && changed ? 2 : 0,
+      migrated: false,
+      removedKeys: changed ? 2 : 0,
     });
     return changed;
   }
@@ -1433,6 +1426,89 @@
     }
   }
 
+  function preservePortfolioAddressHints(snapshots) {
+    var payload = readJSON(PORTFOLIO_ADDRESS_HINTS_KEY, {});
+    var existingHints = Array.isArray(payload)
+      ? payload.slice()
+      : Array.isArray(payload.addresses)
+        ? payload.addresses.slice()
+        : [];
+    var hints = [];
+    var seen = {};
+    function remember(chainID, value) {
+      chainID = canonicalNetwork(chainID);
+      var address = normalizeAddressForChain(chainID, value);
+      if (!chainID || !isPublicAddress(address)) return;
+      var key = chainID + ":" + address.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      hints.push({
+        chainID: chainID,
+        chainId: chainID,
+        network: chainID,
+        address: address,
+        walletAddress: address,
+      });
+    }
+    existingHints.forEach(function (entry) {
+      if (!isObject(entry)) return;
+      remember(entry.chainID || entry.chainId || entry.network || entry.chain, entry.address || entry.walletAddress);
+    });
+    function rememberContainer(container) {
+      if (Array.isArray(container)) {
+        container.forEach(function (entry) {
+          if (!isObject(entry)) return;
+          remember(entry.chainID || entry.chainId || entry.network || entry.chain, entry.address || entry.walletAddress);
+        });
+        return;
+      }
+      if (isObject(container)) {
+        Object.keys(container).forEach(function (key) {
+          var value = container[key];
+          if (typeof value === "string") remember(key, value);
+          else if (isObject(value)) remember(key, value.address || value.walletAddress);
+        });
+      }
+    }
+    function rememberRows(rows) {
+      if (!Array.isArray(rows)) return;
+      rows.forEach(function (asset) {
+        if (!isObject(asset)) return;
+        remember(asset.chainID || asset.chainId || asset.network || asset.chain, asset.walletAddress || asset.address);
+      });
+    }
+    (Array.isArray(snapshots) ? snapshots : []).forEach(function (snapshot) {
+      if (!isObject(snapshot)) return;
+      rememberContainer(snapshot.allAddresses);
+      rememberContainer(snapshot.activeAddresses);
+      rememberContainer(snapshot.addresses);
+      [
+        "rawSpendableAssets",
+        "flatSpendableAssets",
+        "unGroupedSpendableAssets",
+        "rawPortfolioAssets",
+        "flatPortfolioAssets",
+        "unGroupedPortfolioAssets",
+        "sourceSpendableAssets",
+        "sourcePortfolioAssets",
+        "sourceStakingAssets",
+        "staking",
+        "assets",
+        "spendableAssets",
+        "portfolioAssets"
+      ].forEach(function (key) {
+        rememberRows(snapshot[key]);
+      });
+    });
+    if (!hints.length) return false;
+    hints = hints.slice(-BACKEND_PORTFOLIO_MAX_WALLETS);
+    return writeJSON(PORTFOLIO_ADDRESS_HINTS_KEY, {
+      schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+      updatedAt: Date.now(),
+      addresses: hints,
+    });
+  }
+
   function snapshotBelongsToWallet(snapshot, wallet) {
     if (!isObject(snapshot) || !isObject(wallet)) return false;
     if (walletsMatchSnapshot(snapshot, wallet)) return true;
@@ -1739,6 +1815,11 @@
         }
       }
     } catch (error) {}
+    var hinted = readJSON(PORTFOLIO_ADDRESS_HINTS_KEY, {});
+    (Array.isArray(hinted) ? hinted : Array.isArray(hinted.addresses) ? hinted.addresses : []).forEach(function (entry) {
+      if (!isObject(entry)) return;
+      addAddress(entry.address || entry.walletAddress, PORTFOLIO_ADDRESS_HINTS_KEY);
+    });
     return wallets.sort(function (left, right) {
       return (Number(left.priority || 100) - Number(right.priority || 100)) ||
         clean(left.address).localeCompare(clean(right.address));
@@ -2455,13 +2536,7 @@
   function publishCachedPortfolioSnapshot(wallet) {
     var snapshot = previousSnapshotForWallet(wallet);
     if (!snapshotHasDisplayRows(snapshot)) return false;
-    if (snapshot.schemaVersion !== SNAPSHOT_SCHEMA_VERSION) {
-      snapshot.schemaVersion = SNAPSHOT_SCHEMA_VERSION;
-      writeJSON(SNAPSHOT_KEY, snapshot);
-      markStatus("portfolio-cache-skipped-version", {
-        cachedVersion: "migrated",
-      });
-    }
+    if (snapshot.schemaVersion !== SNAPSHOT_SCHEMA_VERSION) return false;
     markStatus("portfolio-cache-retained-without-paint", {
       balanceAssets: spendableRowsFromSnapshot(snapshot).length,
       stakingAssets: stakingRowsFromSnapshot(snapshot).length,

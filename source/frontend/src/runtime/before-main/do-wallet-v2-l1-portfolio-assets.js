@@ -5,7 +5,8 @@
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable8";
+  var VERSION = "20260625L1PortfolioStable10";
+  var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
@@ -124,8 +125,10 @@
     uthb: true
   };
 
+  var DO_PORTFOLIO_ICON = "/static/media/DoLogo.aa0e0a1c6b95a5a57eda.jpg";
+
   var CHAIN_META = {
-    "Do-Chain": ["Do Chain", "DO", "/do-logo.jpg", 10],
+    "Do-Chain": ["Do Chain", "DO", DO_PORTFOLIO_ICON, 10],
     "columbus-5": ["Terra Classic (LUNC)", "LUNC", "/img/chains/TerraClassic.svg", 20],
     "osmosis-1": ["Osmosis", "OSMO", "/img/chains/Osmosis.png", 30],
     "phoenix-1": ["Terra (LUNA)", "LUNA", "/img/chains/Terra.svg", 40],
@@ -238,7 +241,7 @@
   }
 
   function displayIconFor(asset, meta, symbol) {
-    if ((meta && meta.key) === "Do-Chain" || upper(symbol) === "DO") return (meta && meta.icon) || "/do-logo.jpg";
+    if ((meta && meta.key) === "Do-Chain" || upper(symbol) === "DO") return DO_PORTFOLIO_ICON;
     return iconOf(asset) || (meta && meta.icon) || "";
   }
 
@@ -437,6 +440,7 @@
     var seen = {};
     function add(snapshot) {
       if (!isObject(snapshot)) return;
+      if (clean(snapshot.schemaVersion || "") !== PORTFOLIO_SCHEMA_VERSION) return;
       var key = clean(snapshot.updatedAt || "") + ":" + snapshotKeys(snapshot).join("|");
       if (seen[key]) return;
       seen[key] = true;
@@ -504,12 +508,11 @@
   }
 
   function buildGroups() {
-    var rows = [];
+    var snapshotRows = [];
     collectSnapshots().forEach(function (snapshot) {
-      rows = rows.concat(collectAssetsFromSnapshot(snapshot));
+      snapshotRows = snapshotRows.concat(collectAssetsFromSnapshot(snapshot));
     });
-    rows = rows.concat(collectAssetsFromPane(findRightWalletPane()));
-    return groupAssets(rows);
+    return groupAssets(snapshotRows);
   }
 
   function groupAssets(rows) {
@@ -864,9 +867,23 @@
       node = node.nextElementSibling;
     }
     if (pane && pane.querySelectorAll) {
-      Array.prototype.slice.call(pane.querySelectorAll(LIST_SELECTOR)).forEach(function (list) {
-        if (list !== host && !(list.closest && list.closest("[" + HOST_ATTR + "='1']"))) {
-          list.setAttribute(NATIVE_HIDDEN_ATTR, "1");
+      [
+        LIST_SELECTOR,
+        "[class*='Asset_asset__']",
+        "[class*='AssetList_assetlist__item']",
+        "[class*='AssetList_assetlist__list'] article",
+        "[class*='AssetList_assetlist__list'] li"
+      ].forEach(function (selector) {
+        Array.prototype.slice.call(pane.querySelectorAll(selector)).forEach(function (candidate) {
+          if (candidate === host || (candidate.closest && candidate.closest("[" + HOST_ATTR + "='1']"))) return;
+          candidate.setAttribute(NATIVE_HIDDEN_ATTR, "1");
+        });
+      });
+      Array.prototype.slice.call(pane.querySelectorAll("img")).forEach(function (img) {
+        if (img.closest && img.closest("[" + HOST_ATTR + "='1']")) return;
+        var rect = visibleRect(img);
+        if (rect && (rect.width > 72 || rect.height > 72)) {
+          img.setAttribute(NATIVE_HIDDEN_ATTR, "1");
         }
       });
     }
@@ -906,6 +923,7 @@
     style.textContent = [
       "html{--do-wallet-l1-font-weight:var(--bold,500);}",
       "[" + NATIVE_HIDDEN_ATTR + "='1']{display:none!important;}",
+      "[" + PANE_ATTR + "='1'] [class*='Asset_asset__'] img,[" + PANE_ATTR + "='1'] [class*='AssetList_assetlist__list'] img{display:block!important;width:34px!important;height:34px!important;min-width:34px!important;max-width:34px!important;min-height:34px!important;max-height:34px!important;border-radius:50%!important;object-fit:cover!important;overflow:hidden!important;}",
       "[" + TARGET_ATTR + "='1']>article{display:none!important;}",
       "[" + HOST_ATTR + "='1'],.do-wallet-l1-portfolio-owned-host{box-sizing:border-box;width:100%;}",
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-detail{box-sizing:border-box;width:100%;font-family:inherit;color:#fff;}",
@@ -956,7 +974,14 @@
       injectStyle();
       var groups = buildGroups();
       if (!groups.length) {
-        setDebug("no-groups", { reason: reason });
+        var emptyLists = findAssetLists();
+        emptyLists.forEach(function (list) {
+          list.removeAttribute(DETAIL_ATTR);
+          list.setAttribute(TARGET_ATTR, "1");
+          list.setAttribute(SIGNATURE_ATTR, "empty");
+          list.innerHTML = '<div class="do-wallet-l1-portfolio-shell"></div>';
+        });
+        setDebug("no-groups", { reason: reason, lists: emptyLists.length });
         return;
       }
       var lists = findAssetLists();
