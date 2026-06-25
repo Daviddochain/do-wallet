@@ -11182,7 +11182,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable11";
+  var VERSION = "20260625L1PortfolioStable12";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -11689,7 +11689,8 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     collectSnapshots().forEach(function (snapshot) {
       snapshotRows = snapshotRows.concat(collectAssetsFromSnapshot(snapshot));
     });
-    return groupAssets(snapshotRows);
+    if (snapshotRows.length) return groupAssets(snapshotRows);
+    return groupAssets(collectAssetsFromPane(findRightWalletPane()));
   }
 
   function groupAssets(rows) {
