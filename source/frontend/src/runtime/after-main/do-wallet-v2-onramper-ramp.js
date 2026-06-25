@@ -499,8 +499,11 @@
         scheduleEnsure(0);
       }, delay);
     });
-    window.setInterval(ensureLauncher, 15000);
   }
+
+  window.addEventListener("focus", ensureLauncher);
+  window.addEventListener("storage", ensureLauncher);
+  window.addEventListener("do_wallet_bridge_update", ensureLauncher);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init, { once: true });

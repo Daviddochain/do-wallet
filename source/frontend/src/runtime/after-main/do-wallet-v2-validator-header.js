@@ -339,7 +339,6 @@
   schedule();
   window.setTimeout(schedule, 750);
   window.setTimeout(schedule, 2000);
-  window.setInterval(schedule, 30000);
   window.addEventListener("focus", schedule);
   window.addEventListener("storage", schedule);
   window.addEventListener("do_wallet_bridge_update", schedule);

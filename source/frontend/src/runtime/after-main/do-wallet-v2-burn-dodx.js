@@ -901,10 +901,6 @@
         observer.disconnect();
       }, 8000);
     } catch (error) {}
-    window.setInterval(function () {
-      ensureLauncher();
-      ensureNavLink();
-    }, 15000);
   }
 
   document.addEventListener("keydown", function (event) {
@@ -913,7 +909,14 @@
   window.addEventListener("load", init);
   window.addEventListener("hashchange", openFromUrl);
   window.addEventListener("popstate", openFromUrl);
-  window.addEventListener("do_wallet_bridge_update", ensureLauncher);
+  window.addEventListener("focus", function () {
+    ensureLauncher();
+    ensureNavLink();
+  });
+  window.addEventListener("do_wallet_bridge_update", function () {
+    ensureLauncher();
+    ensureNavLink();
+  });
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init, { once: true });
   } else {

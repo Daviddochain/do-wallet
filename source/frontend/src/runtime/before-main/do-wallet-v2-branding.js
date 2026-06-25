@@ -144,13 +144,13 @@
     });
     window.setTimeout(function () {
       observer.disconnect();
-    }, 15 * 60 * 1000);
+    }, 60 * 1000);
   } catch (error) {}
 
   var ticks = 0;
   var timer = window.setInterval(function () {
     scheduleRewrite();
     ticks += 1;
-    if (ticks >= 1800) window.clearInterval(timer);
-  }, 500);
+    if (ticks >= 30) window.clearInterval(timer);
+  }, 1000);
 })();

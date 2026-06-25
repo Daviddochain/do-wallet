@@ -171,15 +171,14 @@
       var modal=manageTokensModal();
       if(modal&&e.target&&modal.contains(e.target))setTimeout(injectOrdiSearchResult,80);
     },true);
-    setInterval(injectOrdiSearchResult,30000);
+    document.addEventListener('click',function(){setTimeout(injectOrdiSearchResult,80);},true);
   }
   function initVisibilityFilters(){
     applyVisibilityFilters();
     ['do_wallet_quarantine_change','do_wallet_portfolio_snapshot','do_wallet_chain_assets_update'].forEach(function(name){
       window.addEventListener(name,function(){setTimeout(applyVisibilityFilters,300);});
     });
-    setInterval(applyVisibilityFilters,30000);
   }
   seed(); window.doWalletQuarantine={addPending:addPending,flag:maybeFlagAsset,add:addQuarantine,remove:removeQuarantine,allow:function(x){setDecision(keyFor(x),'approved')},decline:function(x){setDecision(keyFor(x),'declined')},list:getQuarantine,pending:getPending,allowlist:getAllow,decisions:getApprovals,isBlockedAsset:isBlockedAsset,scanTx:scanTx,assertAllowedTx:assertAllowedTx,show:showQuarantine};
-  wrapProviders(); setInterval(wrapProviders,30000); if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',insertSideMenu); else insertSideMenu(); initOrdiSearchResult(); initVisibilityFilters();
+  wrapProviders(); window.addEventListener('focus',wrapProviders); window.addEventListener('pageshow',wrapProviders); document.addEventListener('visibilitychange',function(){if(!document.hidden)wrapProviders();}); if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',insertSideMenu); else insertSideMenu(); initOrdiSearchResult(); initVisibilityFilters();
 })();

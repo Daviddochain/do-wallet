@@ -1,7 +1,7 @@
 (function(){
   var VIDEO_SRC = "/static/media/broadcasting-transmission-20260615.mp4";
   var scheduled = false;
-  var WATCH_MS = 15 * 60 * 1000;
+  var WATCH_MS = 2 * 60 * 1000;
   var VIDEO_ATTR = "data-do-wallet-broadcasting-video";
   var MODAL_ATTR = "data-do-wallet-broadcasting-modal";
   var BROADCAST_TEXT = /Broadcasting transaction|Broadcast transaction|Transaction is processing|Transaction queued|Tx hash|Queued|Signing transaction|Submitting transaction|Processing transaction|Waiting for transaction|Transaction submitted/i;
@@ -217,8 +217,8 @@
     if (video.play) video.play().catch(function(){});
   }
 
-  function forceReplaceAnyBroadcastImage(){
-    var bodyText = textOf(document.body || document.documentElement);
+  function forceReplaceAnyBroadcastImage(bodyText){
+    bodyText = bodyText || textOf(document.body || document.documentElement);
     if (!STRONG_BROADCAST_TEXT.test(bodyText)) return;
     Array.prototype.forEach.call(document.querySelectorAll("img"), function(img){
       if (!img || img.closest("header,nav,aside")) return;
@@ -242,9 +242,11 @@
 
   function run(){
     scheduled = false;
+    var bodyText = textOf(document.body || document.documentElement);
+    if (!BROADCAST_TEXT.test(bodyText)) return;
     normalizeQueuedTimer();
     findBroadcastPanels().forEach(ensurePanelVideo);
-    forceReplaceAnyBroadcastImage();
+    forceReplaceAnyBroadcastImage(bodyText);
   }
 
   function schedule(){
@@ -272,7 +274,7 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["src", "class", "style"]
+      attributeFilter: ["src"]
     });
     window.setTimeout(function(){
       observer.disconnect();
@@ -281,5 +283,10 @@
     window.setTimeout(schedule, 1000);
   }
 
-  window.setInterval(schedule, 1000);
+  var fallbackTicks = 0;
+  var fallbackTimer = window.setInterval(function(){
+    fallbackTicks += 1;
+    schedule();
+    if (fallbackTicks >= 60) window.clearInterval(fallbackTimer);
+  }, 2000);
 })();
