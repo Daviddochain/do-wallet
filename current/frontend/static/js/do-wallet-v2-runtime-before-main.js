@@ -1267,25 +1267,56 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     return plain;
   }
 
+  function chainAddressForWallet(wallet, chain) {
+    if (!isObject(wallet) || !chain) return "";
+    var normalized = completeWalletForAllChains(wallet);
+    var addresses = addressMap(normalized);
+    var aliases = chainAddressAliases(chain).concat([
+      chain.chainID + "-preserved",
+      chain.chainID + "-legacy",
+      chain.chainID + "-native",
+      chain.chainID + "-imported"
+    ]);
+    for (var index = 0; index < aliases.length; index += 1) {
+      var value = text(addresses[aliases[index]]);
+      if (looksLikeAddress(value)) return value;
+    }
+    try {
+      return addressFromWords(normalized.words, chain) || "";
+    } catch (error) {
+      return "";
+    }
+  }
+
   async function revealMasterSeedPhrase(options) {
     var name = text(options && options.name);
+    var walletIndex = Number(options && options.walletIndex);
     var password = String(options && options.password || "");
-    var wallet = parseKeysRaw(readRaw(KEYS_KEY) || "[]").filter(function (item) {
+    var rawWallets = parseKeysRaw(readRaw(KEYS_KEY) || "[]");
+    var wallets = rawWallets.filter(function (item) {
       return isObject(item) && item.encryptedSeed && text(item.name) === name;
-    })[0];
+    });
+    var wallet = Number.isInteger(walletIndex) && isObject(rawWallets[walletIndex]) && rawWallets[walletIndex].encryptedSeed
+      ? rawWallets[walletIndex]
+      : wallets[0];
     if (!wallet) throw new Error("Seed wallet not found");
     if (!wallet.encryptedMnemonic) {
       throw new Error("This wallet was saved before master phrase reveal was enabled. Re-import the seed phrase once to enable reveal.");
     }
     var mnemonic = await decryptWalletSecret(wallet.encryptedMnemonic, password);
+    var normalizedWallet = completeWalletForAllChains(wallet);
     return {
       type: "master-seed",
+      walletName: walletName(normalizedWallet),
       mnemonic: mnemonic,
       chains: DERIVED_CHAIN_EXPORTS.map(function (chain) {
         return {
           chainID: chain.chainID,
           label: chain.label,
-          derivationPath: chain.path
+          coinType: chain.coinType,
+          address: chainAddressForWallet(normalizedWallet, chain),
+          derivationPath: chain.path,
+          path: chain.path
         };
       })
     };
@@ -2026,12 +2057,14 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
   }
 
   function seedWalletsForReveal() {
-    var wallets = parseKeysRaw(readRaw(KEYS_KEY) || "[]").filter(function (wallet) {
+    var wallets = parseKeysRaw(readRaw(KEYS_KEY) || "[]").map(function (wallet, index) {
+      return isObject(wallet) ? Object.assign({}, wallet, { __seedRevealIndex: index }) : null;
+    }).filter(function (wallet) {
       return isObject(wallet) && wallet.encryptedSeed && text(wallet.name);
     });
     var seen = {};
     return wallets.filter(function (wallet) {
-      var key = lower(wallet.name);
+      var key = lower(wallet.name) + ":" + text(wallet.encryptedSeed).slice(0, 80);
       if (!key || seen[key]) return false;
       seen[key] = true;
       return true;
@@ -2052,22 +2085,25 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
       ".do-wallet-seed-reveal [hidden]{display:none!important}",
       ".do-wallet-seed-reveal h2{margin:0 0 14px;font-size:18px;line-height:1.25;color:#fff}",
       ".do-wallet-seed-reveal form{display:grid;grid-template-columns:minmax(140px,1fr) minmax(160px,1fr) auto;gap:10px;align-items:end}",
-      ".do-wallet-seed-reveal label{display:grid;gap:6px;font-size:12px;color:#cdbce8;font-weight:700}",
+      ".do-wallet-seed-reveal label{display:grid;gap:6px;font-size:12px;color:#cdbce8;font-weight:var(--bold,500)}",
       ".do-wallet-seed-reveal select,.do-wallet-seed-reveal input{min-height:40px;border:1px solid rgba(160,80,255,.38);border-radius:8px;background:#160f24;color:#fff;padding:0 10px;font:inherit}",
-      ".do-wallet-seed-reveal button{min-height:40px;border:0;border-radius:8px;background:#9d3cff;color:#fff;font:700 13px/1.2 inherit;padding:0 14px;cursor:pointer;white-space:nowrap}",
+      ".do-wallet-seed-reveal button{min-height:40px;border:0;border-radius:8px;background:#9d3cff;color:#fff;font:inherit;font-size:13px;font-weight:var(--bold,500);line-height:1.2;padding:0 14px;cursor:pointer;white-space:nowrap}",
+      ".do-wallet-seed-reveal button:disabled{opacity:.45;cursor:not-allowed}",
       ".do-wallet-seed-reveal button.secondary{background:rgba(143,60,255,.14);border:1px solid rgba(160,80,255,.45)}",
       ".do-wallet-seed-reveal__result{margin-top:14px;display:grid;gap:12px}",
-      ".do-wallet-seed-reveal__summary{color:#cdbce8;font-size:12px;font-weight:700;line-height:1.45}",
+      ".do-wallet-seed-reveal__summary{color:#cdbce8;font-size:12px;font-weight:var(--bold,500);line-height:1.45}",
       ".do-wallet-seed-reveal__top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch}",
-      ".do-wallet-seed-reveal__words{white-space:pre-wrap;word-break:break-word;border:1px solid rgba(160,80,255,.28);border-radius:8px;background:#090413;padding:12px;color:#fff;font:700 14px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}",
+      ".do-wallet-seed-reveal__words{white-space:pre-wrap;word-break:break-word;border:1px solid rgba(160,80,255,.28);border-radius:8px;background:#090413;padding:12px;color:#fff;font:500 14px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}",
       ".do-wallet-seed-reveal__chains{max-height:360px;overflow:auto;border:1px solid rgba(160,80,255,.2);border-radius:8px}",
-      ".do-wallet-seed-reveal__chain{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(220px,1.5fr) minmax(160px,1fr) auto;gap:10px;padding:10px;border-bottom:1px solid rgba(160,80,255,.16);font-size:12px;align-items:center}",
+      ".do-wallet-seed-reveal__chain{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(180px,1.35fr) minmax(150px,1fr) auto;gap:10px;padding:10px;border-bottom:1px solid rgba(160,80,255,.16);font-size:12px;align-items:center}",
       ".do-wallet-seed-reveal__chain:last-child{border-bottom:0}",
-      ".do-wallet-seed-reveal__phrase,.do-wallet-seed-reveal__path{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#d8c8ff;word-break:break-word}",
-      ".do-wallet-seed-reveal__phrase{color:#fff}",
+      ".do-wallet-seed-reveal__chain strong{display:grid;gap:4px;font-weight:var(--bold,500);line-height:1.15}",
+      ".do-wallet-seed-reveal__chain strong small{color:#a998cf;font-size:11px;font-weight:var(--bold,500)}",
+      ".do-wallet-seed-reveal__address,.do-wallet-seed-reveal__path{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#d8c8ff;word-break:break-word}",
+      ".do-wallet-seed-reveal__address{color:#fff}",
       ".do-wallet-seed-reveal__actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}",
       ".do-wallet-seed-reveal__actions button{min-height:32px;padding:0 10px;font-size:12px}",
-      ".do-wallet-seed-reveal__error{margin-top:12px;color:#ffb4c4;font-weight: 700}",
+      ".do-wallet-seed-reveal__error{margin-top:12px;color:#ffb4c4;font-weight:var(--bold,500)}",
       "@media (max-width:920px){.do-wallet-seed-reveal__chain{grid-template-columns:1fr}.do-wallet-seed-reveal__actions{justify-content:flex-start}}",
       "@media (max-width:720px){.do-wallet-seed-reveal form,.do-wallet-seed-reveal__top{grid-template-columns:1fr}}"
     ].join("");
@@ -2096,7 +2132,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     var panel = document.createElement("section");
     panel.className = "do-wallet-seed-reveal";
     panel.innerHTML = [
-      "<h2>Master seed phrase</h2>",
+      "<h2>Seed phrase export</h2>",
       "<form>",
       "<label>Wallet<select name=\"wallet\"></select></label>",
       "<label>Password<input name=\"password\" type=\"password\" autocomplete=\"current-password\"></label>",
@@ -2104,7 +2140,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
       "</form>",
       "<div class=\"do-wallet-seed-reveal__error\" hidden></div>",
       "<div class=\"do-wallet-seed-reveal__result\" hidden>",
-      "<div class=\"do-wallet-seed-reveal__summary\">One master seed phrase controls every wallet type below. Use the same phrase with the matching derivation path when importing elsewhere.</div>",
+      "<div class=\"do-wallet-seed-reveal__summary\">One master seed phrase controls the chain wallets below. Use the phrase with the shown derivation path when importing elsewhere.</div>",
       "<div class=\"do-wallet-seed-reveal__top\">",
       "<code class=\"do-wallet-seed-reveal__words\"></code>",
       "<button type=\"button\" class=\"secondary\" data-copy-seed>Copy master seed</button>",
@@ -2116,8 +2152,9 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     var select = panel.querySelector("select");
     wallets.forEach(function (wallet) {
       var option = document.createElement("option");
-      option.value = wallet.name;
-      option.textContent = wallet.name;
+      option.value = String(wallet.__seedRevealIndex);
+      option.setAttribute("data-wallet-name", wallet.name);
+      option.textContent = wallet.name + (wallet.encryptedMnemonic ? "" : " - re-import required");
       if (selectedName && wallet.name === selectedName) option.selected = true;
       select.appendChild(option);
     });
@@ -2130,6 +2167,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     var chains = panel.querySelector(".do-wallet-seed-reveal__chains");
     var copy = panel.querySelector("[data-copy-seed]");
     var currentSeedPhrase = "";
+    var currentChains = [];
 
     function showError(message) {
       error.textContent = message;
@@ -2151,19 +2189,24 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
           showError("Seed phrase reveal is still loading. Try again in a moment.");
           return;
         }
+        var selectedOption = select.options[select.selectedIndex];
         var revealed = await Promise.resolve(window.doWalletRevealMasterSeedPhrase({
-          name: select.value,
+          name: selectedOption && selectedOption.getAttribute("data-wallet-name") || "",
+          walletIndex: Number(select.value),
           password: password.value
         }));
         currentSeedPhrase = text(revealed.mnemonic);
+        currentChains = Array.isArray(revealed.chains) ? revealed.chains : [];
         words.textContent = currentSeedPhrase;
-        chains.innerHTML = DERIVED_CHAIN_EXPORTS.map(function (chain, index) {
+        chains.innerHTML = currentChains.map(function (chain, index) {
+          var address = text(chain.address);
           return "<div class=\"do-wallet-seed-reveal__chain\">" +
-            "<strong>" + escapeHtml(chain.label) + "</strong>" +
-            "<code class=\"do-wallet-seed-reveal__phrase\">" + escapeHtml(currentSeedPhrase) + "</code>" +
-            "<span class=\"do-wallet-seed-reveal__path\">" + escapeHtml(chain.path) + "</span>" +
+            "<strong>" + escapeHtml(chain.label) + "<small>" + escapeHtml(chain.chainID || "") + "</small></strong>" +
+            "<code class=\"do-wallet-seed-reveal__address\">" + escapeHtml(address || "Address unavailable") + "</code>" +
+            "<span class=\"do-wallet-seed-reveal__path\">" + escapeHtml(chain.path || chain.derivationPath || "") + "</span>" +
             "<span class=\"do-wallet-seed-reveal__actions\">" +
             "<button type=\"button\" class=\"secondary\" data-copy-chain-seed=\"" + index + "\">Copy phrase</button>" +
+            "<button type=\"button\" class=\"secondary\" data-copy-chain-address=\"" + index + "\"" + (address ? "" : " disabled") + ">Copy address</button>" +
             "<button type=\"button\" class=\"secondary\" data-copy-chain-path=\"" + index + "\">Copy path</button>" +
             "</span>" +
             "</div>";
@@ -2186,12 +2229,15 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
       var button = event.target && event.target.closest && event.target.closest("button");
       if (!button || !navigator.clipboard) return;
       var seedIndex = button.getAttribute("data-copy-chain-seed");
+      var addressIndex = button.getAttribute("data-copy-chain-address");
       var pathIndex = button.getAttribute("data-copy-chain-path");
       var value = "";
       if (seedIndex !== null) {
         value = currentSeedPhrase;
-      } else if (pathIndex !== null && DERIVED_CHAIN_EXPORTS[Number(pathIndex)]) {
-        value = DERIVED_CHAIN_EXPORTS[Number(pathIndex)].path;
+      } else if (addressIndex !== null && currentChains[Number(addressIndex)]) {
+        value = text(currentChains[Number(addressIndex)].address);
+      } else if (pathIndex !== null && currentChains[Number(pathIndex)]) {
+        value = currentChains[Number(pathIndex)].path || currentChains[Number(pathIndex)].derivationPath;
       }
       if (!value) return;
       navigator.clipboard.writeText(value).then(function () {
