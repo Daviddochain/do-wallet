@@ -2542,8 +2542,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins3) return;
-  window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins3 = true;
+  if (window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins4) return;
+  window.__doWalletPortfolioGroupPanel20260625SideL1DetailCoins4 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var STYLE_ID = "do-wallet-portfolio-group-panel-style";
@@ -2557,8 +2557,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
   var SIDE_PENDING_AT_ATTR = "data-do-wallet-l1-side-pending-at";
   var DETAIL_PANEL_ATTR = "data-do-wallet-l1-detail-assets";
   var DETAIL_GROUP_ATTR = "data-do-wallet-l1-detail-group";
-  var SIDE_STABLE_DELAY = 0;
-  var VERSION = "20260625SideL1DetailCoins3";
+  var SIDE_STABLE_DELAY = 700;
+  var VERSION = "20260625SideL1DetailCoins4";
   var lastSignature = "";
   var renderTimer = null;
   var tableTimer = null;
@@ -3505,6 +3505,14 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       if (upper && content.indexOf((" " + upper).toLowerCase()) >= 0) score += 3;
       if (amount && content.indexOf(amount) >= 0) score += 6;
       if (value && value !== "$-" && content.indexOf(value.toLowerCase()) >= 0) score += 4;
+      children.forEach(function (child) {
+        var childSymbol = lowerText(symbolOf(child));
+        var childAmount = lowerText(amountOf(child));
+        var childValue = lowerText(valueOf(child));
+        if (childSymbol && content.indexOf(childSymbol) >= 0) score += 8;
+        if (childAmount && content.indexOf(childAmount) >= 0) score += 3;
+        if (childValue && childValue !== "$-" && content.indexOf(childValue) >= 0) score += 3;
+      });
       if (score > bestScore) {
         best = group;
         bestScore = score;
@@ -3631,6 +3639,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
       ".do-wallet-side-l1-parent-row{background:rgba(163,60,255,.045);}",
       ".do-wallet-side-l1-parent-row[data-do-wallet-l1-child-count]:not([data-do-wallet-l1-child-count='0']){cursor:pointer;}",
       ".do-wallet-side-l1-child-row{display:none!important;}",
+      "[" + SIDE_PENDING_SIGNATURE_ATTR + "]{opacity:0!important;pointer-events:none!important;}",
       ".do-wallet-side-l1-synthetic-parent{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:14px 0;background:rgba(163,60,255,.045);}",
       ".do-wallet-side-l1-synthetic-left{display:flex;align-items:center;gap:12px;min-width:0;}",
       ".do-wallet-side-l1-synthetic-icon,.do-wallet-side-l1-synthetic-fallback{width:28px;height:28px;border-radius:50%;background:#2c2140;flex:0 0 auto;}",
@@ -3814,6 +3823,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
         icon: group.chainIcon
       };
       groupKeyAliases(group).forEach(function (key) {
+        var existing = sideDetailGroupsCache[key];
+        if (existing && Array.isArray(existing.children) && existing.children.length > detailGroup.children.length) return;
         sideDetailGroupsCache[key] = detailGroup;
       });
     });
@@ -3917,6 +3928,8 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
     var parent = document.createElement("article");
     parent.className = "do-wallet-side-l1-synthetic-parent";
     parent.setAttribute("data-do-wallet-l1-synthetic-parent", "1");
+    parent.setAttribute("role", "button");
+    parent.setAttribute("tabindex", "0");
 
     var left = document.createElement("div");
     left.className = "do-wallet-side-l1-synthetic-left";
@@ -3952,6 +3965,15 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
 
     parent.appendChild(left);
     parent.appendChild(count);
+    parent.addEventListener("click", function () {
+      var target = (group.parent && group.parent.row) || (group.rows && group.rows[0] && group.rows[0].row) || null;
+      if (target && target.click) target.click();
+    });
+    parent.addEventListener("keydown", function (event) {
+      if (!event || (event.key !== "Enter" && event.key !== " ")) return;
+      event.preventDefault();
+      parent.click();
+    });
     return parent;
   }
 
@@ -4044,6 +4066,7 @@ runModule("do-wallet-v2-portfolio-group-panel.js", function(){
           }
           group.children.forEach(function (child) {
             markSideRow(child, group, false, true);
+            block.appendChild(child.row);
             childCount += 1;
           });
           shell.appendChild(block);
