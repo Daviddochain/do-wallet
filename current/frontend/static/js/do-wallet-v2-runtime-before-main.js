@@ -8216,14 +8216,13 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
         if (isObject(byWallet[key])) snapshots.push(byWallet[key]);
       });
     }
-    preservePortfolioAddressHints(snapshots);
-    var changed = removeJSON(SNAPSHOT_KEY) || false;
-    changed = removeJSON(SNAPSHOTS_BY_WALLET_KEY) || changed;
+    var changed = preservePortfolioAddressHints(snapshots);
     writeJSON(SNAPSHOT_RESET_KEY, SNAPSHOT_SCHEMA_VERSION);
     markStatus("portfolio-cache-cleared-for-schema", {
       schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-      migrated: false,
-      removedKeys: changed ? 2 : 0,
+      migrated: Boolean(changed),
+      removedKeys: 0,
+      retainedKeys: snapshots.length,
     });
     return changed;
   }
@@ -9109,6 +9108,60 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     return out;
   }
 
+  function collectPublicAddressesFromSnapshotLike(value) {
+    var payload = value;
+    if (typeof payload === "string") {
+      try { payload = JSON.parse(payload); } catch (error) { return []; }
+    }
+    var out = {};
+    function remember(chainID, address) {
+      chainID = canonicalNetwork(chainID);
+      address = normalizeAddressForChain(chainID, address) || clean(address);
+      if (chainID && isPublicAddress(address)) {
+        addSnapshotAddress(out, chainID, address);
+        return;
+      }
+      chainIDsForPublicAddress(address).forEach(function (candidateChainID) {
+        addSnapshotAddress(out, candidateChainID, address);
+      });
+    }
+    function rememberRows(rows) {
+      if (!Array.isArray(rows)) return;
+      rows.forEach(function (asset) {
+        if (!isObject(asset)) return;
+        remember(asset.chainID || asset.chainId || asset.network || asset.chain, asset.walletAddress || asset.address);
+      });
+    }
+    function scan(snapshot) {
+      if (!isObject(snapshot)) return;
+      addSnapshotAddressContainer(out, snapshot.allAddresses);
+      addSnapshotAddressContainer(out, snapshot.activeAddresses);
+      addSnapshotAddressContainer(out, snapshot.addresses);
+      addSnapshotAddressContainer(out, snapshot.addressMap);
+      addSnapshotAddressContainer(out, snapshot.wallet && (snapshot.wallet.addresses || snapshot.wallet.addressMap));
+      [
+        "rawSpendableAssets",
+        "flatSpendableAssets",
+        "unGroupedSpendableAssets",
+        "rawPortfolioAssets",
+        "flatPortfolioAssets",
+        "unGroupedPortfolioAssets",
+        "sourceSpendableAssets",
+        "sourcePortfolioAssets",
+        "sourceStakingAssets",
+        "detailPortfolioAssets",
+        "staking",
+        "assets",
+        "spendableAssets",
+        "portfolioAssets",
+      ].forEach(function (key) { rememberRows(snapshot[key]); });
+      if (isObject(snapshot.snapshot)) scan(snapshot.snapshot);
+    }
+    if (Array.isArray(payload)) payload.forEach(scan);
+    else scan(payload);
+    return Object.keys(out).map(function (chainID) { return out[chainID]; }).filter(Boolean);
+  }
+
   function publicWalletAddressContext(key, inherited) {
     var lowerKey = String(key || "").toLowerCase();
     if (!lowerKey) return inherited === true;
@@ -9235,15 +9288,24 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     try {
       for (var index = 0; index < window.localStorage.length; index += 1) {
         var key = window.localStorage.key(index);
-        if (!publicStorageWalletKeyAllowed(key)) continue;
+        var allowedKey = publicStorageWalletKeyAllowed(key);
+        var snapshotLikeKey = /portfolio|snapshot|do-wallet-multichain-live/i.test(String(key || ""));
+        if (!allowedKey && !snapshotLikeKey) continue;
         var raw = window.localStorage.getItem(key);
         if (!raw || raw.length > 750000) continue;
         var parsed = null;
         try { parsed = JSON.parse(raw); } catch (error) {}
-        collectPublicWalletAddressesFromValue(parsed || raw).forEach(function (address) {
-          addAddress(address, key);
-        });
-        if (!parsed) {
+        if (snapshotLikeKey || (parsed && (parsed.schemaVersion || parsed.source || parsed.snapshot))) {
+          collectPublicAddressesFromSnapshotLike(parsed || raw).forEach(function (address) {
+            addAddress(address, key);
+          });
+        }
+        if (allowedKey) {
+          collectPublicWalletAddressesFromValue(parsed || raw).forEach(function (address) {
+            addAddress(address, key);
+          });
+        }
+        if (!parsed && allowedKey) {
           collectPublicAddressesFromText(raw).forEach(function (address) {
             if (isLikelyWalletPublicAddress(address)) addAddress(address, key);
           });
@@ -9947,16 +10009,34 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   }
 
   function previousSnapshotForWallet(wallet) {
-    var snapshot = readJSON(SNAPSHOT_KEY, null);
-    if (walletsMatchSnapshot(snapshot, wallet)) return snapshot;
-    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
-    if (!isObject(byWallet)) return null;
-    var keys = walletIdentityKeys(wallet);
-    for (var index = 0; index < keys.length; index += 1) {
-      var candidate = byWallet[keys[index]];
-      if (walletsMatchSnapshot(candidate, wallet)) return candidate;
+    var candidates = [];
+    function add(candidate) {
+      if (isObject(candidate) && snapshotHasDisplayRows(candidate)) candidates.push(candidate);
     }
-    return null;
+    add(readJSON(SNAPSHOT_KEY, null));
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) {
+      Object.keys(byWallet).forEach(function (key) { add(byWallet[key]); });
+    }
+    if (!candidates.length) return null;
+    var keys = walletIdentityKeys(wallet);
+    function directKeyMatch(snapshot) {
+      var key = clean(snapshot && snapshot.walletKey).toLowerCase();
+      return Boolean(key && keys.indexOf(key) >= 0);
+    }
+    function score(snapshot) {
+      var addressScore = 0;
+      if (isObject(snapshot && snapshot.allAddresses)) addressScore += Object.keys(snapshot.allAddresses).length * 2;
+      if (isObject(snapshot && snapshot.addresses)) addressScore += Object.keys(snapshot.addresses).length;
+      return snapshotDisplayRowCount(snapshot) + addressScore + (snapshot && snapshot.schemaVersion === SNAPSHOT_SCHEMA_VERSION ? 1 : 0);
+    }
+    var related = candidates.filter(function (candidate) {
+      return walletsMatchSnapshot(candidate, wallet) || directKeyMatch(candidate);
+    });
+    var pool = related.length ? related : candidates;
+    return pool.sort(function (a, b) {
+      return score(b) - score(a) || Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+    })[0] || null;
   }
 
   function snapshotHasDisplayRows(snapshot) {
@@ -11182,7 +11262,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable12";
+  var VERSION = "20260625L1PortfolioStable13";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -11302,7 +11382,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     uthb: true
   };
 
-  var DO_PORTFOLIO_ICON = "/static/media/DoLogo.aa0e0a1c6b95a5a57eda.jpg";
+  var DO_PORTFOLIO_ICON = "/do-logo.jpg";
 
   var CHAIN_META = {
     "Do-Chain": ["Do Chain", "DO", DO_PORTFOLIO_ICON, 10],
@@ -11617,8 +11697,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     var seen = {};
     function add(snapshot) {
       if (!isObject(snapshot)) return;
-      if (clean(snapshot.schemaVersion || "") !== PORTFOLIO_SCHEMA_VERSION) return;
-      var key = clean(snapshot.updatedAt || "") + ":" + snapshotKeys(snapshot).join("|");
+      var key = clean(snapshot.schemaVersion || "") + ":" + clean(snapshot.updatedAt || "") + ":" + snapshotKeys(snapshot).join("|");
       if (seen[key]) return;
       seen[key] = true;
       snapshots.push(snapshot);
@@ -11684,13 +11763,49 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     return 4;
   }
 
+  function rowChainCount(rows) {
+    var seen = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (asset) {
+      var meta = metaFor(asset);
+      if (meta && meta.key) seen[meta.key] = true;
+    });
+    return Object.keys(seen).length;
+  }
+
+  function rowQuality(rows) {
+    rows = Array.isArray(rows) ? rows : [];
+    var valued = rows.filter(function (asset) {
+      return Number(asset && asset.value) > 0 || Boolean(asset && asset.valueText && asset.valueText !== "$-" && asset.valueText !== "$0");
+    }).length;
+    return rows.length + (rowChainCount(rows) * 20) + (valued * 3);
+  }
+
+  function mergeRows(primary, secondary) {
+    var out = [];
+    var byKey = {};
+    function add(asset) {
+      if (!isDisplayable(asset)) return;
+      var key = assetIdentity(asset);
+      byKey[key] = betterAsset(byKey[key], asset);
+    }
+    (Array.isArray(primary) ? primary : []).forEach(add);
+    (Array.isArray(secondary) ? secondary : []).forEach(add);
+    Object.keys(byKey).forEach(function (key) { out.push(byKey[key]); });
+    return out.sort(function (a, b) {
+      return (a.index - b.index) || upper(a.symbol).localeCompare(upper(b.symbol));
+    });
+  }
+
   function buildGroups() {
     var snapshotRows = [];
     collectSnapshots().forEach(function (snapshot) {
       snapshotRows = snapshotRows.concat(collectAssetsFromSnapshot(snapshot));
     });
-    if (snapshotRows.length) return groupAssets(snapshotRows);
-    return groupAssets(collectAssetsFromPane(findRightWalletPane()));
+    var paneRows = collectAssetsFromPane(findRightWalletPane());
+    var rows = mergeRows(snapshotRows, paneRows);
+    if (!rows.length) return [];
+    if (paneRows.length && rowQuality(paneRows) > rowQuality(snapshotRows)) rows = mergeRows(paneRows, snapshotRows);
+    return groupAssets(rows);
   }
 
   function groupAssets(rows) {
@@ -11767,7 +11882,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
 
   function renderIcon(src, label, className) {
     if (!src) return fallbackIcon(label, className, false);
-    return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='grid';\" />" + fallbackIcon(label, className, true);
+    return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.visibility='hidden';\" />";
   }
 
   function nativeAssetForGroup(group) {

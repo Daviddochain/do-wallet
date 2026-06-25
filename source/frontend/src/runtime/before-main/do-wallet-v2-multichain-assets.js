@@ -781,14 +781,13 @@
         if (isObject(byWallet[key])) snapshots.push(byWallet[key]);
       });
     }
-    preservePortfolioAddressHints(snapshots);
-    var changed = removeJSON(SNAPSHOT_KEY) || false;
-    changed = removeJSON(SNAPSHOTS_BY_WALLET_KEY) || changed;
+    var changed = preservePortfolioAddressHints(snapshots);
     writeJSON(SNAPSHOT_RESET_KEY, SNAPSHOT_SCHEMA_VERSION);
     markStatus("portfolio-cache-cleared-for-schema", {
       schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-      migrated: false,
-      removedKeys: changed ? 2 : 0,
+      migrated: Boolean(changed),
+      removedKeys: 0,
+      retainedKeys: snapshots.length,
     });
     return changed;
   }
@@ -1674,6 +1673,60 @@
     return out;
   }
 
+  function collectPublicAddressesFromSnapshotLike(value) {
+    var payload = value;
+    if (typeof payload === "string") {
+      try { payload = JSON.parse(payload); } catch (error) { return []; }
+    }
+    var out = {};
+    function remember(chainID, address) {
+      chainID = canonicalNetwork(chainID);
+      address = normalizeAddressForChain(chainID, address) || clean(address);
+      if (chainID && isPublicAddress(address)) {
+        addSnapshotAddress(out, chainID, address);
+        return;
+      }
+      chainIDsForPublicAddress(address).forEach(function (candidateChainID) {
+        addSnapshotAddress(out, candidateChainID, address);
+      });
+    }
+    function rememberRows(rows) {
+      if (!Array.isArray(rows)) return;
+      rows.forEach(function (asset) {
+        if (!isObject(asset)) return;
+        remember(asset.chainID || asset.chainId || asset.network || asset.chain, asset.walletAddress || asset.address);
+      });
+    }
+    function scan(snapshot) {
+      if (!isObject(snapshot)) return;
+      addSnapshotAddressContainer(out, snapshot.allAddresses);
+      addSnapshotAddressContainer(out, snapshot.activeAddresses);
+      addSnapshotAddressContainer(out, snapshot.addresses);
+      addSnapshotAddressContainer(out, snapshot.addressMap);
+      addSnapshotAddressContainer(out, snapshot.wallet && (snapshot.wallet.addresses || snapshot.wallet.addressMap));
+      [
+        "rawSpendableAssets",
+        "flatSpendableAssets",
+        "unGroupedSpendableAssets",
+        "rawPortfolioAssets",
+        "flatPortfolioAssets",
+        "unGroupedPortfolioAssets",
+        "sourceSpendableAssets",
+        "sourcePortfolioAssets",
+        "sourceStakingAssets",
+        "detailPortfolioAssets",
+        "staking",
+        "assets",
+        "spendableAssets",
+        "portfolioAssets",
+      ].forEach(function (key) { rememberRows(snapshot[key]); });
+      if (isObject(snapshot.snapshot)) scan(snapshot.snapshot);
+    }
+    if (Array.isArray(payload)) payload.forEach(scan);
+    else scan(payload);
+    return Object.keys(out).map(function (chainID) { return out[chainID]; }).filter(Boolean);
+  }
+
   function publicWalletAddressContext(key, inherited) {
     var lowerKey = String(key || "").toLowerCase();
     if (!lowerKey) return inherited === true;
@@ -1800,15 +1853,24 @@
     try {
       for (var index = 0; index < window.localStorage.length; index += 1) {
         var key = window.localStorage.key(index);
-        if (!publicStorageWalletKeyAllowed(key)) continue;
+        var allowedKey = publicStorageWalletKeyAllowed(key);
+        var snapshotLikeKey = /portfolio|snapshot|do-wallet-multichain-live/i.test(String(key || ""));
+        if (!allowedKey && !snapshotLikeKey) continue;
         var raw = window.localStorage.getItem(key);
         if (!raw || raw.length > 750000) continue;
         var parsed = null;
         try { parsed = JSON.parse(raw); } catch (error) {}
-        collectPublicWalletAddressesFromValue(parsed || raw).forEach(function (address) {
-          addAddress(address, key);
-        });
-        if (!parsed) {
+        if (snapshotLikeKey || (parsed && (parsed.schemaVersion || parsed.source || parsed.snapshot))) {
+          collectPublicAddressesFromSnapshotLike(parsed || raw).forEach(function (address) {
+            addAddress(address, key);
+          });
+        }
+        if (allowedKey) {
+          collectPublicWalletAddressesFromValue(parsed || raw).forEach(function (address) {
+            addAddress(address, key);
+          });
+        }
+        if (!parsed && allowedKey) {
           collectPublicAddressesFromText(raw).forEach(function (address) {
             if (isLikelyWalletPublicAddress(address)) addAddress(address, key);
           });
@@ -2512,16 +2574,34 @@
   }
 
   function previousSnapshotForWallet(wallet) {
-    var snapshot = readJSON(SNAPSHOT_KEY, null);
-    if (walletsMatchSnapshot(snapshot, wallet)) return snapshot;
-    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
-    if (!isObject(byWallet)) return null;
-    var keys = walletIdentityKeys(wallet);
-    for (var index = 0; index < keys.length; index += 1) {
-      var candidate = byWallet[keys[index]];
-      if (walletsMatchSnapshot(candidate, wallet)) return candidate;
+    var candidates = [];
+    function add(candidate) {
+      if (isObject(candidate) && snapshotHasDisplayRows(candidate)) candidates.push(candidate);
     }
-    return null;
+    add(readJSON(SNAPSHOT_KEY, null));
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) {
+      Object.keys(byWallet).forEach(function (key) { add(byWallet[key]); });
+    }
+    if (!candidates.length) return null;
+    var keys = walletIdentityKeys(wallet);
+    function directKeyMatch(snapshot) {
+      var key = clean(snapshot && snapshot.walletKey).toLowerCase();
+      return Boolean(key && keys.indexOf(key) >= 0);
+    }
+    function score(snapshot) {
+      var addressScore = 0;
+      if (isObject(snapshot && snapshot.allAddresses)) addressScore += Object.keys(snapshot.allAddresses).length * 2;
+      if (isObject(snapshot && snapshot.addresses)) addressScore += Object.keys(snapshot.addresses).length;
+      return snapshotDisplayRowCount(snapshot) + addressScore + (snapshot && snapshot.schemaVersion === SNAPSHOT_SCHEMA_VERSION ? 1 : 0);
+    }
+    var related = candidates.filter(function (candidate) {
+      return walletsMatchSnapshot(candidate, wallet) || directKeyMatch(candidate);
+    });
+    var pool = related.length ? related : candidates;
+    return pool.sort(function (a, b) {
+      return score(b) - score(a) || Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+    })[0] || null;
   }
 
   function snapshotHasDisplayRows(snapshot) {

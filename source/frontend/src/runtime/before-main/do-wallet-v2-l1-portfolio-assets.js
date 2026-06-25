@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable12";
+  var VERSION = "20260625L1PortfolioStable13";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -125,7 +125,7 @@
     uthb: true
   };
 
-  var DO_PORTFOLIO_ICON = "/static/media/DoLogo.aa0e0a1c6b95a5a57eda.jpg";
+  var DO_PORTFOLIO_ICON = "/do-logo.jpg";
 
   var CHAIN_META = {
     "Do-Chain": ["Do Chain", "DO", DO_PORTFOLIO_ICON, 10],
@@ -440,8 +440,7 @@
     var seen = {};
     function add(snapshot) {
       if (!isObject(snapshot)) return;
-      if (clean(snapshot.schemaVersion || "") !== PORTFOLIO_SCHEMA_VERSION) return;
-      var key = clean(snapshot.updatedAt || "") + ":" + snapshotKeys(snapshot).join("|");
+      var key = clean(snapshot.schemaVersion || "") + ":" + clean(snapshot.updatedAt || "") + ":" + snapshotKeys(snapshot).join("|");
       if (seen[key]) return;
       seen[key] = true;
       snapshots.push(snapshot);
@@ -507,13 +506,49 @@
     return 4;
   }
 
+  function rowChainCount(rows) {
+    var seen = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (asset) {
+      var meta = metaFor(asset);
+      if (meta && meta.key) seen[meta.key] = true;
+    });
+    return Object.keys(seen).length;
+  }
+
+  function rowQuality(rows) {
+    rows = Array.isArray(rows) ? rows : [];
+    var valued = rows.filter(function (asset) {
+      return Number(asset && asset.value) > 0 || Boolean(asset && asset.valueText && asset.valueText !== "$-" && asset.valueText !== "$0");
+    }).length;
+    return rows.length + (rowChainCount(rows) * 20) + (valued * 3);
+  }
+
+  function mergeRows(primary, secondary) {
+    var out = [];
+    var byKey = {};
+    function add(asset) {
+      if (!isDisplayable(asset)) return;
+      var key = assetIdentity(asset);
+      byKey[key] = betterAsset(byKey[key], asset);
+    }
+    (Array.isArray(primary) ? primary : []).forEach(add);
+    (Array.isArray(secondary) ? secondary : []).forEach(add);
+    Object.keys(byKey).forEach(function (key) { out.push(byKey[key]); });
+    return out.sort(function (a, b) {
+      return (a.index - b.index) || upper(a.symbol).localeCompare(upper(b.symbol));
+    });
+  }
+
   function buildGroups() {
     var snapshotRows = [];
     collectSnapshots().forEach(function (snapshot) {
       snapshotRows = snapshotRows.concat(collectAssetsFromSnapshot(snapshot));
     });
-    if (snapshotRows.length) return groupAssets(snapshotRows);
-    return groupAssets(collectAssetsFromPane(findRightWalletPane()));
+    var paneRows = collectAssetsFromPane(findRightWalletPane());
+    var rows = mergeRows(snapshotRows, paneRows);
+    if (!rows.length) return [];
+    if (paneRows.length && rowQuality(paneRows) > rowQuality(snapshotRows)) rows = mergeRows(paneRows, snapshotRows);
+    return groupAssets(rows);
   }
 
   function groupAssets(rows) {
@@ -590,7 +625,7 @@
 
   function renderIcon(src, label, className) {
     if (!src) return fallbackIcon(label, className, false);
-    return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.display='none';this.nextElementSibling.style.display='grid';\" />" + fallbackIcon(label, className, true);
+    return "<img class=\"" + className + "\" src=\"" + escapeHTML(src) + "\" alt=\"\" loading=\"eager\" decoding=\"async\" onerror=\"this.style.visibility='hidden';\" />";
   }
 
   function nativeAssetForGroup(group) {
