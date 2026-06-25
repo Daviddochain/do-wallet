@@ -529,15 +529,31 @@
   async function revealMasterSeedPhrase(options) {
     var name = text(options && options.name);
     var walletIndex = Number(options && options.walletIndex);
+    var seedToken = text(options && options.seedToken);
     var password = String(options && options.password || "");
     var rawWallets = parseKeysRaw(readRaw(KEYS_KEY) || "[]");
+    var candidateWallets = seedWalletCandidates();
+    var wallet = seedToken
+      ? candidateWallets.filter(function (item) {
+        return text(item.__seedRevealToken) === seedToken;
+      })[0]
+      : null;
+    if (!wallet && Number.isInteger(walletIndex)) {
+      wallet = candidateWallets.filter(function (item) {
+        return Number(item.__seedRevealIndex) === walletIndex && text(item.__seedRevealSource) === "keys";
+      })[0] || null;
+    }
     var wallets = rawWallets.filter(function (item) {
       return isObject(item) && item.encryptedSeed && text(item.name) === name;
     });
-    var wallet = Number.isInteger(walletIndex) && isObject(rawWallets[walletIndex]) && rawWallets[walletIndex].encryptedSeed
-      ? rawWallets[walletIndex]
-      : wallets[0];
+    if (!wallet && Number.isInteger(walletIndex) && isObject(rawWallets[walletIndex]) && rawWallets[walletIndex].encryptedSeed) {
+      wallet = rawWallets[walletIndex];
+    }
+    if (!wallet) wallet = wallets[0];
     if (!wallet) throw new Error("Seed wallet not found");
+    if (!wallet.encryptedSeed) {
+      throw new Error("This wallet was not created from a stored Do-Wallet seed. Back it up or export it separately.");
+    }
     if (!wallet.encryptedMnemonic) {
       throw new Error("This wallet was saved before master phrase reveal was enabled. Re-import the seed phrase once to enable reveal.");
     }
@@ -1294,15 +1310,97 @@
     normalizeRecoveredWallets();
   }
 
-  function seedWalletsForReveal() {
-    var wallets = parseKeysRaw(readRaw(KEYS_KEY) || "[]").map(function (wallet, index) {
-      return isObject(wallet) ? Object.assign({}, wallet, { __seedRevealIndex: index }) : null;
-    }).filter(function (wallet) {
-      return isObject(wallet) && wallet.encryptedSeed && text(wallet.name);
+  function shortAddressForSeedReveal(address) {
+    var value = text(address);
+    if (value.length <= 18) return value;
+    return value.slice(0, 8) + "..." + value.slice(-6);
+  }
+
+  function seedRevealStatus(wallet) {
+    if (!isObject(wallet)) return "not seed-backed";
+    if (wallet.encryptedSeed && wallet.encryptedMnemonic) return "ready";
+    if (wallet.encryptedSeed) return "re-import required";
+    if (hasEncryptedMap(wallet) || wallet.wallet) return "private-key wallet";
+    if (wallet.ledger) return "ledger wallet";
+    if (wallet.multisig) return "multisig wallet";
+    return "not seed-backed";
+  }
+
+  function seedRevealToken(wallet, source, index) {
+    return [
+      source || "",
+      Number.isFinite(Number(index)) ? String(index) : "",
+      signableToken(wallet),
+      lower(walletName(wallet)),
+      lower(primaryAddress(wallet))
+    ].join("|");
+  }
+
+  function seedRevealDedupeKey(wallet) {
+    return signableToken(wallet) || (lower(walletName(wallet)) + ":" + lower(primaryAddress(wallet)));
+  }
+
+  function seedWalletCandidates() {
+    var candidates = [];
+    function add(wallet, source, index) {
+      if (!isObject(wallet)) return;
+      var normalized = normalizeWalletRecord(wallet);
+      if (!normalized) normalized = Object.assign({}, wallet);
+      var name = walletName(normalized);
+      var address = primaryAddress(normalized);
+      if (!name && !address) return;
+      var sourceName = text(source) || "storage";
+      var token = seedRevealToken(normalized, sourceName, index);
+      candidates.push(Object.assign({}, normalized, {
+        name: name || shortAddressForSeedReveal(address) || "Do-Wallet",
+        walletName: text(normalized.walletName) || name || "Do-Wallet",
+        __seedRevealIndex: Number.isFinite(Number(index)) ? Number(index) : -1,
+        __seedRevealSource: sourceName,
+        __seedRevealToken: token,
+        __seedRevealStatus: seedRevealStatus(normalized)
+      }));
+    }
+
+    parseKeysRaw(readRaw(KEYS_KEY) || "[]").forEach(function (wallet, index) {
+      add(wallet, "keys", index);
     });
+
+    [
+      [readJSON(USER_KEY), "user", -1],
+      [readJSON("do-wallet-selected-recovered-wallet.v1"), "selected", -1],
+      [readJSON("do-wallet-bridge-wallet"), "bridge", -1],
+      [readJSON("do-wallet-extension-authority.v1"), "authority", -1]
+    ].forEach(function (entry) {
+      var payload = entry[0];
+      var wallet = isObject(payload && payload.wallet) ? payload.wallet : payload;
+      add(wallet, entry[1], entry[2]);
+    });
+
+    var recovered = readJSON(RECOVERED_KEY);
+    if (recovered && Array.isArray(recovered.wallets)) {
+      recovered.wallets.forEach(function (wallet, index) {
+        add(wallet, "recovered", index);
+      });
+    }
+
+    var seen = {};
+    return candidates.filter(function (wallet) {
+      var key = seedRevealDedupeKey(wallet) || text(wallet.__seedRevealToken);
+      if (!key || seen[key]) return false;
+      seen[key] = true;
+      return true;
+    }).sort(function (left, right) {
+      var leftReady = left.encryptedSeed && left.encryptedMnemonic ? 0 : left.encryptedSeed ? 1 : 2;
+      var rightReady = right.encryptedSeed && right.encryptedMnemonic ? 0 : right.encryptedSeed ? 1 : 2;
+      return (leftReady - rightReady) || walletName(left).localeCompare(walletName(right));
+    });
+  }
+
+  function seedWalletsForReveal() {
+    var wallets = seedWalletCandidates();
     var seen = {};
     return wallets.filter(function (wallet) {
-      var key = lower(wallet.name) + ":" + text(wallet.encryptedSeed).slice(0, 80);
+      var key = text(wallet.__seedRevealToken) || lower(wallet.name) + ":" + text(wallet.encryptedSeed).slice(0, 80);
       if (!key || seen[key]) return false;
       seen[key] = true;
       return true;
@@ -1322,6 +1420,8 @@
       ".do-wallet-seed-reveal{margin:18px 0 0;border:1px solid rgba(160,80,255,.34);border-radius:8px;background:rgba(18,10,32,.74);color:#fff;padding:16px;font-family:inherit}",
       ".do-wallet-seed-reveal [hidden]{display:none!important}",
       ".do-wallet-seed-reveal h2{margin:0 0 14px;font-size:18px;line-height:1.25;color:#fff}",
+      ".do-wallet-seed-reveal__notice,.do-wallet-seed-reveal__empty{margin:0 0 14px;color:#cdbce8;font-size:12px;font-weight:var(--bold,500);line-height:1.45}",
+      ".do-wallet-seed-reveal__empty{padding:10px 12px;border:1px solid rgba(160,80,255,.2);border-radius:8px;background:rgba(9,4,19,.5)}",
       ".do-wallet-seed-reveal form{display:grid;grid-template-columns:minmax(140px,1fr) minmax(160px,1fr) auto;gap:10px;align-items:end}",
       ".do-wallet-seed-reveal label{display:grid;gap:6px;font-size:12px;color:#cdbce8;font-weight:var(--bold,500)}",
       ".do-wallet-seed-reveal select,.do-wallet-seed-reveal input{min-height:40px;border:1px solid rgba(160,80,255,.38);border-radius:8px;background:#160f24;color:#fff;padding:0 10px;font:inherit}",
@@ -1350,7 +1450,8 @@
 
   function seedRevealHost() {
     try {
-      if (window.location.pathname !== "/auth") return null;
+      var path = window.location.pathname.replace(/\/+$/, "") || "/";
+      if (path !== "/auth") return null;
     } catch (error) {
       return null;
     }
@@ -1363,7 +1464,6 @@
     var host = seedRevealHost();
     if (!host || host.querySelector(".do-wallet-seed-reveal")) return;
     var wallets = seedWalletsForReveal();
-    if (!wallets.length) return;
     ensureSeedRevealStyles();
 
     var selectedName = activeWalletName();
@@ -1371,11 +1471,13 @@
     panel.className = "do-wallet-seed-reveal";
     panel.innerHTML = [
       "<h2>Seed phrase export</h2>",
-      "<form>",
+      "<div class=\"do-wallet-seed-reveal__notice\">Seed-created wallets use one master seed phrase. Each chain uses the same phrase with the derivation path shown after reveal.</div>",
+      "<form" + (wallets.length ? "" : " hidden") + ">",
       "<label>Wallet<select name=\"wallet\"></select></label>",
       "<label>Password<input name=\"password\" type=\"password\" autocomplete=\"current-password\"></label>",
       "<button type=\"submit\">Show</button>",
       "</form>",
+      "<div class=\"do-wallet-seed-reveal__empty\"" + (wallets.length ? " hidden" : "") + ">No wallet with a stored seed phrase was found in this browser. Import the wallet from its seed phrase once to enable seed phrase export here.</div>",
       "<div class=\"do-wallet-seed-reveal__error\" hidden></div>",
       "<div class=\"do-wallet-seed-reveal__result\" hidden>",
       "<div class=\"do-wallet-seed-reveal__summary\">One master seed phrase controls the chain wallets below. Use the phrase with the shown derivation path when importing elsewhere.</div>",
@@ -1392,7 +1494,10 @@
       var option = document.createElement("option");
       option.value = String(wallet.__seedRevealIndex);
       option.setAttribute("data-wallet-name", wallet.name);
-      option.textContent = wallet.name + (wallet.encryptedMnemonic ? "" : " - re-import required");
+      option.setAttribute("data-seed-token", wallet.__seedRevealToken || "");
+      var address = shortAddressForSeedReveal(primaryAddress(wallet));
+      var status = seedRevealStatus(wallet);
+      option.textContent = wallet.name + (address ? " - " + address : "") + (status === "ready" ? "" : " - " + status);
       if (selectedName && wallet.name === selectedName) option.selected = true;
       select.appendChild(option);
     });
@@ -1430,6 +1535,7 @@
         var selectedOption = select.options[select.selectedIndex];
         var revealed = await Promise.resolve(window.doWalletRevealMasterSeedPhrase({
           name: selectedOption && selectedOption.getAttribute("data-wallet-name") || "",
+          seedToken: selectedOption && selectedOption.getAttribute("data-seed-token") || "",
           walletIndex: Number(select.value),
           password: password.value
         }));
@@ -1483,7 +1589,16 @@
       }).catch(function () {});
     });
 
-    host.appendChild(panel);
+    var headings = Array.prototype.slice.call(host.querySelectorAll("h1,h2")).filter(function (node) {
+      return /Manage wallets/i.test(text(node.textContent));
+    });
+    if (headings[0] && headings[0].parentElement) {
+      headings[0].insertAdjacentElement("afterend", panel);
+    } else if (host.firstElementChild) {
+      host.insertBefore(panel, host.firstElementChild.nextSibling || null);
+    } else {
+      host.appendChild(panel);
+    }
   }
 
   function scheduleSeedRevealPanel() {
