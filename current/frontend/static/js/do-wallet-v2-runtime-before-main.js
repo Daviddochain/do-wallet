@@ -7447,7 +7447,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   var AUTH_KEY = "do-wallet-extension-authority.v1";
   var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
   var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
-  var SNAPSHOT_SCHEMA_VERSION = "20260625FullWalletPortfolio1";
+  var SNAPSHOT_SCHEMA_VERSION = "20260625FullWalletPortfolio2";
   var PAGE_TARGET = "do-wallet-page";
   var CONTENT_TARGET = "do-wallet-content";
   var PORTFOLIO_REFRESH_MS = 120000;
@@ -7459,7 +7459,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   var TOKEN_FETCH_TIMEOUT_MS = 3000;
   var ACCOUNT_FETCH_TIMEOUT_MS = 5500;
   var BACKEND_PORTFOLIO_SNAPSHOT_TIMEOUT_MS = 10000;
-  var BACKEND_PORTFOLIO_MAX_WALLETS = 96;
+  var BACKEND_PORTFOLIO_MAX_WALLETS = 240;
   var BACKEND_PORTFOLIO_SNAPSHOT_PATH = "/station-assets/api/portfolio/snapshot?v=" + SNAPSHOT_SCHEMA_VERSION;
   var WETH_CONTRACT = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
   var L2_CONTRACT = "terra12ckccpalj2y9h54syyst4lpqp79duc9cpxfsyvne409rjw93s8qs2eneh3";
@@ -8189,32 +8189,12 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
 
   function clearPortfolioSnapshotsOnceForSchema() {
     if (readJSON(SNAPSHOT_RESET_KEY, "") === SNAPSHOT_SCHEMA_VERSION) return false;
-    var changed = false;
-    var migrated = false;
-    var snapshot = readJSON(SNAPSHOT_KEY, null);
-    if (snapshotHasDisplayRows(snapshot)) {
-      snapshot.schemaVersion = SNAPSHOT_SCHEMA_VERSION;
-      changed = writeJSON(SNAPSHOT_KEY, snapshot) || changed;
-      migrated = true;
-    }
-    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
-    if (isObject(byWallet)) {
-      Object.keys(byWallet).forEach(function (key) {
-        if (!snapshotHasDisplayRows(byWallet[key])) return;
-        byWallet[key].schemaVersion = SNAPSHOT_SCHEMA_VERSION;
-        migrated = true;
-      });
-      if (migrated) changed = writeJSON(SNAPSHOTS_BY_WALLET_KEY, byWallet) || changed;
-    }
-    if (!migrated) {
-      changed = removeJSON(SNAPSHOT_KEY) || changed;
-      changed = removeJSON(SNAPSHOTS_BY_WALLET_KEY) || changed;
-    }
+    var changed = removeJSON(SNAPSHOT_KEY) || false;
+    changed = removeJSON(SNAPSHOTS_BY_WALLET_KEY) || changed;
     writeJSON(SNAPSHOT_RESET_KEY, SNAPSHOT_SCHEMA_VERSION);
     markStatus("portfolio-cache-cleared-for-schema", {
       schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-      migrated: migrated,
-      removedKeys: !migrated && changed ? 2 : 0,
+      removedKeys: changed ? 2 : 0,
     });
     return changed;
   }
@@ -8913,7 +8893,9 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       var wallet = walletFromPayload(payload);
       if (!isObject(wallet)) return;
       patchWallet(wallet);
-      var addressMap = buildWalletAddressMap(wallet);
+      var addressMap = wallet.publicAddressMapOnly === true
+        ? cleanAddressMapForSnapshot(wallet.addressMap || wallet.addresses || {})
+        : buildWalletAddressMap(wallet);
       if (!Object.keys(addressMap).length && !collectRawAddresses(wallet).length) return;
       wallet.addresses = Object.assign({}, isObject(wallet.addresses) ? wallet.addresses : {}, addressMap);
       wallet.addressMap = Object.assign({}, isObject(wallet.addressMap) ? wallet.addressMap : {}, addressMap);
@@ -8933,7 +8915,176 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     var keys = readJSON("keys", null);
     if (Array.isArray(keys)) keys.forEach(add);
     else if (keys && Array.isArray(keys.wallets)) keys.wallets.forEach(add);
+    localStoragePublicWalletCandidates().forEach(add);
     return out;
+  }
+
+  function chainIDsForPublicAddress(address) {
+    address = clean(address);
+    if (!address) return [];
+    if (isDo(address)) return ["Do-Chain"];
+    if (isTerra(address)) return ["columbus-5", "phoenix-1"];
+    if (isSecret(address)) return ["secret-4"];
+    if (isDungeon(address)) return ["dungeon-1"];
+    if (isCosmos(address)) return ["cosmoshub-4"];
+    if (isOsmo(address)) return ["osmosis-1"];
+    if (/^akash1/i.test(address)) return ["akashnet-2"];
+    if (/^juno1/i.test(address)) return ["juno-1"];
+    if (/^kujira1/i.test(address)) return ["kaiyo-1"];
+    if (/^mars1/i.test(address)) return ["mars-1"];
+    if (/^swth1/i.test(address)) return ["carbon-1"];
+    if (/^cheqd1/i.test(address)) return ["cheqd-mainnet-1"];
+    if (/^chihuahua1/i.test(address)) return ["chihuahua-1"];
+    if (/^archway1/i.test(address)) return ["archway-1"];
+    if (/^axelar1/i.test(address)) return ["axelar-dojo-1"];
+    if (/^cre1/i.test(address)) return ["crescent-1"];
+    if (/^decentr1/i.test(address)) return ["decentr-3"];
+    if (/^sei1/i.test(address)) return ["pacific-1"];
+    if (/^stride1/i.test(address)) return ["stride-1"];
+    if (/^noble1/i.test(address)) return ["noble-1"];
+    if (/^neutron1/i.test(address)) return ["neutron-1"];
+    if (/^stars1/i.test(address)) return ["stargaze-1"];
+    if (/^migaloo1/i.test(address)) return ["migaloo-1"];
+    if (/^kava1/i.test(address)) return ["kava_2222-10"];
+    if (/^orai1/i.test(address)) return ["Oraichain"];
+    if (/^pryzm1/i.test(address)) return ["pryzm-1"];
+    if (/^nolus1/i.test(address)) return ["pirin-1"];
+    if (/^stafi1/i.test(address)) return ["stafihub-1"];
+    if (/^dydx1/i.test(address)) return ["dydx-mainnet-1"];
+    if (/^sent1/i.test(address)) return ["sentinelhub-2"];
+    if (/^andr1/i.test(address)) return ["andromeda-1"];
+    if (isEth(address)) return [
+      "ethereum-mainnet",
+      "bnb-smart-chain-mainnet",
+      "polygon-mainnet",
+      "base-mainnet",
+      "arbitrum-one",
+      "avalanche-c-chain",
+      "optimism-mainnet",
+    ];
+    if (isBtc(address)) return ["bitcoin-mainnet"];
+    if (isCardano(address)) return ["cardano-mainnet"];
+    if (isTron(address)) return ["tron-mainnet"];
+    if (isXrp(address)) return ["xrp-ledger-mainnet"];
+    if (isSol(address)) return ["solana-mainnet"];
+    return [];
+  }
+
+  function collectPublicAddressesFromText(value) {
+    var text = clean(value);
+    if (!text || text.length > 500000) return [];
+    var patterns = [
+      /\b(?:do|terra|cosmos|osmo|secret|dungeon|akash|juno|kujira|mars|swth|cheqd|chihuahua|archway|axelar|cre|decentr|sei|stride|noble|neutron|stars|migaloo|kava|orai|pryzm|nolus|stafi|dydx|sent|andr)1[ac-hj-np-z02-9]{20,110}\b/gi,
+      /\b0x[a-fA-F0-9]{40}\b/g,
+      /\baddr1[0-9a-z]{30,160}\b/gi,
+      /\bT[1-9A-HJ-NP-Za-km-z]{33}\b/g,
+      /\br[1-9A-HJ-NP-Za-km-z]{24,34}\b/g,
+    ];
+    var out = [];
+    var seen = {};
+    function add(address) {
+      address = clean(address);
+      if (!isPublicAddress(address)) return;
+      var key = address.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(address);
+    }
+    patterns.forEach(function (pattern) {
+      var match;
+      while ((match = pattern.exec(text))) add(match[0]);
+    });
+    return out;
+  }
+
+  function publicStorageSensitiveKey(key) {
+    return /(seed|mnemonic|phrase|private|password|cipher|encrypted|secret|recovery|entropy)/i.test(String(key || ""));
+  }
+
+  function publicStorageWalletKeyAllowed(key) {
+    var raw = String(key || "");
+    var lower = raw.toLowerCase();
+    if (!raw) return false;
+    if (LEGACY_REGISTRY_KEYS[raw]) return false;
+    if (/custom|catalog|token|chain|lcd|network|price|market|proposal|validator|governance/i.test(raw)) return false;
+    if (publicStorageSensitiveKey(raw)) return false;
+    return (
+      raw === "keys" ||
+      raw === "user" ||
+      raw === "wallet" ||
+      raw === "wallets" ||
+      lower.indexOf("wallet") >= 0 ||
+      lower.indexOf("account") >= 0 ||
+      lower.indexOf("address") >= 0 ||
+      lower.indexOf("bridge") >= 0 ||
+      lower.indexOf("authority") >= 0 ||
+      lower.indexOf("auth") >= 0 ||
+      lower.indexOf("recovered") >= 0 ||
+      lower.indexOf("portfolio") >= 0
+    );
+  }
+
+  function localStoragePublicWalletCandidates() {
+    var wallets = [];
+    var seen = {};
+    var chains = allChains();
+    var priority = {
+      "Do-Chain": 1,
+      "columbus-5": 2,
+      "osmosis-1": 3,
+      "secret-4": 4,
+      "dungeon-1": 5,
+      "cosmoshub-4": 6,
+      "juno-1": 7,
+      "akashnet-2": 8,
+    };
+    function addAddress(address, sourceKey) {
+      chainIDsForPublicAddress(address).forEach(function (chainID) {
+        chainID = canonicalNetwork(chainID);
+        if (!chainID || !chains[chainID] || isRemovedNetwork(chainID)) return;
+        var normalized = normalizeAddressForChain(chainID, address) || clean(address);
+        if (!isPublicAddress(normalized)) return;
+        var key = chainID + ":" + normalized.toLowerCase();
+        if (seen[key]) return;
+        seen[key] = true;
+        var addressMap = {};
+        addressMap[chainID] = normalized;
+        wallets.push({
+          id: "local-public-address:" + key,
+          name: "Local wallet address",
+          walletName: "Local wallet address",
+          address: normalized,
+          addresses: addressMap,
+          addressMap: addressMap,
+          publicAddressMapOnly: true,
+          source: "local-storage-public-addresses",
+          sourceKey: sourceKey,
+          priority: priority[chainID] || 100,
+        });
+      });
+    }
+    try {
+      for (var index = 0; index < window.localStorage.length; index += 1) {
+        var key = window.localStorage.key(index);
+        if (!publicStorageWalletKeyAllowed(key)) continue;
+        var raw = window.localStorage.getItem(key);
+        if (!raw || raw.length > 750000) continue;
+        var parsed = null;
+        try { parsed = JSON.parse(raw); } catch (error) {}
+        collectRawAddresses(parsed || raw).forEach(function (address) {
+          addAddress(address, key);
+        });
+        if (!parsed) {
+          collectPublicAddressesFromText(raw).forEach(function (address) {
+            addAddress(address, key);
+          });
+        }
+      }
+    } catch (error) {}
+    return wallets.sort(function (left, right) {
+      return (Number(left.priority || 100) - Number(right.priority || 100)) ||
+        clean(left.address).localeCompare(clean(right.address));
+    }).slice(0, BACKEND_PORTFOLIO_MAX_WALLETS);
   }
 
   function normalizeDirectChainAddress(chainID, chain, value) {
@@ -9934,7 +10085,10 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
 
   function publicWalletForBackend(wallet, addressMap) {
     if (!isObject(wallet)) return null;
-    var map = cleanAddressMapForSnapshot(addressMap || buildWalletAddressMap(wallet));
+    var sourceMap = addressMap || (wallet.publicAddressMapOnly === true
+      ? (wallet.addressMap || wallet.addresses || {})
+      : buildWalletAddressMap(wallet));
+    var map = cleanAddressMapForSnapshot(sourceMap);
     if (!Object.keys(map).length) return null;
     return {
       name: walletName(wallet) || "Do-Wallet",
@@ -10833,7 +10987,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable3";
+  var VERSION = "20260625L1PortfolioStable4";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
@@ -11300,7 +11454,6 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     collectSnapshots().forEach(function (snapshot) {
       rows = rows.concat(collectAssetsFromSnapshot(snapshot));
     });
-    rows = rows.concat(collectAssetsFromPane(findRightWalletPane()));
     return groupAssets(rows);
   }
 

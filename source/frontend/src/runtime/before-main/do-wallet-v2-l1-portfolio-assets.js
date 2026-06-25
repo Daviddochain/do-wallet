@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable3";
+  var VERSION = "20260625L1PortfolioStable4";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-l1-portfolio-assets-style";
@@ -472,7 +472,6 @@
     collectSnapshots().forEach(function (snapshot) {
       rows = rows.concat(collectAssetsFromSnapshot(snapshot));
     });
-    rows = rows.concat(collectAssetsFromPane(findRightWalletPane()));
     return groupAssets(rows);
   }
 
