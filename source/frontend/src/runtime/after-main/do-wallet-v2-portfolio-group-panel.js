@@ -1740,6 +1740,10 @@
     function debug(reason, details) {
       setDebug(reason, Object.assign({ elapsedMs: Date.now() - startedAt }, details || {}));
     }
+    if (window.__doWalletL1PortfolioOwnsAssets) {
+      debug("owned-by-l1-portfolio-assets", {});
+      return;
+    }
     rendering = true;
     try {
       var sideResult = applyNativeSidePanelGrouping();
