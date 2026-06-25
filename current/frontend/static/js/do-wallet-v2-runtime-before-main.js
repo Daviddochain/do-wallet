@@ -7189,7 +7189,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   var AUTH_KEY = "do-wallet-extension-authority.v1";
   var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
   var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
-  var SNAPSHOT_SCHEMA_VERSION = "20260624L1DashboardGroup2";
+  var SNAPSHOT_SCHEMA_VERSION = "20260625FullWalletPortfolio1";
   var PAGE_TARGET = "do-wallet-page";
   var CONTENT_TARGET = "do-wallet-content";
   var PORTFOLIO_REFRESH_MS = 120000;
@@ -8553,6 +8553,11 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       }
     });
 
+    var historical = historicalAddressMapForWallet(wallet);
+    Object.keys(historical).forEach(function (chainID) {
+      if (!map[chainID]) map[chainID] = historical[chainID];
+    });
+
     return map;
   }
 
@@ -8561,6 +8566,59 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     if (Array.isArray(payload)) return payload;
     if (payload && Array.isArray(payload.wallets)) return payload.wallets;
     return [];
+  }
+
+  function addSnapshotAddress(out, chainID, value) {
+    var chains = allChains();
+    chainID = canonicalNetwork(chainID);
+    var address = normalizeAddressForChain(chainID, value);
+    if (!chainID || !chains[chainID] || !isPublicAddress(address)) return;
+    if (!out[chainID]) out[chainID] = address;
+  }
+
+  function addSnapshotAddressContainer(out, container) {
+    if (!container) return;
+    if (Array.isArray(container)) {
+      container.forEach(function (entry) {
+        if (!isObject(entry)) return;
+        addSnapshotAddress(out, entry.chainID || entry.chainId || entry.network || entry.chain, entry.address || entry.walletAddress);
+      });
+      return;
+    }
+    if (isObject(container)) {
+      Object.keys(container).forEach(function (key) {
+        var value = container[key];
+        if (typeof value === "string") addSnapshotAddress(out, key, value);
+        else if (isObject(value)) addSnapshotAddress(out, key, value.address || value.walletAddress);
+      });
+    }
+  }
+
+  function snapshotBelongsToWallet(snapshot, wallet) {
+    if (!isObject(snapshot) || !isObject(wallet)) return false;
+    if (walletsMatchSnapshot(snapshot, wallet)) return true;
+    var wanted = walletIdentityKeys(wallet);
+    var snapshotKey = clean(snapshot.walletKey || "").toLowerCase();
+    return Boolean(snapshotKey && wanted.indexOf(snapshotKey) >= 0);
+  }
+
+  function historicalAddressMapForWallet(wallet) {
+    var out = {};
+    function add(snapshot) {
+      if (!snapshotBelongsToWallet(snapshot, wallet)) return;
+      addSnapshotAddressContainer(out, snapshot.allAddresses);
+      addSnapshotAddressContainer(out, snapshot.activeAddresses);
+      addSnapshotAddressContainer(out, snapshot.addresses);
+    }
+
+    add(readJSON(SNAPSHOT_KEY, null));
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) {
+      Object.keys(byWallet).forEach(function (key) {
+        add(byWallet[key]);
+      });
+    }
+    return out;
   }
 
   function collectDoChainAddresses(wallet, addressMap) {
@@ -8596,6 +8654,11 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     function add(payload) {
       var wallet = walletFromPayload(payload);
       if (!isObject(wallet)) return;
+      patchWallet(wallet);
+      var addressMap = buildWalletAddressMap(wallet);
+      if (!Object.keys(addressMap).length && !collectRawAddresses(wallet).length) return;
+      wallet.addresses = Object.assign({}, isObject(wallet.addresses) ? wallet.addresses : {}, addressMap);
+      wallet.addressMap = Object.assign({}, isObject(wallet.addressMap) ? wallet.addressMap : {}, addressMap);
       var raw = collectRawAddresses(wallet);
       var key = walletIdentityKeys(wallet).join("|") || raw.slice(0, 12).join("|") || walletName(wallet);
       key = clean(key).toLowerCase();
@@ -8604,6 +8667,14 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       out.push(wallet);
     }
     add(activeWallet);
+    add(readJSON(SELECTED_WALLET_KEY, null));
+    add(readJSON("user", null));
+    add(readJSON(BRIDGE_KEY, null));
+    add(readJSON(AUTH_KEY, null));
+    recoveredWallets().forEach(add);
+    var keys = readJSON("keys", null);
+    if (Array.isArray(keys)) keys.forEach(add);
+    else if (keys && Array.isArray(keys.wallets)) keys.wallets.forEach(add);
     return out;
   }
 
@@ -9692,7 +9763,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       .then(function (response) {
         if (!response || response.ok === false) return false;
         var persisted = persistBackendPortfolioSnapshot(wallet, addressMap, response);
-        if (persisted) return true;
+        if (persisted) return response;
         if (response.stats && Number(response.stats.pairs || 0) > 0) {
           markStatus("portfolio-backend-empty", {
             balanceChains: Number(response.stats.pairs || 0),
@@ -9702,6 +9773,25 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
         }
         return false;
       });
+  }
+
+  function snapshotDisplayRowCount(snapshot) {
+    if (!isObject(snapshot)) return 0;
+    return rawSpendableRowsFromSnapshot(snapshot).length + stakingRowsFromSnapshot(snapshot).length;
+  }
+
+  function backendSnapshotNeedsBrowserRecovery(response, previousRowCount, addressCount) {
+    if (!response || response === false) return true;
+    var stats = isObject(response.stats) ? response.stats : {};
+    var snapshot = readJSON(SNAPSHOT_KEY, null);
+    var currentRows = snapshotDisplayRowCount(snapshot);
+    var backendRows = Number(stats.assets || 0) + Number(stats.staking || 0);
+    var pairCount = Number(stats.pairs || 0);
+    var expectedChains = Math.max(Number(addressCount) || 0, pairCount);
+    if (previousRowCount > 1 && currentRows > 0 && currentRows < previousRowCount) return true;
+    if (expectedChains > 1 && currentRows <= 1) return true;
+    if (pairCount > 1 && backendRows <= 1) return true;
+    return false;
   }
 
   function writePortfolioSnapshot(wallet, addressMap, assets, staking, errors) {
@@ -9757,8 +9847,13 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       });
       return;
     }
-    var visibleAddresses = activeAddressMap(addressMap, rawPortfolioAssets);
     var fullAddressMap = Object.assign({}, addressMap || {});
+    rawPortfolioAssets.forEach(function (asset) {
+      var chainID = assetChainID(asset);
+      var address = normalizeAddressForChain(chainID, asset && (asset.walletAddress || asset.address));
+      if (chainID && isPublicAddress(address) && !fullAddressMap[chainID]) fullAddressMap[chainID] = address;
+    });
+    var visibleAddresses = activeAddressMap(fullAddressMap, rawPortfolioAssets);
     var totalValue = displayPortfolioAssets.reduce(function (sum, asset) {
       return sum + (Number(asset && (asset.valueUsd || asset.value || asset.usd)) || 0);
     }, 0);
@@ -9866,6 +9961,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     pendingPortfolioRefresh = false;
     pendingPortfolioForceRefresh = false;
     markStatus("portfolio-loading", { balanceChains: addressCount, forced: forceRefresh ? 1 : 0 });
+    var previousRowCount = snapshotDisplayRowCount(previousSnapshotForWallet(wallet));
     function runBrowserPortfolioScan() {
       return Promise.all([
         fetchJSONTimed(TOKEN_CATALOG_PATHS.prices, CATALOG_FETCH_TIMEOUT_MS),
@@ -9944,10 +10040,16 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
         writePortfolioSnapshot(wallet, addressMap, assets, staking, errors);
       });
     }
-    fetchBackendPortfolioSnapshot(wallet, addressMap).then(function (loaded) {
-      if (loaded) return true;
-      markStatus("portfolio-backend-unavailable", { balanceChains: addressCount });
-      return false;
+    fetchBackendPortfolioSnapshot(wallet, addressMap).then(function (backendResponse) {
+      if (!backendSnapshotNeedsBrowserRecovery(backendResponse, previousRowCount, addressCount)) return true;
+      markStatus(backendResponse ? "portfolio-backend-thin-browser-recovery" : "portfolio-backend-unavailable", {
+        balanceChains: addressCount,
+        previousRows: previousRowCount,
+        backendPairs: backendResponse && backendResponse.stats && backendResponse.stats.pairs || 0,
+        backendAssets: backendResponse && backendResponse.stats && backendResponse.stats.assets || 0,
+        backendStaking: backendResponse && backendResponse.stats && backendResponse.stats.staking || 0,
+      });
+      return runBrowserPortfolioScan().then(function () { return true; });
     }).catch(function (error) {
       markStatus("portfolio-error", { error: String(error && error.message || error).slice(0, 120) });
     }).then(function () {
