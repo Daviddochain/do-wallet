@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsStable20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioStable10";
+  var VERSION = "20260625L1PortfolioStable11";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio6";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -914,6 +914,23 @@
     return owned ? [owned] : [];
   }
 
+  function restoreNativeAssets() {
+    var pane = findRightWalletPane();
+    if (!pane || !pane.querySelectorAll) return 0;
+    var restored = 0;
+    Array.prototype.slice.call(pane.querySelectorAll("[" + HOST_ATTR + "='1']")).forEach(function (host) {
+      if (host && host.parentElement) {
+        host.parentElement.removeChild(host);
+        restored += 1;
+      }
+    });
+    Array.prototype.slice.call(pane.querySelectorAll("[" + NATIVE_HIDDEN_ATTR + "='1']")).forEach(function (node) {
+      node.removeAttribute(NATIVE_HIDDEN_ATTR);
+      restored += 1;
+    });
+    return restored;
+  }
+
   function injectStyle() {
     if (document.getElementById(STYLE_ID)) return;
     var head = document.head || document.getElementsByTagName("head")[0];
@@ -974,14 +991,8 @@
       injectStyle();
       var groups = buildGroups();
       if (!groups.length) {
-        var emptyLists = findAssetLists();
-        emptyLists.forEach(function (list) {
-          list.removeAttribute(DETAIL_ATTR);
-          list.setAttribute(TARGET_ATTR, "1");
-          list.setAttribute(SIGNATURE_ATTR, "empty");
-          list.innerHTML = '<div class="do-wallet-l1-portfolio-shell"></div>';
-        });
-        setDebug("no-groups", { reason: reason, lists: emptyLists.length });
+        var restored = restoreNativeAssets();
+        setDebug("no-groups", { reason: reason, restored: restored });
         return;
       }
       var lists = findAssetLists();
