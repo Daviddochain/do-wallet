@@ -6902,14 +6902,23 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     }
   }
 
+  function mainHeader() {
+    var layoutHeader = document.querySelector("[class*='Layout_header__']");
+    if (layoutHeader && isVisible(layoutHeader)) return layoutHeader;
+    var headers = Array.prototype.slice.call(document.querySelectorAll("header")).filter(isVisible).sort(function (a, b) {
+      return b.getBoundingClientRect().width - a.getBoundingClientRect().width;
+    });
+    return headers[0] || null;
+  }
+
   function headerHost() {
-    var header = document.querySelector("[class*='Layout_header__'],header");
+    var header = mainHeader();
     if (!header || !header.querySelector) return null;
     return header.querySelector("[class*='Layout_wrapper__']") || header;
   }
 
   function topRightControls() {
-    var header = document.querySelector("[class*='Layout_header__'],header");
+    var header = mainHeader();
     var host = headerHost();
     if (!header || !host) return null;
     var headerRect = header.getBoundingClientRect();
@@ -6961,8 +6970,10 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
       button.__doWalletMobileConnectBound = true;
     }
     if (target.before && target.before.parentNode === target.host && target.before !== button) {
+      if (button.parentNode === target.host && button.nextSibling === target.before) return;
       target.host.insertBefore(button, target.before);
     } else {
+      if (button.parentNode === target.host && button.nextSibling === null) return;
       target.host.appendChild(button);
     }
   }
@@ -7109,8 +7120,13 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
   boot();
   document.addEventListener("DOMContentLoaded", boot);
   window.addEventListener("hashchange", handlePendingMobileSeed);
+  var observerFrame = 0;
   var observer = new MutationObserver(function () {
-    installButton();
+    if (observerFrame) return;
+    observerFrame = window.requestAnimationFrame(function () {
+      observerFrame = 0;
+      installButton();
+    });
   });
   try {
     observer.observe(document.documentElement, { childList: true, subtree: true });
