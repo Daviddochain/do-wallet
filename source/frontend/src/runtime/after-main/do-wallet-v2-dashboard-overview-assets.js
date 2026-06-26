@@ -1,10 +1,10 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletDashboardOverviewAssets20260625) return;
-  window.__doWalletDashboardOverviewAssets20260625 = true;
+  if (window.__doWalletDashboardOverviewAssets20260626) return;
+  window.__doWalletDashboardOverviewAssets20260626 = true;
 
-  var VERSION = "20260625DashboardOverviewAssets1";
+  var VERSION = "20260626DashboardOverviewAssets2";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-dashboard-overview-assets-style";
@@ -307,17 +307,52 @@
     return clean(node && (node.innerText || node.textContent || ""));
   }
 
+  function textMatches(node, value) {
+    return lower(node && (node.innerText || node.textContent || "")) === lower(value);
+  }
+
+  function isDashboardRoute() {
+    var path = lower((window.location && window.location.pathname) || "/").replace(/\/+$/, "") || "/";
+    return path === "/" || path === "/dashboard";
+  }
+
+  function hasPageLevelDashboardContent(text) {
+    return (
+      text.indexOf("portfolio") >= 0 ||
+      text.indexOf("do-wallet overview") >= 0 ||
+      text.indexOf("wallet overview") >= 0 ||
+      text.indexOf("individual chain addresses") >= 0 ||
+      text.indexOf("spendable wallet assets") >= 0 ||
+      text.indexOf("validator positions") >= 0 ||
+      (text.indexOf("portfolio value") >= 0 && text.indexOf("send") >= 0 && text.indexOf("receive") >= 0)
+    );
+  }
+
+  function cardIsSafeHost(node, title, subtitle) {
+    if (!node || !visible(node)) return false;
+    if (node.closest && node.closest("nav,aside,header,footer")) return false;
+    var text = lower(bodyText(node));
+    if (text.indexOf(lower(title)) < 0 || text.indexOf(lower(subtitle)) < 0) return false;
+    if (hasPageLevelDashboardContent(text)) return false;
+    var rect = node.getBoundingClientRect();
+    if (rect.width < 320 || rect.height < 170) return false;
+    if (rect.height > Math.max(620, Math.floor((window.innerHeight || 900) * 0.72))) return false;
+    return true;
+  }
+
   function findOverviewCard(title, subtitle) {
-    var needleTitle = lower(title);
-    var needleSubtitle = lower(subtitle);
-    var nodes = Array.prototype.slice.call(document.querySelectorAll("section,article,div"));
-    return nodes.filter(function (node) {
-      if (!visible(node)) return false;
-      var text = lower(bodyText(node));
-      if (text.indexOf(needleTitle) < 0 || text.indexOf(needleSubtitle) < 0) return false;
-      if (text.indexOf("portfolio value") >= 0 && text.indexOf("send") >= 0 && text.indexOf("receive") >= 0) return false;
-      var rect = node.getBoundingClientRect();
-      return rect.width >= 320 && rect.height >= 180;
+    if (!isDashboardRoute()) return null;
+    var candidates = [];
+    Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,strong")).forEach(function (heading) {
+      if (!textMatches(heading, title)) return;
+      var node = heading.parentElement;
+      for (var depth = 0; node && node !== document.body && depth < 7; depth += 1) {
+        if (cardIsSafeHost(node, title, subtitle)) candidates.push(node);
+        node = node.parentElement;
+      }
+    });
+    return candidates.filter(function (node, index, list) {
+      return list.indexOf(node) === index;
     }).sort(function (a, b) {
       var ar = a.getBoundingClientRect();
       var br = b.getBoundingClientRect();
@@ -351,6 +386,7 @@
 
   function renderCard(card, kind, title, subtitle, rows) {
     if (!card || !rows.length) return false;
+    if (!cardIsSafeHost(card, title, subtitle)) return false;
     var signature = VERSION + ":" + kind + ":" + rows.map(function (row) {
       return rowKey(row) + ":" + row.valueText + ":" + row.amountText;
     }).join("||");
@@ -404,6 +440,7 @@
 
   function render() {
     if (!document.body) return;
+    if (!isDashboardRoute()) return;
     installStyle();
     var assets = spendableRows();
     var staked = stakingRows();
