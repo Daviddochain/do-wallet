@@ -7,7 +7,7 @@
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-stake-balance-bridge-style";
-  var VERSION = "20260626-stake-balance-bridge-1";
+  var VERSION = "20260626-stake-balance-bridge-2";
   var APPLY_DELAY_MS = 80;
   var applyTimer = 0;
 
@@ -363,77 +363,97 @@
     });
   }
 
-  function textNodes(root) {
-    var out = [];
-    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-    var node;
-    while ((node = walker.nextNode())) out.push(node);
-    return out;
+  function visibleTextElements(root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll("div,span,strong,small,p,button"))
+      .filter(visible);
   }
 
-  function setText(node, value) {
-    if (!node || clean(node.nodeValue) === value) return false;
-    node.nodeValue = value;
+  function hasVisibleElementChildren(node) {
+    return Array.prototype.slice.call((node && node.children) || []).some(visible);
+  }
+
+  function setElementText(node, value) {
+    if (!node || clean(node.textContent) === value) return false;
+    node.textContent = value;
     return true;
   }
 
-  function patchPlainBalanceText(root, symbol, balance) {
+  function patchStandaloneBalanceText(root, symbol, balance) {
     var amountText = formatAmount(balance) + " " + symbol;
     var changed = false;
-    textNodes(root).forEach(function (node) {
-      var value = clean(node.nodeValue);
+    visibleTextElements(root).forEach(function (node) {
+      if (hasVisibleElementChildren(node)) return;
+      var value = clean(node.textContent);
       if (!new RegExp("^0(?:\\.0+)?\\s+" + symbol + "$", "i").test(value)) return;
-      changed = setText(node, amountText) || changed;
+      changed = setElementText(node, amountText) || changed;
     });
     return changed;
   }
 
   function findRowWithLabel(root, label) {
-    var labelPattern = label === "Balance"
+    var exactLabelPattern = label === "Balance"
+      ? /^Balance$/i
+      : new RegExp("^" + label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
+    var rowLabelPattern = label === "Balance"
       ? /\bBalance\b(?!\s+after)/i
-      : new RegExp("\\b" + label + "\\b", "i");
-    var candidates = Array.prototype.slice.call(root.querySelectorAll("div,span,p,section,article")).filter(visible);
+      : new RegExp("\\b" + label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+    var otherSummaryLabels = label === "Balance"
+      ? /\b(Fee|Balance after tx)\b/i
+      : /\b(Fee|Balance\b(?!\s+after))\b/i;
+    var candidates = visibleTextElements(root);
     for (var index = 0; index < candidates.length; index += 1) {
       var node = candidates[index];
       var body = clean(node.innerText || node.textContent);
-      if (!labelPattern.test(body)) continue;
+      if (!exactLabelPattern.test(body)) continue;
       var current = node;
-      for (var depth = 0; current && current !== root && depth < 5; depth += 1) {
+      for (var depth = 0; current && current !== root && depth < 6; depth += 1) {
         var currentText = clean(current.innerText || current.textContent);
-        if (labelPattern.test(currentText) && /\d/.test(currentText)) return current;
+        if (rowLabelPattern.test(currentText) && /\d/.test(currentText) && !otherSummaryLabels.test(currentText.replace(body, ""))) {
+          return current;
+        }
         current = current.parentElement;
       }
     }
     return null;
   }
 
+  function amountValueContainer(row, symbol) {
+    if (!row) return null;
+    var leaves = visibleTextElements(row).filter(function (node) {
+      if (hasVisibleElementChildren(node)) return false;
+      var value = clean(node.textContent);
+      if (!value || !/\d/.test(value)) return false;
+      if (/\b(Balance|Fee|Amount|Password)\b/i.test(value)) return false;
+      return new RegExp("-?\\d[\\d,]*(?:\\.\\d+)?(?:\\s+" + symbol + ")?", "i").test(value);
+    });
+    if (!leaves.length) return null;
+    var node = leaves[leaves.length - 1];
+    for (var depth = 0; node.parentElement && node.parentElement !== row && depth < 3; depth += 1) {
+      var parent = node.parentElement;
+      var body = clean(parent.innerText || parent.textContent);
+      if (!body || /\b(Balance|Fee|Amount|Password)\b/i.test(body)) break;
+      if (!new RegExp("^-?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s+" + symbol + ")?$", "i").test(body)) break;
+      node = parent;
+    }
+    return node;
+  }
+
   function patchRowValue(row, symbol, nextAmount) {
     if (!row) return false;
     var nextText = formatAmount(nextAmount) + " " + symbol;
-    var changed = false;
-    var nodes = textNodes(row).filter(function (node) {
-      var value = clean(node.nodeValue);
-      return value && /\d/.test(value) && !/\b(Balance|Fee|Amount|Password)\b/i.test(value);
-    });
-    for (var index = nodes.length - 1; index >= 0; index -= 1) {
-      var value = clean(nodes[index].nodeValue);
-      if (new RegExp("-?\\d[\\d,]*(?:\\.\\d+)?(?:\\s+" + symbol + ")?$", "i").test(value)) {
-        changed = setText(nodes[index], nextText) || changed;
-        break;
-      }
-    }
-    return changed;
+    return setElementText(amountValueContainer(row, symbol), nextText);
   }
 
-  function patchInsufficientState(root, symbol, balance) {
+  function patchInsufficientState(root, symbol, balance, fee) {
     var amount = amountValue(root, symbol);
-    var canSpend = amount > 0 && balance >= amount;
+    var canCover = balance >= amount + (Number(fee) || 0);
+    var canSubmit = amount > 0 && canCover;
     var changed = false;
     Array.prototype.slice.call(root.querySelectorAll("div,span,p,small")).forEach(function (node) {
       if (!visible(node)) return;
       var body = clean(node.innerText || node.textContent);
       if (!/\bInsufficient balance\b/i.test(body)) return;
-      if (canSpend) {
+      if (canCover) {
         if (node.getAttribute("data-do-wallet-stake-balance-hidden") !== "1") changed = true;
         node.setAttribute("data-do-wallet-stake-balance-hidden", "1");
       } else {
@@ -441,7 +461,7 @@
         node.removeAttribute("data-do-wallet-stake-balance-hidden");
       }
     });
-    if (canSpend) {
+    if (canSubmit) {
       Array.prototype.slice.call(root.querySelectorAll("button")).forEach(function (button) {
         if (!/\bSubmit\b/i.test(clean(button.innerText || button.textContent))) return;
         if (button.disabled || button.getAttribute("aria-disabled") === "true") changed = true;
@@ -465,10 +485,10 @@
     var after = balance.amount - amount - fee;
     var changed = false;
     root.setAttribute("data-do-wallet-stake-balance-bridge", VERSION);
-    changed = patchPlainBalanceText(root, symbol, balance.amount) || changed;
+    changed = patchStandaloneBalanceText(root, symbol, balance.amount) || changed;
     changed = patchRowValue(findRowWithLabel(root, "Balance after tx"), symbol, after) || changed;
     changed = patchRowValue(findRowWithLabel(root, "Balance"), symbol, balance.amount) || changed;
-    changed = patchInsufficientState(root, symbol, balance.amount) || changed;
+    changed = patchInsufficientState(root, symbol, balance.amount, fee) || changed;
     window.__doWalletStakeBalanceBridgeDebug = {
       version: VERSION,
       symbol: symbol,
