@@ -12,6 +12,7 @@
   var SIGNATURE_ATTR = "data-do-wallet-dashboard-overview-signature";
   var RENDER_DELAY_MS = 180;
   var renderTimer = 0;
+  var assetActionPayloads = {};
 
   var CHAIN_ICON = {
     "Do-Chain": "/do-logo.jpg",
@@ -263,6 +264,21 @@
     return true;
   }
 
+  function rowDecisionPayload(row) {
+    return Object.assign({}, rowForVisibility(row), {
+      displayName: row.name || row.symbol,
+      name: row.name || row.symbol,
+      symbol: row.symbol,
+      chainName: row.chainName,
+      chainID: row.chainID,
+      denom: row.denom,
+      amountText: row.amountText,
+      valueText: row.valueText,
+      priceText: row.priceText,
+      changeText: row.changeText
+    });
+  }
+
   function displayableRow(row) {
     if (!row || !row.symbol || /^[0-9.]+$/.test(row.symbol)) return false;
     if (!rowAllowedByVisibility(row)) return false;
@@ -393,8 +409,9 @@
   function rowHTML(row) {
     var changeClass = row.changeText && row.changeText.indexOf("-") >= 0 ? "negative" : "positive";
     var key = rowVisibilityKey(row);
+    assetActionPayloads[key] = rowDecisionPayload(row);
     return [
-      '<div class="do-wallet-dashboard-overview-row" data-do-wallet-dashboard-asset-key="' + escapeHTML(key) + '">',
+      '<button type="button" class="do-wallet-dashboard-overview-row" data-do-wallet-dashboard-asset-key="' + escapeHTML(key) + '">',
         '<div class="do-wallet-dashboard-overview-left">',
           iconHTML(row),
           '<span>',
@@ -406,11 +423,7 @@
           '<strong>' + escapeHTML(row.valueText) + '</strong>',
           '<small>' + escapeHTML(row.amountText || row.symbol) + '</small>',
         '</div>',
-        '<div class="do-wallet-dashboard-overview-actions">',
-          '<button type="button" data-do-wallet-dashboard-hide-asset="' + escapeHTML(key) + '">Hide</button>',
-          '<button type="button" data-do-wallet-dashboard-quarantine-asset="' + escapeHTML(key) + '">Quarantine</button>',
-        '</div>',
-      '</div>'
+      '</button>'
     ].join("");
   }
 
@@ -450,7 +463,8 @@
       ".do-wallet-dashboard-overview-head p{margin:0;color:#aaa0bd;font-size:14px;line-height:1.3;font-weight:var(--bold,500);}",
       ".do-wallet-dashboard-overview-head>strong{color:#aaa0bd;font-size:14px;line-height:1.2;font-weight:var(--bold,500);white-space:nowrap;}",
       ".do-wallet-dashboard-overview-list{max-height:330px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-top:1px solid rgba(135,57,190,.24);}",
-      ".do-wallet-dashboard-overview-row{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:70px;padding:12px 0;border-bottom:1px solid rgba(135,57,190,.24);}",
+      ".do-wallet-dashboard-overview-row{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;min-height:70px;margin:0;padding:12px 0;border:0;border-bottom:1px solid rgba(135,57,190,.24);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;}",
+      ".do-wallet-dashboard-overview-row:hover,.do-wallet-dashboard-overview-row:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
       ".do-wallet-dashboard-overview-left{display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto;}",
       ".do-wallet-dashboard-overview-left>span{display:flex;flex-direction:column;gap:4px;min-width:0;}",
       ".do-wallet-dashboard-overview-left strong{display:block;color:#fff;font-size:15px;line-height:1.12;font-weight:var(--bold,500);letter-spacing:0;white-space:normal;}",
@@ -461,13 +475,9 @@
       ".do-wallet-dashboard-overview-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:128px;max-width:42%;text-align:right;}",
       ".do-wallet-dashboard-overview-right strong{display:block;color:#fff;font-size:15px;line-height:1.1;font-weight:var(--bold,500);}",
       ".do-wallet-dashboard-overview-right small{display:block;color:#c9bbef;font-size:12px;line-height:1.1;font-weight:var(--bold,500);white-space:normal;}",
-      ".do-wallet-dashboard-overview-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 0 auto;}",
-      ".do-wallet-dashboard-overview-actions button{border:1px solid rgba(135,57,190,.55);border-radius:7px;background:#20162f;color:#d9c6ff;font-size:11px;line-height:1;font-weight:var(--bold,500);padding:7px 8px;cursor:pointer;min-width:0;height:auto;}",
-      ".do-wallet-dashboard-overview-actions button[data-do-wallet-dashboard-quarantine-asset]{border-color:#8e2840;background:#2a0f1b;color:#ff9aad;}",
-      ".do-wallet-dashboard-overview-actions button:hover{filter:brightness(1.12);}",
       ".do-wallet-dashboard-overview-icon,.do-wallet-dashboard-overview-icon-fallback{width:34px;height:34px;min-width:34px;border-radius:50%;object-fit:cover;background:#2c2140;}",
       ".do-wallet-dashboard-overview-icon-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
-      "@media(max-width:760px){[" + CARD_ATTR + "]{padding:20px 18px!important}.do-wallet-dashboard-overview-head h2{font-size:24px}.do-wallet-dashboard-overview-row{gap:10px;flex-wrap:wrap}.do-wallet-dashboard-overview-right{min-width:104px}.do-wallet-dashboard-overview-left strong{font-size:14px}.do-wallet-dashboard-overview-right strong{font-size:14px}.do-wallet-dashboard-overview-actions{flex:1 0 100%;padding-left:48px}.do-wallet-dashboard-overview-actions button{font-size:10px;padding:7px}}"
+      "@media(max-width:760px){[" + CARD_ATTR + "]{padding:20px 18px!important}.do-wallet-dashboard-overview-head h2{font-size:24px}.do-wallet-dashboard-overview-row{gap:10px}.do-wallet-dashboard-overview-right{min-width:104px}.do-wallet-dashboard-overview-left strong{font-size:14px}.do-wallet-dashboard-overview-right strong{font-size:14px}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -508,15 +518,14 @@
   window.addEventListener("do_wallet_portfolio_snapshot", schedule);
   window.addEventListener("do_wallet_quarantine_change", schedule);
   document.addEventListener("click", function (event) {
-    var target = event.target && event.target.closest && event.target.closest("[data-do-wallet-dashboard-hide-asset],[data-do-wallet-dashboard-quarantine-asset]");
+    var target = event.target && event.target.closest && event.target.closest("[data-do-wallet-dashboard-asset-key]");
     if (!target) return;
     event.preventDefault();
     event.stopPropagation();
-    var key = target.getAttribute("data-do-wallet-dashboard-hide-asset") || target.getAttribute("data-do-wallet-dashboard-quarantine-asset") || "";
+    var key = target.getAttribute("data-do-wallet-dashboard-asset-key") || "";
     var quarantine = window.doWalletQuarantine;
-    if (quarantine && key) {
-      if (target.hasAttribute("data-do-wallet-dashboard-quarantine-asset") && typeof quarantine.add === "function") quarantine.add(key);
-      else if (typeof quarantine.hide === "function") quarantine.hide(key);
+    if (quarantine && typeof quarantine.inspectAsset === "function" && key) {
+      quarantine.inspectAsset(assetActionPayloads[key] || { symbol: key, denom: key });
     }
     schedule();
   }, true);

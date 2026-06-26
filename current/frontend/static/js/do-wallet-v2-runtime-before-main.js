@@ -11694,6 +11694,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   var backendPromise = null;
   var backendLastStartedAt = 0;
   var waitingForFullPortfolio = false;
+  var assetActionPayloads = {};
 
   var FLAT_KEYS = [
     "rawSpendableAssets",
@@ -12470,6 +12471,22 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     return true;
   }
 
+  function assetDecisionPayload(asset, group, amountText) {
+    var payload = assetForVisibility(asset);
+    return Object.assign({}, payload, {
+      displayName: clean(asset && (asset.name || asset.symbol)),
+      name: clean(asset && (asset.name || asset.symbol)),
+      symbol: clean(asset && asset.symbol),
+      chainName: clean(asset && asset.chainName) || clean(group && group.name),
+      chainID: clean(asset && asset.chainID) || clean(group && group.key),
+      denom: clean(asset && asset.denom),
+      amountText: clean(amountText || asset && asset.amountText),
+      valueText: clean(asset && asset.valueText) || formatUSD(asset && asset.value),
+      priceText: clean(asset && asset.priceText),
+      changeText: clean(asset && asset.changeText)
+    });
+  }
+
   function isDisplayable(asset) {
     if (!asset || !asset.symbol || /^[0-9.]+$/.test(asset.symbol)) return false;
     if (!assetIsVisible(asset)) return false;
@@ -12729,8 +12746,9 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     var amount = clean(asset.amountText);
     var key = assetVisibilityKey(asset);
     if (amount && upper(amount).indexOf(upper(asset.symbol)) < 0) amount += " " + asset.symbol;
+    assetActionPayloads[key] = assetDecisionPayload(asset, group, amount);
     return [
-      '<div class="do-wallet-l1-portfolio-coin" data-do-wallet-l1-asset-key="' + escapeHTML(key) + '">',
+      '<button type="button" class="do-wallet-l1-portfolio-coin" data-do-wallet-l1-asset-key="' + escapeHTML(key) + '">',
       '  <span class="do-wallet-l1-portfolio-left">',
       renderIcon(asset.icon || group.icon, asset.symbol, "do-wallet-l1-portfolio-coin-icon"),
       '    <span class="do-wallet-l1-portfolio-meta">',
@@ -12739,11 +12757,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       "    </span>",
       "  </span>",
       '  <span class="do-wallet-l1-portfolio-right"><strong>' + escapeHTML(asset.valueText || formatUSD(asset.value)) + "</strong><small>" + escapeHTML(amount) + "</small></span>",
-      '  <span class="do-wallet-l1-portfolio-actions">',
-      '    <button type="button" data-do-wallet-l1-hide-asset="' + escapeHTML(key) + '">Hide</button>',
-      '    <button type="button" data-do-wallet-l1-quarantine-asset="' + escapeHTML(key) + '">Quarantine</button>',
-      "  </span>",
-      "</div>"
+      "</button>"
     ].join("");
   }
 
@@ -12763,6 +12777,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     updateAssetHostScrollBounds(list);
     if (list.getAttribute(SIGNATURE_ATTR) === signature && list.getAttribute(DETAIL_ATTR) === group.key) return;
     var count = group.assets.length === 1 ? "1 asset" : group.assets.length + " assets";
+    assetActionPayloads = {};
     list.setAttribute(TARGET_ATTR, "1");
     list.setAttribute(DETAIL_ATTR, group.key);
     list.setAttribute(SIGNATURE_ATTR, signature);
@@ -12955,9 +12970,9 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-coins{display:flex;flex-direction:column;gap:0;}",
       ".do-wallet-l1-portfolio-shell{max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:8px;}",
       ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;}",
-      ".do-wallet-l1-portfolio-row{cursor:pointer;}",
-      ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
-      ".do-wallet-l1-portfolio-coin{position:relative;flex-wrap:wrap;padding-right:10px;}",
+      ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin{cursor:pointer;}",
+      ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible,.do-wallet-l1-portfolio-coin:hover,.do-wallet-l1-portfolio-coin:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
+      ".do-wallet-l1-portfolio-coin{position:relative;padding-right:10px;}",
       ".do-wallet-l1-portfolio-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;}",
       ".do-wallet-l1-portfolio-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:84px;max-width:45%;text-align:right;white-space:nowrap;}",
       "[" + HOST_ATTR + "='1'] img,.do-wallet-l1-portfolio-owned-host img{display:block!important;object-fit:cover!important;border-radius:50%!important;}",
@@ -12974,10 +12989,6 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-meta em.negative{color:#ff4b55;}",
       ".do-wallet-l1-portfolio-meta em.positive{color:#00c68f;}",
       ".do-wallet-l1-portfolio-right strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;max-width:100%;}",
-      ".do-wallet-l1-portfolio-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:1 0 100%;padding-left:44px;}",
-      ".do-wallet-l1-portfolio-actions button{border:1px solid rgba(135,57,190,.55);border-radius:7px;background:#20162f;color:#d9c6ff;font-size:11px;line-height:1;font-weight:var(--do-wallet-l1-font-weight);padding:7px 8px;cursor:pointer;min-width:0;height:auto;}",
-      ".do-wallet-l1-portfolio-actions button[data-do-wallet-l1-quarantine-asset]{border-color:#8e2840;background:#2a0f1b;color:#ff9aad;}",
-      ".do-wallet-l1-portfolio-actions button:hover{filter:brightness(1.12);}",
       ".do-wallet-l1-portfolio-detail{display:flex;flex-direction:column;max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));min-height:0;padding:0 0 16px;overflow:hidden;}",
       ".do-wallet-l1-portfolio-waiting{display:flex;flex-direction:column;gap:6px;padding:18px 10px;color:#fff;border-bottom:1px solid rgba(135,57,190,.26);}",
       ".do-wallet-l1-portfolio-waiting strong{font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
@@ -12988,7 +12999,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-coins-title{padding:18px 10px 8px;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-coins{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:8px;}",
       ".do-wallet-l1-portfolio-coin{min-height:58px;}",
-      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}.do-wallet-l1-portfolio-actions{padding-left:40px}.do-wallet-l1-portfolio-actions button{font-size:10px;padding:7px}}"
+      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}}"
     ].join("\n");
     head.appendChild(style);
   }
@@ -13086,17 +13097,16 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   }
 
   document.addEventListener("click", function (event) {
-    var action = event.target && event.target.closest && event.target.closest("[data-do-wallet-l1-hide-asset],[data-do-wallet-l1-quarantine-asset]");
-    if (action) {
+    var assetTarget = event.target && event.target.closest && event.target.closest("[data-do-wallet-l1-asset-key]");
+    if (assetTarget) {
       event.preventDefault();
       event.stopPropagation();
       var api = quarantineAPI();
-      var key = action.getAttribute("data-do-wallet-l1-hide-asset") || action.getAttribute("data-do-wallet-l1-quarantine-asset") || "";
-      if (api && key) {
-        if (action.hasAttribute("data-do-wallet-l1-quarantine-asset") && typeof api.add === "function") api.add(key);
-        else if (typeof api.hide === "function") api.hide(key);
+      var assetKey = assetTarget.getAttribute("data-do-wallet-l1-asset-key") || "";
+      var payload = assetActionPayloads[assetKey] || { symbol: assetKey, denom: assetKey };
+      if (api && typeof api.inspectAsset === "function") {
+        api.inspectAsset(payload);
       }
-      schedule(0, action.hasAttribute("data-do-wallet-l1-quarantine-asset") ? "quarantine-asset" : "hide-asset");
       return;
     }
     var target = event.target && event.target.closest && event.target.closest("[data-do-wallet-l1-key],[data-do-wallet-l1-back]");
@@ -15334,6 +15344,7 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
   var defaultChains=['dochain-1','bitcoin-mainnet','ethereum-mainnet','bnb-smart-chain-mainnet','solana-mainnet','polygon-mainnet','optimism-mainnet','base-mainnet','avalanche-c-chain','arbitrum-one','tron-mainnet','xrp-ledger-mainnet','cardano-mainnet','columbus-5','phoenix-1','secret-4','dungeon-1'];
   function norm(v){return String(v||'').trim().toLowerCase();}
   function esc(v){return String(v||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  function escAttr(v){return esc(v).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   function read(k,fallback){try{var v=JSON.parse(localStorage.getItem(k)||JSON.stringify(fallback||[]));return Array.isArray(v)||typeof v==='object'?v:fallback}catch(e){return fallback||[]}}
   function write(k,v){localStorage.setItem(k,JSON.stringify(v));}
   function unique(a){var m={}; (a||[]).forEach(function(x){x=norm(x); if(x)m[x]=1;}); return Object.keys(m);}
@@ -15397,6 +15408,32 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
   function addQuarantine(item,rerender){var k=keyForAsset(item)||keyFor(item); if(!k)return false; var q=getQuarantine(); if(q.indexOf(k)<0)q.push(k); setQuarantine(q,false); write(PKEY,getPending().filter(function(x){return x!==k;})); removeHidden(k,false); if(rerender!==false){renderQuarantinePage(); applyVisibilityFilters();} return true;}
   function removeQuarantine(k,rerender){k=norm(k); var c=storeCtx(); c.bucket.declined=unique((c.bucket.declined||[]).filter(function(x){return x!==k;})); saveCtx(c); write(QKEY,unique(read(QKEY,[]).filter(function(x){return norm(x)!==k;}))); if(rerender!==false){renderQuarantinePage(); applyVisibilityFilters();}}
   function setDecision(k,decision){k=norm(k); var a=getApprovals(); a[k]={decision:decision,updatedAt:new Date().toISOString()}; write(UKEY,a); if(decision==='approved'){addAllow(k); removeQuarantine(k,false); removeHidden(k,false); write(PKEY,getPending().filter(function(x){return x!==k;}));} if(decision==='hidden'){addHidden(k,false); removeQuarantine(k,false);} if(decision==='declined'){addQuarantine(k,false);} renderQuarantinePage(); applyVisibilityFilters();}
+  function firstField(obj,names){for(var i=0;i<names.length;i++){var v=obj&&obj[names[i]]; if(v!==undefined&&v!==null&&String(v).trim())return String(v).trim();} return '';}
+  function assetDetailRow(label,value){if(!value)return ''; return '<div class="doq-asset-detail-row"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';}
+  function closeAssetModal(){var m=document.getElementById('doq-asset-modal'); if(m)m.remove();}
+  function installAssetModalStyles(){
+    if(document.getElementById('doq-asset-modal-style'))return;
+    var s=document.createElement('style'); s.id='doq-asset-modal-style';
+    s.textContent='.doq-asset-modal-backdrop{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;background:rgba(3,0,10,.72);padding:18px;color:#fff}.doq-asset-modal{box-sizing:border-box;width:min(520px,calc(100vw - 28px));max-height:calc(100vh - 32px);overflow:auto;border:1px solid #6e2ca5;border-radius:14px;background:#171020;box-shadow:0 24px 80px rgba(0,0,0,.55);font-family:inherit}.doq-asset-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px;border-bottom:1px solid #392050}.doq-asset-modal-title{display:flex;flex-direction:column;gap:5px;min-width:0}.doq-asset-modal-title strong{font-size:22px;line-height:1.1;font-weight:var(--bold,500)}.doq-asset-modal-title small{font-size:13px;line-height:1.2;color:#c9bbef;font-weight:var(--bold,500);word-break:break-word}.doq-asset-modal-close{border:0;background:transparent;color:#fff;font-size:26px;line-height:1;cursor:pointer;padding:0}.doq-asset-modal-body{display:flex;flex-direction:column;gap:14px;padding:18px 22px}.doq-asset-detail-row{display:grid;grid-template-columns:118px minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid rgba(135,57,190,.25)}.doq-asset-detail-row span{color:#aaa0bd;font-size:12px;font-weight:var(--bold,500)}.doq-asset-detail-row strong{color:#fff;font-size:13px;font-weight:var(--bold,500);word-break:break-word}.doq-asset-modal-note{color:#c9bbef;font-size:13px;line-height:1.35;margin:0}.doq-asset-modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:0 22px 22px}.doq-asset-modal-actions button{border:1px solid #5f2f95;border-radius:10px;background:#241936;color:#fff;padding:10px 13px;font:inherit;font-size:13px;font-weight:var(--bold,500);cursor:pointer}.doq-asset-modal-actions button[data-doq-asset-hide]{color:#d9c6ff;border-color:#8739be}.doq-asset-modal-actions button[data-doq-asset-quarantine]{color:#ffb3c2;border-color:#b92e54;background:#35131f}@media(max-width:520px){.doq-asset-modal-backdrop{align-items:end;padding:10px}.doq-asset-modal{width:100%;border-radius:14px 14px 0 0}.doq-asset-detail-row{grid-template-columns:1fr}.doq-asset-modal-actions{justify-content:stretch}.doq-asset-modal-actions button{flex:1 1 100%}}';
+    document.head.appendChild(s);
+  }
+  function showAssetDecision(asset){
+    var payload=safeObj(asset), key=keyForAsset(payload)||keyFor(payload); if(!key)return false;
+    var parts=keyParts(key), symbol=firstField(payload,['symbol','ticker','nativeSymbol'])||parts.value||'Asset';
+    var name=firstField(payload,['displayName','name','label','chainName'])||symbol;
+    var chain=firstField(payload,['chainName','networkName','network','chainID','chainId','chain'])||parts.chain||'global';
+    var denom=firstField(payload,['denom','baseDenom','token','tokenId','id']);
+    var contract=firstField(payload,['contract','contractAddress','tokenAddress']);
+    var amount=firstField(payload,['amountText','displayAmount','balanceText','quantityText']);
+    var value=firstField(payload,['valueText','usdValueText','fiatValueText','valueFormatted']);
+    var price=firstField(payload,['priceText','usdPriceText','priceFormatted','unitPriceText']);
+    var change=firstField(payload,['changeText','priceChangeText','percentText','change24hText']);
+    closeAssetModal(); installAssetModalStyles();
+    var modal=document.createElement('div'); modal.id='doq-asset-modal'; modal.className='doq-asset-modal-backdrop';
+    modal.innerHTML='<section class="doq-asset-modal" role="dialog" aria-modal="true" aria-label="Asset details"><div class="doq-asset-modal-head"><div class="doq-asset-modal-title"><strong>'+esc(name)+'</strong><small>'+esc(symbol)+' on '+esc(chain)+'</small></div><button type="button" class="doq-asset-modal-close" data-doq-asset-close="1" aria-label="Close">x</button></div><div class="doq-asset-modal-body">'+assetDetailRow('Value',value)+assetDetailRow('Amount',amount)+assetDetailRow('Price',price)+assetDetailRow('24h change',change)+assetDetailRow('Chain',chain)+assetDetailRow('Symbol',symbol)+assetDetailRow('Denom',denom)+assetDetailRow('Contract',contract)+assetDetailRow('Reference',key)+'<p class="doq-asset-modal-note">Leave keeps this coin visible. Hide removes it from wallet views only. Quarantine hides it and blocks interactions for this wallet.</p></div><div class="doq-asset-modal-actions"><button type="button" data-doq-asset-close="1">Leave in wallet</button><button type="button" data-doq-asset-hide="1">Hide from view</button><button type="button" data-doq-asset-quarantine="1">Quarantine</button></div></section>';
+    modal.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('button,[data-doq-asset-close],[data-doq-asset-hide],[data-doq-asset-quarantine]'); if(!btn&&e.target===modal){closeAssetModal(); return;} if(!btn)return; e.preventDefault(); e.stopPropagation(); if(btn.hasAttribute('data-doq-asset-hide')){addHidden(payload,false); closeAssetModal(); renderQuarantinePage(); applyVisibilityFilters(); return;} if(btn.hasAttribute('data-doq-asset-quarantine')){addQuarantine(payload,false); closeAssetModal(); renderQuarantinePage(); applyVisibilityFilters(); return;} if(btn.hasAttribute('data-doq-asset-close'))closeAssetModal();},true);
+    document.body.appendChild(modal); return true;
+  }
   async function loadRegistry(){if(registry)return registry; try{var r=await fetch(RURL,{cache:'force-cache'}); registry=await r.json();}catch(e){registry={assets:[]};} return registry;}
   function isKnownSafe(k){
     k=norm(k); if(getAllow().indexOf(k)>=0)return true;
@@ -15536,7 +15573,7 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
       window.addEventListener(name,function(){setTimeout(applyVisibilityFilters,300);});
     });
   }
-  seed(); window.doWalletQuarantine={addPending:addPending,flag:maybeFlagAsset,add:addQuarantine,remove:removeQuarantine,hide:addHidden,unhide:removeHidden,allow:function(x){setDecision(keyForAsset(x)||keyFor(x),'approved')},decline:function(x){setDecision(keyForAsset(x)||keyFor(x),'declined')},restore:function(x){removeHidden(keyForAsset(x)||keyFor(x));},keyFor:keyFor,keyForAsset:keyForAsset,list:getQuarantine,hidden:getHidden,pending:getPending,allowlist:getAllow,decisions:getApprovals,isHiddenAsset:isHiddenAsset,isBlockedAsset:isBlockedAsset,isVisibleAsset:function(asset){return !isHiddenAsset(asset)&&!isBlockedAsset(asset);},scanTx:scanTx,assertAllowedTx:assertAllowedTx,show:showQuarantine};
+  seed(); window.doWalletQuarantine={addPending:addPending,flag:maybeFlagAsset,add:addQuarantine,remove:removeQuarantine,hide:addHidden,unhide:removeHidden,allow:function(x){setDecision(keyForAsset(x)||keyFor(x),'approved')},decline:function(x){setDecision(keyForAsset(x)||keyFor(x),'declined')},restore:function(x){removeHidden(keyForAsset(x)||keyFor(x));},inspect:showAssetDecision,inspectAsset:showAssetDecision,keyFor:keyFor,keyForAsset:keyForAsset,list:getQuarantine,hidden:getHidden,pending:getPending,allowlist:getAllow,decisions:getApprovals,isHiddenAsset:isHiddenAsset,isBlockedAsset:isBlockedAsset,isVisibleAsset:function(asset){return !isHiddenAsset(asset)&&!isBlockedAsset(asset);},scanTx:scanTx,assertAllowedTx:assertAllowedTx,show:showQuarantine};
   wrapProviders(); window.addEventListener('focus',wrapProviders); window.addEventListener('pageshow',wrapProviders); document.addEventListener('visibilitychange',function(){if(!document.hidden)wrapProviders();}); if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',insertSideMenu); else insertSideMenu(); initOrdiSearchResult(); initVisibilityFilters();
 })();
 });

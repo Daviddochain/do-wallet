@@ -34,6 +34,7 @@
   var backendPromise = null;
   var backendLastStartedAt = 0;
   var waitingForFullPortfolio = false;
+  var assetActionPayloads = {};
 
   var FLAT_KEYS = [
     "rawSpendableAssets",
@@ -810,6 +811,22 @@
     return true;
   }
 
+  function assetDecisionPayload(asset, group, amountText) {
+    var payload = assetForVisibility(asset);
+    return Object.assign({}, payload, {
+      displayName: clean(asset && (asset.name || asset.symbol)),
+      name: clean(asset && (asset.name || asset.symbol)),
+      symbol: clean(asset && asset.symbol),
+      chainName: clean(asset && asset.chainName) || clean(group && group.name),
+      chainID: clean(asset && asset.chainID) || clean(group && group.key),
+      denom: clean(asset && asset.denom),
+      amountText: clean(amountText || asset && asset.amountText),
+      valueText: clean(asset && asset.valueText) || formatUSD(asset && asset.value),
+      priceText: clean(asset && asset.priceText),
+      changeText: clean(asset && asset.changeText)
+    });
+  }
+
   function isDisplayable(asset) {
     if (!asset || !asset.symbol || /^[0-9.]+$/.test(asset.symbol)) return false;
     if (!assetIsVisible(asset)) return false;
@@ -1069,8 +1086,9 @@
     var amount = clean(asset.amountText);
     var key = assetVisibilityKey(asset);
     if (amount && upper(amount).indexOf(upper(asset.symbol)) < 0) amount += " " + asset.symbol;
+    assetActionPayloads[key] = assetDecisionPayload(asset, group, amount);
     return [
-      '<div class="do-wallet-l1-portfolio-coin" data-do-wallet-l1-asset-key="' + escapeHTML(key) + '">',
+      '<button type="button" class="do-wallet-l1-portfolio-coin" data-do-wallet-l1-asset-key="' + escapeHTML(key) + '">',
       '  <span class="do-wallet-l1-portfolio-left">',
       renderIcon(asset.icon || group.icon, asset.symbol, "do-wallet-l1-portfolio-coin-icon"),
       '    <span class="do-wallet-l1-portfolio-meta">',
@@ -1079,11 +1097,7 @@
       "    </span>",
       "  </span>",
       '  <span class="do-wallet-l1-portfolio-right"><strong>' + escapeHTML(asset.valueText || formatUSD(asset.value)) + "</strong><small>" + escapeHTML(amount) + "</small></span>",
-      '  <span class="do-wallet-l1-portfolio-actions">',
-      '    <button type="button" data-do-wallet-l1-hide-asset="' + escapeHTML(key) + '">Hide</button>',
-      '    <button type="button" data-do-wallet-l1-quarantine-asset="' + escapeHTML(key) + '">Quarantine</button>',
-      "  </span>",
-      "</div>"
+      "</button>"
     ].join("");
   }
 
@@ -1103,6 +1117,7 @@
     updateAssetHostScrollBounds(list);
     if (list.getAttribute(SIGNATURE_ATTR) === signature && list.getAttribute(DETAIL_ATTR) === group.key) return;
     var count = group.assets.length === 1 ? "1 asset" : group.assets.length + " assets";
+    assetActionPayloads = {};
     list.setAttribute(TARGET_ATTR, "1");
     list.setAttribute(DETAIL_ATTR, group.key);
     list.setAttribute(SIGNATURE_ATTR, signature);
@@ -1295,9 +1310,9 @@
       ".do-wallet-l1-portfolio-shell,.do-wallet-l1-portfolio-coins{display:flex;flex-direction:column;gap:0;}",
       ".do-wallet-l1-portfolio-shell{max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:8px;}",
       ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;}",
-      ".do-wallet-l1-portfolio-row{cursor:pointer;}",
-      ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
-      ".do-wallet-l1-portfolio-coin{position:relative;flex-wrap:wrap;padding-right:10px;}",
+      ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin{cursor:pointer;}",
+      ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible,.do-wallet-l1-portfolio-coin:hover,.do-wallet-l1-portfolio-coin:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
+      ".do-wallet-l1-portfolio-coin{position:relative;padding-right:10px;}",
       ".do-wallet-l1-portfolio-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;}",
       ".do-wallet-l1-portfolio-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:84px;max-width:45%;text-align:right;white-space:nowrap;}",
       "[" + HOST_ATTR + "='1'] img,.do-wallet-l1-portfolio-owned-host img{display:block!important;object-fit:cover!important;border-radius:50%!important;}",
@@ -1314,10 +1329,6 @@
       ".do-wallet-l1-portfolio-meta em.negative{color:#ff4b55;}",
       ".do-wallet-l1-portfolio-meta em.positive{color:#00c68f;}",
       ".do-wallet-l1-portfolio-right strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;max-width:100%;}",
-      ".do-wallet-l1-portfolio-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:1 0 100%;padding-left:44px;}",
-      ".do-wallet-l1-portfolio-actions button{border:1px solid rgba(135,57,190,.55);border-radius:7px;background:#20162f;color:#d9c6ff;font-size:11px;line-height:1;font-weight:var(--do-wallet-l1-font-weight);padding:7px 8px;cursor:pointer;min-width:0;height:auto;}",
-      ".do-wallet-l1-portfolio-actions button[data-do-wallet-l1-quarantine-asset]{border-color:#8e2840;background:#2a0f1b;color:#ff9aad;}",
-      ".do-wallet-l1-portfolio-actions button:hover{filter:brightness(1.12);}",
       ".do-wallet-l1-portfolio-detail{display:flex;flex-direction:column;max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));min-height:0;padding:0 0 16px;overflow:hidden;}",
       ".do-wallet-l1-portfolio-waiting{display:flex;flex-direction:column;gap:6px;padding:18px 10px;color:#fff;border-bottom:1px solid rgba(135,57,190,.26);}",
       ".do-wallet-l1-portfolio-waiting strong{font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
@@ -1328,7 +1339,7 @@
       ".do-wallet-l1-portfolio-coins-title{padding:18px 10px 8px;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-coins{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:8px;}",
       ".do-wallet-l1-portfolio-coin{min-height:58px;}",
-      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}.do-wallet-l1-portfolio-actions{padding-left:40px}.do-wallet-l1-portfolio-actions button{font-size:10px;padding:7px}}"
+      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}}"
     ].join("\n");
     head.appendChild(style);
   }
@@ -1426,17 +1437,16 @@
   }
 
   document.addEventListener("click", function (event) {
-    var action = event.target && event.target.closest && event.target.closest("[data-do-wallet-l1-hide-asset],[data-do-wallet-l1-quarantine-asset]");
-    if (action) {
+    var assetTarget = event.target && event.target.closest && event.target.closest("[data-do-wallet-l1-asset-key]");
+    if (assetTarget) {
       event.preventDefault();
       event.stopPropagation();
       var api = quarantineAPI();
-      var key = action.getAttribute("data-do-wallet-l1-hide-asset") || action.getAttribute("data-do-wallet-l1-quarantine-asset") || "";
-      if (api && key) {
-        if (action.hasAttribute("data-do-wallet-l1-quarantine-asset") && typeof api.add === "function") api.add(key);
-        else if (typeof api.hide === "function") api.hide(key);
+      var assetKey = assetTarget.getAttribute("data-do-wallet-l1-asset-key") || "";
+      var payload = assetActionPayloads[assetKey] || { symbol: assetKey, denom: assetKey };
+      if (api && typeof api.inspectAsset === "function") {
+        api.inspectAsset(payload);
       }
-      schedule(0, action.hasAttribute("data-do-wallet-l1-quarantine-asset") ? "quarantine-asset" : "hide-asset");
       return;
     }
     var target = event.target && event.target.closest && event.target.closest("[data-do-wallet-l1-key],[data-do-wallet-l1-back]");
