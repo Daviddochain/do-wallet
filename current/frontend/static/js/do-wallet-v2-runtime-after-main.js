@@ -6732,7 +6732,7 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     var style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = [
-      ".do-mobile-connect-button{appearance:none;border:1px solid #ffb22e;background:#ff9f08;color:#17101f;border-radius:8px;font:700 14px/1 Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:12px 16px;cursor:pointer;white-space:nowrap;box-shadow:none}",
+      ".do-mobile-connect-button{appearance:none;align-items:center;justify-content:center;height:34px;min-width:0;border:1px solid #ffb22e;background:#ff9f08;color:#17101f;border-radius:999px;font:700 13px/1 Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0 14px;cursor:pointer;white-space:nowrap;box-shadow:none;flex:0 0 auto}",
       ".do-mobile-connect-button:hover{background:#ffad24}",
       ".do-mobile-connect-button:focus{outline:2px solid #b044ff;outline-offset:2px}",
       ".do-mobile-connect-modal{position:fixed;inset:0;z-index:2147482600;display:flex;align-items:center;justify-content:center;background:rgba(4,0,13,.72);padding:18px}",
@@ -6908,22 +6908,62 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     return header.querySelector("[class*='Layout_wrapper__']") || header;
   }
 
+  function topRightControls() {
+    var header = document.querySelector("[class*='Layout_header__'],header");
+    var host = headerHost();
+    if (!header || !host) return null;
+    var headerRect = header.getBoundingClientRect();
+    var rightEdge = headerRect.left + headerRect.width * 0.45;
+    var actionGroups = Array.prototype.slice.call(header.querySelectorAll("[class*='Layout_actions__']")).filter(function (node) {
+      if (!isVisible(node)) return false;
+      if (/do chain|on-chain mfa/i.test(text(node.textContent))) return false;
+      return node.getBoundingClientRect().left >= rightEdge;
+    });
+    if (actionGroups.length) {
+      var actions = actionGroups[actionGroups.length - 1];
+      var walletButton = Array.prototype.slice.call(actions.querySelectorAll("button,a")).filter(function (node) {
+        if (!isVisible(node) || node.id === BUTTON_ID) return false;
+        return text(node.textContent).length >= 3;
+      }).pop();
+      return { host: actions, before: walletButton || null };
+    }
+
+    var controls = Array.prototype.slice.call(header.querySelectorAll("button,a")).filter(function (node) {
+      if (!isVisible(node) || node.id === BUTTON_ID) return false;
+      var label = text(node.textContent);
+      if (/^(do chain|on-chain mfa|connect mobile)$/i.test(label)) return false;
+      var rect = node.getBoundingClientRect();
+      return rect.left >= rightEdge;
+    }).sort(function (a, b) {
+      return a.getBoundingClientRect().left - b.getBoundingClientRect().left;
+    });
+
+    var wallet = controls.filter(function (node) {
+      return text(node.textContent).length >= 3;
+    }).pop();
+    if (wallet && wallet.parentElement) return { host: wallet.parentElement, before: wallet };
+    var rightmost = controls[controls.length - 1];
+    if (rightmost && rightmost.parentElement) return { host: rightmost.parentElement, before: rightmost };
+    return { host: host, before: null };
+  }
+
   function installButton() {
     ensureStyles();
-    if (document.getElementById(BUTTON_ID)) return;
-    var host = headerHost();
-    if (!host) return;
-    var button = document.createElement("button");
+    var target = topRightControls();
+    if (!target || !target.host) return;
+    var button = document.getElementById(BUTTON_ID) || document.createElement("button");
     button.id = BUTTON_ID;
     button.type = "button";
     button.className = "do-mobile-connect-button";
     button.textContent = "Connect mobile";
-    button.addEventListener("click", openModal);
-    var actions = host.querySelector("[class*='Layout_actions__']");
-    if (actions && actions.parentNode === host) {
-      host.insertBefore(button, actions);
+    if (!button.__doWalletMobileConnectBound) {
+      button.addEventListener("click", openModal);
+      button.__doWalletMobileConnectBound = true;
+    }
+    if (target.before && target.before.parentNode === target.host && target.before !== button) {
+      target.host.insertBefore(button, target.before);
     } else {
-      host.appendChild(button);
+      target.host.appendChild(button);
     }
   }
 
