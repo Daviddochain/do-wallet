@@ -4,6 +4,132 @@
 
 @media(min-width:1180px){.Dashboard_detailGrid__yCKlR{grid-template-columns:minmax(0,1fr)!important}}.Dashboard_detailGrid__yCKlR>.Dashboard_sectionCard__ZtA75{width:100%}.Dashboard_detailGrid__yCKlR .Dashboard_tableWrap__ITau0{width:100%}
 
+/*
+  Mobile shell tuning: keep the top bar to one stable row and avoid painting the
+  closed side rail / lower dashboard sections on first load.
+*/
+@media (max-width: 700px) {
+  :root {
+    --header-height: 60px;
+    --main-padding-horizontal: 12px;
+  }
+
+  [class*="Layout_layout__"]:not([class*="Layout_menu__"]) [class*="Nav_nav__"] {
+    display: none !important;
+  }
+
+  [class*="Layout_header__"] {
+    border-bottom: 1px solid var(--card-border) !important;
+    overflow: hidden !important;
+    padding: 0 8px !important;
+  }
+
+  [class*="Layout_header__"] [class*="Layout_wrapper__"] {
+    gap: 8px !important;
+    height: var(--header-height) !important;
+    justify-content: flex-start !important;
+    overflow: hidden !important;
+    width: 100% !important;
+  }
+
+  [class*="NetworkHeader_badge__"],
+  [class*="NetworkHeader_component__"] {
+    align-items: center !important;
+    display: inline-flex !important;
+    flex: 0 1 auto !important;
+    height: 34px !important;
+    line-height: 1 !important;
+    max-width: 96px !important;
+    min-width: 0 !important;
+    padding: 0 10px !important;
+  }
+
+  #dochain-mfa-chain-button,
+  .dochain-mfa-button {
+    flex: 0 0 auto !important;
+    height: 34px !important;
+    line-height: 1 !important;
+    max-width: 128px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    padding: 0 12px !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  [class*="Layout_actions__"] {
+    flex: 1 1 auto !important;
+    gap: 6px !important;
+    justify-content: flex-end !important;
+    margin-left: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  [class*="Layout_actions__"] > section,
+  [class*="HeaderIconButton_wrapper__"] {
+    display: none !important;
+  }
+
+  [class*="Connected_button__"] {
+    border-radius: 999px !important;
+    flex: 0 1 auto !important;
+    height: 34px !important;
+    max-width: 112px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    padding: 0 12px !important;
+  }
+
+  [class*="Connected_button__"] [class*="Connected_button__text__"] {
+    display: inline-block !important;
+    max-width: 72px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+  }
+
+  [class*="Nav_toggle__"] {
+    flex: 0 0 44px !important;
+    height: 44px !important;
+    padding: 10px !important;
+    width: 44px !important;
+  }
+
+  [class*="Nav_nav__"] video,
+  [class*="Nav_background_blur"],
+  [class*="ActionsBackground_background_blur"],
+  [class*="BackgroundBlobs_blob"] {
+    display: none !important;
+  }
+
+  [class*="Page_main__"] > * + *,
+  [class*="Dashboard_portfolio__"] > * + *,
+  [class*="Dashboard_detailGrid__"] > *,
+  [class*="Dashboard_sectionCard__"] {
+    content-visibility: auto;
+    contain-intrinsic-size: 340px;
+  }
+}
+
+@media (max-width: 374px) {
+  [class*="NetworkHeader_badge__"],
+  [class*="NetworkHeader_component__"] {
+    display: none !important;
+  }
+
+  #dochain-mfa-chain-button,
+  .dochain-mfa-button {
+    max-width: 118px !important;
+  }
+
+  [class*="Connected_button__"] {
+    max-width: 96px !important;
+    padding: 0 10px !important;
+  }
+}
+
 /*! do-wallet-v2-onramper.css */
 .do-ramp-inline-launcher {
   cursor: pointer;
