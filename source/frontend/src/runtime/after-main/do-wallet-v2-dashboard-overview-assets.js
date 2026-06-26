@@ -235,12 +235,37 @@
       value: value,
       valueText: valueText && valueText !== "$0" ? valueText : formatUSD(value),
       priceText: clean(asset && (asset.priceText || asset.usdPriceText || asset.priceFormatted || asset.unitPriceText)),
-      changeText: clean(asset && (asset.changeText || asset.priceChangeText || asset.percentText || asset.change24hText))
+      changeText: clean(asset && (asset.changeText || asset.priceChangeText || asset.percentText || asset.change24hText)),
+      raw: asset
     };
+  }
+
+  function rowForVisibility(row) {
+    return Object.assign({}, isObject(row && row.raw) ? row.raw : {}, isObject(row) ? row : {});
+  }
+
+  function rowVisibilityKey(row) {
+    try {
+      var quarantine = window.doWalletQuarantine;
+      if (quarantine && typeof quarantine.keyForAsset === "function") return clean(quarantine.keyForAsset(rowForVisibility(row)));
+    } catch (error) {}
+    return [row.chainID || "global", row.denom || row.symbol, row.name].join(":").toLowerCase();
+  }
+
+  function rowAllowedByVisibility(row) {
+    try {
+      var quarantine = window.doWalletQuarantine;
+      var payload = rowForVisibility(row);
+      if (quarantine && typeof quarantine.isVisibleAsset === "function") return quarantine.isVisibleAsset(payload);
+      if (quarantine && typeof quarantine.isHiddenAsset === "function" && quarantine.isHiddenAsset(payload)) return false;
+      if (quarantine && typeof quarantine.isBlockedAsset === "function" && quarantine.isBlockedAsset(payload)) return false;
+    } catch (error) {}
+    return true;
   }
 
   function displayableRow(row) {
     if (!row || !row.symbol || /^[0-9.]+$/.test(row.symbol)) return false;
+    if (!rowAllowedByVisibility(row)) return false;
     if (row.amount > 0 || row.value > 0) return true;
     if (row.amountText) return true;
     if (row.valueText && row.valueText !== "$-") return true;
@@ -367,8 +392,9 @@
 
   function rowHTML(row) {
     var changeClass = row.changeText && row.changeText.indexOf("-") >= 0 ? "negative" : "positive";
+    var key = rowVisibilityKey(row);
     return [
-      '<div class="do-wallet-dashboard-overview-row">',
+      '<div class="do-wallet-dashboard-overview-row" data-do-wallet-dashboard-asset-key="' + escapeHTML(key) + '">',
         '<div class="do-wallet-dashboard-overview-left">',
           iconHTML(row),
           '<span>',
@@ -379,6 +405,10 @@
         '<div class="do-wallet-dashboard-overview-right">',
           '<strong>' + escapeHTML(row.valueText) + '</strong>',
           '<small>' + escapeHTML(row.amountText || row.symbol) + '</small>',
+        '</div>',
+        '<div class="do-wallet-dashboard-overview-actions">',
+          '<button type="button" data-do-wallet-dashboard-hide-asset="' + escapeHTML(key) + '">Hide</button>',
+          '<button type="button" data-do-wallet-dashboard-quarantine-asset="' + escapeHTML(key) + '">Quarantine</button>',
         '</div>',
       '</div>'
     ].join("");
@@ -431,9 +461,13 @@
       ".do-wallet-dashboard-overview-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:128px;max-width:42%;text-align:right;}",
       ".do-wallet-dashboard-overview-right strong{display:block;color:#fff;font-size:15px;line-height:1.1;font-weight:var(--bold,500);}",
       ".do-wallet-dashboard-overview-right small{display:block;color:#c9bbef;font-size:12px;line-height:1.1;font-weight:var(--bold,500);white-space:normal;}",
+      ".do-wallet-dashboard-overview-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 0 auto;}",
+      ".do-wallet-dashboard-overview-actions button{border:1px solid rgba(135,57,190,.55);border-radius:7px;background:#20162f;color:#d9c6ff;font-size:11px;line-height:1;font-weight:var(--bold,500);padding:7px 8px;cursor:pointer;min-width:0;height:auto;}",
+      ".do-wallet-dashboard-overview-actions button[data-do-wallet-dashboard-quarantine-asset]{border-color:#8e2840;background:#2a0f1b;color:#ff9aad;}",
+      ".do-wallet-dashboard-overview-actions button:hover{filter:brightness(1.12);}",
       ".do-wallet-dashboard-overview-icon,.do-wallet-dashboard-overview-icon-fallback{width:34px;height:34px;min-width:34px;border-radius:50%;object-fit:cover;background:#2c2140;}",
       ".do-wallet-dashboard-overview-icon-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
-      "@media(max-width:760px){[" + CARD_ATTR + "]{padding:20px 18px!important}.do-wallet-dashboard-overview-head h2{font-size:24px}.do-wallet-dashboard-overview-row{gap:10px}.do-wallet-dashboard-overview-right{min-width:104px}.do-wallet-dashboard-overview-left strong{font-size:14px}.do-wallet-dashboard-overview-right strong{font-size:14px}}"
+      "@media(max-width:760px){[" + CARD_ATTR + "]{padding:20px 18px!important}.do-wallet-dashboard-overview-head h2{font-size:24px}.do-wallet-dashboard-overview-row{gap:10px;flex-wrap:wrap}.do-wallet-dashboard-overview-right{min-width:104px}.do-wallet-dashboard-overview-left strong{font-size:14px}.do-wallet-dashboard-overview-right strong{font-size:14px}.do-wallet-dashboard-overview-actions{flex:1 0 100%;padding-left:48px}.do-wallet-dashboard-overview-actions button{font-size:10px;padding:7px}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -472,6 +506,20 @@
   window.addEventListener("popstate", schedule);
   window.addEventListener("hashchange", schedule);
   window.addEventListener("do_wallet_portfolio_snapshot", schedule);
+  window.addEventListener("do_wallet_quarantine_change", schedule);
+  document.addEventListener("click", function (event) {
+    var target = event.target && event.target.closest && event.target.closest("[data-do-wallet-dashboard-hide-asset],[data-do-wallet-dashboard-quarantine-asset]");
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    var key = target.getAttribute("data-do-wallet-dashboard-hide-asset") || target.getAttribute("data-do-wallet-dashboard-quarantine-asset") || "";
+    var quarantine = window.doWalletQuarantine;
+    if (quarantine && key) {
+      if (target.hasAttribute("data-do-wallet-dashboard-quarantine-asset") && typeof quarantine.add === "function") quarantine.add(key);
+      else if (typeof quarantine.hide === "function") quarantine.hide(key);
+    }
+    schedule();
+  }, true);
   window.addEventListener("storage", function (event) {
     if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY) schedule();
   });

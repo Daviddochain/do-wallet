@@ -2519,9 +2519,19 @@
     return true;
   }
 
+  function assetAllowedByVisibility(asset) {
+    try {
+      var quarantine = window.doWalletQuarantine;
+      if (quarantine && typeof quarantine.isVisibleAsset === "function") return quarantine.isVisibleAsset(asset);
+      if (quarantine && typeof quarantine.isHiddenAsset === "function" && quarantine.isHiddenAsset(asset)) return false;
+      if (quarantine && typeof quarantine.isBlockedAsset === "function" && quarantine.isBlockedAsset(asset)) return false;
+    } catch (error) {}
+    return true;
+  }
+
   function displayableAssets(assets) {
     return (Array.isArray(assets) ? assets : []).filter(function (asset) {
-      return assetHasBalance(asset) && assetHasValidDisplay(asset);
+      return assetHasBalance(asset) && assetHasValidDisplay(asset) && assetAllowedByVisibility(asset);
     });
   }
 
@@ -3843,6 +3853,10 @@
     var source = event && event.detail && event.detail.source;
     if (source === "dochain-multichain-assets-20260615") return;
     scheduleRun(2500);
+  });
+  window.addEventListener("do_wallet_quarantine_change", function () {
+    refreshPortfolio();
+    dispatchUpdates();
   });
   window.doWalletMultichainAssets = { run: run, loadChainCatalog: loadChainCatalog, loadTokenCatalog: loadTokenCatalog, chains: allChains, tokens: NATIVE_TOKENS };
 })();

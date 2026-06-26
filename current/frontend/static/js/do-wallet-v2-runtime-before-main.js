@@ -10314,9 +10314,19 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     return true;
   }
 
+  function assetAllowedByVisibility(asset) {
+    try {
+      var quarantine = window.doWalletQuarantine;
+      if (quarantine && typeof quarantine.isVisibleAsset === "function") return quarantine.isVisibleAsset(asset);
+      if (quarantine && typeof quarantine.isHiddenAsset === "function" && quarantine.isHiddenAsset(asset)) return false;
+      if (quarantine && typeof quarantine.isBlockedAsset === "function" && quarantine.isBlockedAsset(asset)) return false;
+    } catch (error) {}
+    return true;
+  }
+
   function displayableAssets(assets) {
     return (Array.isArray(assets) ? assets : []).filter(function (asset) {
-      return assetHasBalance(asset) && assetHasValidDisplay(asset);
+      return assetHasBalance(asset) && assetHasValidDisplay(asset) && assetAllowedByVisibility(asset);
     });
   }
 
@@ -11639,6 +11649,10 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     if (source === "dochain-multichain-assets-20260615") return;
     scheduleRun(2500);
   });
+  window.addEventListener("do_wallet_quarantine_change", function () {
+    refreshPortfolio();
+    dispatchUpdates();
+  });
   window.doWalletMultichainAssets = { run: run, loadChainCatalog: loadChainCatalog, loadTokenCatalog: loadTokenCatalog, chains: allChains, tokens: NATIVE_TOKENS };
 })();
 });
@@ -12420,8 +12434,45 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     };
   }
 
+  function assetForVisibility(asset) {
+    return Object.assign({}, isObject(asset && asset.raw) ? asset.raw : {}, isObject(asset) ? asset : {});
+  }
+
+  function quarantineAPI() {
+    try {
+      return window.doWalletQuarantine || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function assetVisibilityKey(asset) {
+    var api = quarantineAPI();
+    var payload = assetForVisibility(asset);
+    try {
+      if (api && typeof api.keyForAsset === "function") return clean(api.keyForAsset(payload));
+    } catch (error) {}
+    var chain = lower(payload.chainID || payload.chainId || payload.chain || payload.network || "global");
+    var value = lower(payload.contract || payload.contractAddress || payload.tokenAddress || payload.denom || payload.baseDenom || payload.token || payload.symbol || payload.name);
+    if (!value) return "";
+    var type = /^0x[0-9a-f]{40}$/i.test(value) || value.length > 24 || value.indexOf("/") >= 0 || value.indexOf(":") >= 0 ? "contract" : "symbol";
+    return [type, chain || "global", value].join(":");
+  }
+
+  function assetIsVisible(asset) {
+    var api = quarantineAPI();
+    var payload = assetForVisibility(asset);
+    try {
+      if (api && typeof api.isVisibleAsset === "function") return api.isVisibleAsset(payload);
+      if (api && typeof api.isHiddenAsset === "function" && api.isHiddenAsset(payload)) return false;
+      if (api && typeof api.isBlockedAsset === "function" && api.isBlockedAsset(payload)) return false;
+    } catch (error) {}
+    return true;
+  }
+
   function isDisplayable(asset) {
     if (!asset || !asset.symbol || /^[0-9.]+$/.test(asset.symbol)) return false;
+    if (!assetIsVisible(asset)) return false;
     if (asset.value > 0 || asset.amount > 0) return true;
     if (asset.valueText && asset.valueText !== "$-" && asset.valueText !== "$0") return true;
     if (asset.amountText) return true;
@@ -12676,9 +12727,10 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     var change = clean(asset.changeText);
     var changeClass = change.indexOf("-") >= 0 ? "negative" : "positive";
     var amount = clean(asset.amountText);
+    var key = assetVisibilityKey(asset);
     if (amount && upper(amount).indexOf(upper(asset.symbol)) < 0) amount += " " + asset.symbol;
     return [
-      '<div class="do-wallet-l1-portfolio-coin">',
+      '<div class="do-wallet-l1-portfolio-coin" data-do-wallet-l1-asset-key="' + escapeHTML(key) + '">',
       '  <span class="do-wallet-l1-portfolio-left">',
       renderIcon(asset.icon || group.icon, asset.symbol, "do-wallet-l1-portfolio-coin-icon"),
       '    <span class="do-wallet-l1-portfolio-meta">',
@@ -12687,6 +12739,10 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       "    </span>",
       "  </span>",
       '  <span class="do-wallet-l1-portfolio-right"><strong>' + escapeHTML(asset.valueText || formatUSD(asset.value)) + "</strong><small>" + escapeHTML(amount) + "</small></span>",
+      '  <span class="do-wallet-l1-portfolio-actions">',
+      '    <button type="button" data-do-wallet-l1-hide-asset="' + escapeHTML(key) + '">Hide</button>',
+      '    <button type="button" data-do-wallet-l1-quarantine-asset="' + escapeHTML(key) + '">Quarantine</button>',
+      "  </span>",
       "</div>"
     ].join("");
   }
@@ -12901,6 +12957,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{box-sizing:border-box;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;margin:0;padding:10px;border:0;border-bottom:1px solid rgba(135,57,190,.26);background:transparent;color:inherit;font:inherit;text-align:left;}",
       ".do-wallet-l1-portfolio-row{cursor:pointer;}",
       ".do-wallet-l1-portfolio-row:hover,.do-wallet-l1-portfolio-row:focus-visible{background:rgba(163,60,255,.09);outline:0;}",
+      ".do-wallet-l1-portfolio-coin{position:relative;flex-wrap:wrap;padding-right:10px;}",
       ".do-wallet-l1-portfolio-left{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;}",
       ".do-wallet-l1-portfolio-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:84px;max-width:45%;text-align:right;white-space:nowrap;}",
       "[" + HOST_ATTR + "='1'] img,.do-wallet-l1-portfolio-owned-host img{display:block!important;object-fit:cover!important;border-radius:50%!important;}",
@@ -12917,6 +12974,10 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-meta em.negative{color:#ff4b55;}",
       ".do-wallet-l1-portfolio-meta em.positive{color:#00c68f;}",
       ".do-wallet-l1-portfolio-right strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;max-width:100%;}",
+      ".do-wallet-l1-portfolio-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:1 0 100%;padding-left:44px;}",
+      ".do-wallet-l1-portfolio-actions button{border:1px solid rgba(135,57,190,.55);border-radius:7px;background:#20162f;color:#d9c6ff;font-size:11px;line-height:1;font-weight:var(--do-wallet-l1-font-weight);padding:7px 8px;cursor:pointer;min-width:0;height:auto;}",
+      ".do-wallet-l1-portfolio-actions button[data-do-wallet-l1-quarantine-asset]{border-color:#8e2840;background:#2a0f1b;color:#ff9aad;}",
+      ".do-wallet-l1-portfolio-actions button:hover{filter:brightness(1.12);}",
       ".do-wallet-l1-portfolio-detail{display:flex;flex-direction:column;max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));min-height:0;padding:0 0 16px;overflow:hidden;}",
       ".do-wallet-l1-portfolio-waiting{display:flex;flex-direction:column;gap:6px;padding:18px 10px;color:#fff;border-bottom:1px solid rgba(135,57,190,.26);}",
       ".do-wallet-l1-portfolio-waiting strong{font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
@@ -12927,7 +12988,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-coins-title{padding:18px 10px 8px;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-coins{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:8px;}",
       ".do-wallet-l1-portfolio-coin{min-height:58px;}",
-      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}}"
+      "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}.do-wallet-l1-portfolio-actions{padding-left:40px}.do-wallet-l1-portfolio-actions button{font-size:10px;padding:7px}}"
     ].join("\n");
     head.appendChild(style);
   }
@@ -13025,6 +13086,19 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   }
 
   document.addEventListener("click", function (event) {
+    var action = event.target && event.target.closest && event.target.closest("[data-do-wallet-l1-hide-asset],[data-do-wallet-l1-quarantine-asset]");
+    if (action) {
+      event.preventDefault();
+      event.stopPropagation();
+      var api = quarantineAPI();
+      var key = action.getAttribute("data-do-wallet-l1-hide-asset") || action.getAttribute("data-do-wallet-l1-quarantine-asset") || "";
+      if (api && key) {
+        if (action.hasAttribute("data-do-wallet-l1-quarantine-asset") && typeof api.add === "function") api.add(key);
+        else if (typeof api.hide === "function") api.hide(key);
+      }
+      schedule(0, action.hasAttribute("data-do-wallet-l1-quarantine-asset") ? "quarantine-asset" : "hide-asset");
+      return;
+    }
     var target = event.target && event.target.closest && event.target.closest("[data-do-wallet-l1-key],[data-do-wallet-l1-back]");
     if (!target) return;
     event.preventDefault();
@@ -13048,6 +13122,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     ].indexOf(event.key) >= 0) schedule(0, "storage");
   });
   window.addEventListener("do_wallet_portfolio_snapshot", function () { schedule(0, "snapshot"); });
+  window.addEventListener("do_wallet_quarantine_change", function () { schedule(0, "quarantine-change"); });
   window.addEventListener("load", function () { schedule(0, "load"); });
   window.addEventListener("focus", function () { schedule(0, "focus"); });
   window.addEventListener("resize", function () { schedule(0, "resize"); });
@@ -15251,6 +15326,7 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
   var PKEY='doWallet.quarantinePending.v1';
   var AKEY='doWallet.allowlist.v1';
   var UKEY='doWallet.userApprovals.v1';
+  var HKEY='doWallet.hiddenAssets.v1';
   var SKEY='doWalletQuarantineV1';
   var RURL='/static/approved-assets/top-500-coingecko-20260519.json?v=20260519a';
   var registry=null;
@@ -15270,7 +15346,7 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
   function storeCtx(){
     var store=safeObj(read(SKEY,{byWallet:{}})); store.byWallet=safeObj(store.byWallet);
     var key=walletKey(), b=safeObj(store.byWallet[key]);
-    b.approved=unique(b.approved||[]); b.declined=unique(b.declined||[]); b.pending=safeObj(b.pending);
+    b.approved=unique(b.approved||[]); b.declined=unique(b.declined||[]); b.hidden=unique(b.hidden||[]); b.pending=safeObj(b.pending);
     store.byWallet[key]=b; return {store:store,key:key,bucket:b};
   }
   function saveCtx(ctx){ctx.store.byWallet[ctx.key]=ctx.bucket; write(SKEY,ctx.store); try{window.dispatchEvent(new CustomEvent('do_wallet_quarantine_change',{detail:{wallet:ctx.key}}));}catch(e){}}
@@ -15284,19 +15360,43 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
     var type=norm(item.type||'symbol'), chain=norm(item.chain||item.chainID||item.network||'global'), value=norm(item.value||item.contract||item.denom||item.symbol||item.token||item.id||'');
     return value ? [type,chain,value].join(':') : '';
   }
+  function keyForAsset(asset){
+    if(!asset)return'';
+    var chain=norm(asset.chain||asset.chainID||asset.chainId||asset.network||asset.networkID||asset.networkId||'global');
+    var contract=norm(asset.contract||asset.contractAddress||asset.tokenAddress||asset.address);
+    var denom=norm(asset.denom||asset.baseDenom||asset.token||asset.tokenId||asset.id||'');
+    var symbol=norm(asset.symbol||asset.ticker||asset.name||'');
+    if(contract&&(/^0x[0-9a-f]{40}$/i.test(contract)||contract.indexOf('terra1')===0||contract.indexOf('secret1')===0||contract.indexOf('do1')===0))return keyFor({type:'contract',chain:chain,value:contract});
+    if(denom)return keyFor({type:denom.length>24||denom.indexOf('/')>=0||denom.indexOf(':')>=0?'contract':'denom',chain:chain,value:denom});
+    if(symbol)return keyFor({type:'symbol',chain:chain,value:symbol});
+    return '';
+  }
+  function matchingKeysForAsset(asset){
+    var keys=[], base=keyForAsset(asset), chain=norm(asset&& (asset.chain||asset.chainID||asset.chainId||asset.network||asset.networkID||asset.networkId||'global')), symbol=norm(asset&& (asset.symbol||asset.ticker||asset.name)), denom=norm(asset&& (asset.denom||asset.baseDenom||asset.token||asset.tokenId||asset.id)), contract=norm(asset&& (asset.contract||asset.contractAddress||asset.tokenAddress||asset.address));
+    function add(k){k=norm(k); if(k&&keys.indexOf(k)<0)keys.push(k);}
+    add(base); add(chain?'chain:'+chain:'');
+    if(symbol){add('symbol:'+chain+':'+symbol); add('symbol:global:'+symbol);}
+    if(denom){add('denom:'+chain+':'+denom); add('denom:global:'+denom); add('contract:'+chain+':'+denom); add('contract:global:'+denom);}
+    if(contract){add('contract:'+chain+':'+contract); add('contract:global:'+contract);}
+    return keys;
+  }
   function keyParts(k){var p=norm(k).split(':'); if(p[0]==='chain')return {type:'chain',chain:p[1]||'',value:p[1]||''}; return {type:p[0]||'',chain:p[1]||'',value:p.slice(2).join(':')||p[1]||''};}
   function tokenFromKey(k){return keyParts(k).value;}
   function getQuarantine(){var c=storeCtx(); return unique((c.bucket.declined||[]).concat(read(QKEY,[]).filter(Boolean)));}
-  function setQuarantine(v){var c=storeCtx(); c.bucket.declined=unique(v); saveCtx(c); write(QKEY,unique(v)); renderQuarantinePage(); applyVisibilityFilters();}
+  function setQuarantine(v,rerender){var c=storeCtx(); c.bucket.declined=unique(v); saveCtx(c); write(QKEY,unique(v)); if(rerender!==false){renderQuarantinePage(); applyVisibilityFilters();}}
+  function getHidden(){var c=storeCtx(); return unique((c.bucket.hidden||[]).concat(read(HKEY,[]).filter(Boolean)));}
+  function setHidden(v,rerender){var c=storeCtx(); c.bucket.hidden=unique(v); saveCtx(c); if(rerender!==false){renderQuarantinePage(); applyVisibilityFilters();}}
+  function addHidden(item,rerender){var k=keyForAsset(item)||keyFor(item); if(!k)return false; var h=getHidden(); if(h.indexOf(k)<0)h.push(k); setHidden(h,rerender); return true;}
+  function removeHidden(k,rerender){k=norm(k); var next=getHidden().filter(function(x){return x!==k;}); write(HKEY,unique(read(HKEY,[]).filter(function(x){return norm(x)!==k;}))); setHidden(next,rerender); return true;}
   function getPending(){var c=storeCtx(); return unique(Object.keys(c.bucket.pending||{}).concat(read(PKEY,[]).filter(Boolean)));}
   function setPending(v){var c=storeCtx(); c.bucket.pending={}; unique(v).forEach(function(k){c.bucket.pending[k]={key:k,label:tokenFromKey(k)||k,source:'website',status:'pending',firstSeenAt:Date.now(),updatedAt:Date.now()};}); saveCtx(c); write(PKEY,unique(v)); renderQuarantinePage();}
   function getAllow(){var c=storeCtx(); return unique((c.bucket.approved||[]).concat(read(AKEY,[]).filter(Boolean)));}
   function addAllow(k){var c=storeCtx(); c.bucket.approved=unique((c.bucket.approved||[]).concat([k])); saveCtx(c); write(AKEY,unique(getAllow().concat([k])));}
   function getApprovals(){var x=read(UKEY,{}); return Array.isArray(x)?{}:x;}
   function addPending(item){var k=keyFor(item); if(!k||isKnownSafe(k))return false; var p=getPending(); if(p.indexOf(k)<0&&getQuarantine().indexOf(k)<0)p.push(k); setPending(p); return true;}
-  function addQuarantine(item,rerender){var k=keyFor(item); if(!k)return false; var q=getQuarantine(); if(q.indexOf(k)<0)q.push(k); setQuarantine(q); write(PKEY,getPending().filter(function(x){return x!==k;})); if(rerender!==false){renderQuarantinePage(); applyVisibilityFilters();} return true;}
-  function removeQuarantine(k,rerender){k=norm(k); write(QKEY,getQuarantine().filter(function(x){return x!==k;})); if(rerender!==false){renderQuarantinePage(); applyVisibilityFilters();}}
-  function setDecision(k,decision){k=norm(k); var a=getApprovals(); a[k]={decision:decision,updatedAt:new Date().toISOString()}; write(UKEY,a); if(decision==='approved'){addAllow(k); removeQuarantine(k,false); write(PKEY,getPending().filter(function(x){return x!==k;}));} if(decision==='declined'){addQuarantine(k,false);} renderQuarantinePage(); applyVisibilityFilters();}
+  function addQuarantine(item,rerender){var k=keyForAsset(item)||keyFor(item); if(!k)return false; var q=getQuarantine(); if(q.indexOf(k)<0)q.push(k); setQuarantine(q,false); write(PKEY,getPending().filter(function(x){return x!==k;})); removeHidden(k,false); if(rerender!==false){renderQuarantinePage(); applyVisibilityFilters();} return true;}
+  function removeQuarantine(k,rerender){k=norm(k); var c=storeCtx(); c.bucket.declined=unique((c.bucket.declined||[]).filter(function(x){return x!==k;})); saveCtx(c); write(QKEY,unique(read(QKEY,[]).filter(function(x){return norm(x)!==k;}))); if(rerender!==false){renderQuarantinePage(); applyVisibilityFilters();}}
+  function setDecision(k,decision){k=norm(k); var a=getApprovals(); a[k]={decision:decision,updatedAt:new Date().toISOString()}; write(UKEY,a); if(decision==='approved'){addAllow(k); removeQuarantine(k,false); removeHidden(k,false); write(PKEY,getPending().filter(function(x){return x!==k;}));} if(decision==='hidden'){addHidden(k,false); removeQuarantine(k,false);} if(decision==='declined'){addQuarantine(k,false);} renderQuarantinePage(); applyVisibilityFilters();}
   async function loadRegistry(){if(registry)return registry; try{var r=await fetch(RURL,{cache:'force-cache'}); registry=await r.json();}catch(e){registry={assets:[]};} return registry;}
   function isKnownSafe(k){
     k=norm(k); if(getAllow().indexOf(k)>=0)return true;
@@ -15304,8 +15404,16 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
     return false;
   }
   function isBlockedAsset(asset){
-    var chain=norm(asset&& (asset.chain||asset.chainID)); var denom=norm(asset&& (asset.denom||asset.token||asset.contract||asset.symbol));
-    return getQuarantine().some(function(k){var p=keyParts(k); return p.value && (!p.chain||p.chain==='global'||p.chain===chain) && (p.value===denom || denom.indexOf(p.value)>=0);});
+    var matches=matchingKeysForAsset(asset), q=getQuarantine();
+    if(matches.some(function(k){return q.indexOf(k)>=0;}))return true;
+    var chain=norm(asset&& (asset.chain||asset.chainID||asset.chainId||asset.network)); var values=matchingKeysForAsset(asset).map(tokenFromKey).filter(Boolean);
+    return q.some(function(k){var p=keyParts(k); return p.value && (!p.chain||p.chain==='global'||p.chain===chain) && values.some(function(v){return v===p.value || v.indexOf(p.value)>=0;});});
+  }
+  function isHiddenAsset(asset){
+    var matches=matchingKeysForAsset(asset), h=getHidden();
+    if(matches.some(function(k){return h.indexOf(k)>=0;}))return true;
+    var chain=norm(asset&& (asset.chain||asset.chainID||asset.chainId||asset.network)); var values=matches.map(tokenFromKey).filter(Boolean);
+    return h.some(function(k){var p=keyParts(k); return p.value && (!p.chain||p.chain==='global'||p.chain===chain) && values.some(function(v){return v===p.value || v.indexOf(p.value)>=0;});});
   }
   function maybeFlagAsset(asset){
     var k=keyFor(asset); if(!k||isKnownSafe(k))return false;
@@ -15366,8 +15474,8 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
   function hideMainChildren(root,hide){Array.prototype.forEach.call(root.children,function(el){if(el.id!=='doq-page')el.classList.toggle('doq-hidden',hide);});}
   function showPortfolio(){var main=findMain(), page=document.getElementById('doq-page'); if(main)hideMainChildren(main,false); if(page)page.classList.add('doq-hidden'); var side=document.getElementById('doq-side'); if(side)side.classList.remove('active');}
   function showQuarantine(){installStyles(); var main=findMain(); if(!main)return; var page=document.getElementById('doq-page'); if(!page){page=document.createElement('div'); page.id='doq-page'; main.insertBefore(page,main.firstChild);} hideMainChildren(main,true); page.classList.remove('doq-hidden'); var side=document.getElementById('doq-side'); if(side)side.classList.add('active'); renderQuarantinePage();}
-  function rowHtml(row){var pill=row.status==='declined'?'bad':'warn'; return '<tr><td><strong>'+esc(row.asset)+'</strong><div class="doq-small">'+esc(row.chain)+'</div></td><td>'+esc(row.reason)+'</td><td><span class="doq-pill '+pill+'">'+esc(row.status)+'</span></td><td class="doq-key">'+esc(row.key)+'</td><td><button class="doq-btn primary" data-approve="'+encodeURIComponent(row.key)+'">Approve</button> <button class="doq-btn danger" data-decline="'+encodeURIComponent(row.key)+'">Decline</button></td></tr>';}
-  async function buildRows(){await loadRegistry(); var approvals=getApprovals(), pending=getPending(), quarantine=getQuarantine(), rows=[]; pending.forEach(function(k){if(approvals[k]&&approvals[k].decision==='approved')return; var p=keyParts(k); rows.push({asset:p.value||k,chain:p.chain||'global',reason:'Suspicious or unknown received asset',status:'pending review',key:k});}); quarantine.forEach(function(k){var p=keyParts(k); rows.push({asset:p.value||k,chain:p.chain||'global',reason:'User declined or blocked asset',status:'declined',key:k});}); return rows.filter(function(r,i,a){return a.findIndex(function(x){return x.key===r.key;})===i;});}
+  function rowHtml(row){var pill=row.status==='declined'?'bad':row.status==='hidden'?'':'warn'; var actions=row.status==='hidden'?'<button class="doq-btn primary" data-restore="'+encodeURIComponent(row.key)+'">Restore</button> <button class="doq-btn danger" data-decline="'+encodeURIComponent(row.key)+'">Quarantine</button>':'<button class="doq-btn primary" data-approve="'+encodeURIComponent(row.key)+'">Approve</button> <button class="doq-btn danger" data-decline="'+encodeURIComponent(row.key)+'">Decline</button>'; return '<tr><td><strong>'+esc(row.asset)+'</strong><div class="doq-small">'+esc(row.chain)+'</div></td><td>'+esc(row.reason)+'</td><td><span class="doq-pill '+pill+'">'+esc(row.status)+'</span></td><td class="doq-key">'+esc(row.key)+'</td><td>'+actions+'</td></tr>';}
+  async function buildRows(){await loadRegistry(); var approvals=getApprovals(), pending=getPending(), quarantine=getQuarantine(), hidden=getHidden(), rows=[]; pending.forEach(function(k){if(approvals[k]&&approvals[k].decision==='approved')return; var p=keyParts(k); rows.push({asset:p.value||k,chain:p.chain||'global',reason:'Suspicious or unknown received asset',status:'pending review',key:k});}); quarantine.forEach(function(k){var p=keyParts(k); rows.push({asset:p.value||k,chain:p.chain||'global',reason:'User declined or blocked asset',status:'declined',key:k});}); hidden.forEach(function(k){if(quarantine.indexOf(k)>=0)return; var p=keyParts(k); rows.push({asset:p.value||k,chain:p.chain||'global',reason:'Hidden from wallet views by this user',status:'hidden',key:k});}); return rows.filter(function(r,i,a){return a.findIndex(function(x){return x.key===r.key;})===i;});}
   async function renderQuarantinePage(){var page=document.getElementById('doq-page'); if(!page)return; page.innerHTML='<div class="doq-page"><h1>Quarantine</h1><section class="doq-panel"><h2>Suspicious assets inbox</h2><p>This page only shows coins/contracts that look risky or have been declined by this user. Known safe L1/L2 assets and approved reference coins stay out of the inbox.</p><div class="doq-form"><input class="doq-input" id="doq-chain" placeholder="chain id, optional"><input class="doq-input" id="doq-value" placeholder="contract / denom / symbol"><button class="doq-btn danger" id="doq-add">Decline custom</button><button class="doq-btn" id="doq-back">Back</button></div><div class="doq-small">Approve shows the asset for this user. Decline hides it and blocks signing/interactions for this user.</div><div id="doq-table-wrap" class="doq-small">Loading quarantine inbox...</div></section></div>'; var rows=await buildRows(); var wrap=document.getElementById('doq-table-wrap'); if(!wrap)return; wrap.innerHTML=rows.length?'<table class="doq-table"><thead><tr><th>Asset</th><th>Reason</th><th>Status</th><th>Reference key</th><th>Action</th></tr></thead><tbody>'+rows.map(rowHtml).join('')+'</tbody></table>':'<div class="doq-empty">No suspicious assets detected. If a risky token arrives, it will appear here for this user to approve or decline.</div>';}
   function lowBalanceFilterEnabled(){
     var checks=Array.prototype.slice.call(document.querySelectorAll('input[type="checkbox"]'));
@@ -15407,11 +15515,12 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
     });
   }
   function applyVisibilityFilters(){
-    var q=getQuarantine().map(tokenFromKey).filter(Boolean);
-    if(q.length)Array.prototype.forEach.call(document.querySelectorAll('*'),function(el){if(el.children.length>3||el.closest('#doq-page'))return; var text=norm(el.textContent); if(text && q.some(function(v){return v.length>3 && text.indexOf(v)>=0;})) el.classList.add('doq-hidden');});
+    Array.prototype.forEach.call(document.querySelectorAll('[data-doq-asset-visibility-hidden="1"]'),function(el){el.classList.remove('doq-hidden'); el.removeAttribute('data-doq-asset-visibility-hidden');});
+    var q=getQuarantine().concat(getHidden()).map(tokenFromKey).filter(Boolean);
+    if(q.length)Array.prototype.forEach.call(document.querySelectorAll('*'),function(el){if(el.children.length>3||el.closest('#doq-page'))return; var text=norm(el.textContent); if(text && q.some(function(v){return v.length>3 && text.indexOf(v)>=0;})){el.setAttribute('data-doq-asset-visibility-hidden','1'); el.classList.add('doq-hidden');}});
     applyLowBalanceFilter();
   }
-  document.addEventListener('click',function(e){var side=e.target.closest&&e.target.closest('#doq-side'); var inPage=e.target.closest&&e.target.closest('#doq-page'); if(!side&&!inPage){var nav=e.target.closest&&e.target.closest('a,button'); if(nav)showPortfolio();} var b=e.target.closest&&e.target.closest('button'); if(!b)return; if(b.id==='doq-add'){var chain=document.getElementById('doq-chain'), value=document.getElementById('doq-value'); var raw=norm(value&&value.value); var type=raw.indexOf(':')>0?null:(raw.indexOf('0x')===0||raw.indexOf('1')>0?'contract':'symbol'); if(raw)setDecision(type?[type,chain&&chain.value||'global',raw].join(':'):raw,'declined'); if(value)value.value='';} if(b.id==='doq-back')showPortfolio(); if(b.dataset.approve)setDecision(decodeURIComponent(b.dataset.approve),'approved'); if(b.dataset.decline)setDecision(decodeURIComponent(b.dataset.decline),'declined');},true);
+  document.addEventListener('click',function(e){var side=e.target.closest&&e.target.closest('#doq-side'); var inPage=e.target.closest&&e.target.closest('#doq-page'); if(!side&&!inPage){var nav=e.target.closest&&e.target.closest('a,button'); if(nav)showPortfolio();} var b=e.target.closest&&e.target.closest('button'); if(!b)return; if(b.id==='doq-add'){var chain=document.getElementById('doq-chain'), value=document.getElementById('doq-value'); var raw=norm(value&&value.value); var type=raw.indexOf(':')>0?null:(raw.indexOf('0x')===0||raw.indexOf('1')>0?'contract':'symbol'); if(raw)setDecision(type?[type,chain&&chain.value||'global',raw].join(':'):raw,'declined'); if(value)value.value='';} if(b.id==='doq-back')showPortfolio(); if(b.dataset.approve)setDecision(decodeURIComponent(b.dataset.approve),'approved'); if(b.dataset.restore){removeHidden(decodeURIComponent(b.dataset.restore)); renderQuarantinePage(); applyVisibilityFilters();} if(b.dataset.decline)setDecision(decodeURIComponent(b.dataset.decline),'declined');},true);
   window.addEventListener('hashchange',showPortfolio); window.addEventListener('popstate',showPortfolio);
   function initOrdiSearchResult(){
     injectOrdiSearchResult();
@@ -15427,7 +15536,7 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
       window.addEventListener(name,function(){setTimeout(applyVisibilityFilters,300);});
     });
   }
-  seed(); window.doWalletQuarantine={addPending:addPending,flag:maybeFlagAsset,add:addQuarantine,remove:removeQuarantine,allow:function(x){setDecision(keyFor(x),'approved')},decline:function(x){setDecision(keyFor(x),'declined')},list:getQuarantine,pending:getPending,allowlist:getAllow,decisions:getApprovals,isBlockedAsset:isBlockedAsset,scanTx:scanTx,assertAllowedTx:assertAllowedTx,show:showQuarantine};
+  seed(); window.doWalletQuarantine={addPending:addPending,flag:maybeFlagAsset,add:addQuarantine,remove:removeQuarantine,hide:addHidden,unhide:removeHidden,allow:function(x){setDecision(keyForAsset(x)||keyFor(x),'approved')},decline:function(x){setDecision(keyForAsset(x)||keyFor(x),'declined')},restore:function(x){removeHidden(keyForAsset(x)||keyFor(x));},keyFor:keyFor,keyForAsset:keyForAsset,list:getQuarantine,hidden:getHidden,pending:getPending,allowlist:getAllow,decisions:getApprovals,isHiddenAsset:isHiddenAsset,isBlockedAsset:isBlockedAsset,isVisibleAsset:function(asset){return !isHiddenAsset(asset)&&!isBlockedAsset(asset);},scanTx:scanTx,assertAllowedTx:assertAllowedTx,show:showQuarantine};
   wrapProviders(); window.addEventListener('focus',wrapProviders); window.addEventListener('pageshow',wrapProviders); document.addEventListener('visibilitychange',function(){if(!document.hidden)wrapProviders();}); if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',insertSideMenu); else insertSideMenu(); initOrdiSearchResult(); initVisibilityFilters();
 })();
 });
