@@ -2,7 +2,7 @@
   "name": "Do-Wallet",
   "version": "2.0.0",
   "date": "2026-06-26",
-  "build": "20260626SourceRuntime63",
+  "build": "20260626SourceRuntime64",
   "storagePolicy": "preserve-client-local-storage",
   "activeTree": "source/frontend",
   "styles": [
@@ -42,6 +42,7 @@
     "do-wallet-v2-amount-decimal-guard.js",
     "do-wallet-v2-validator-continuity.js",
     "do-wallet-v2-stake-chain-dropdown.js",
+    "do-wallet-v2-stake-balance-bridge.js",
     "do-wallet-v2-markets-insights.js",
     "do-wallet-v2-dashboard-overview-assets.js",
     "do-wallet-v2-broadcasting-video.js",

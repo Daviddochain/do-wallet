@@ -6,6 +6,8 @@
 
   var LCD_PREFIX = "/station-assets/lcd/";
   var API_LCD_PREFIX = "/station-assets/api/lcd/";
+  var PORTFOLIO_SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
+  var PORTFOLIO_SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var NODE_INFO_BOOT_DEFER_MS = 12000;
   var NODE_INFO_BOOT_UNTIL = Date.now() + NODE_INFO_BOOT_DEFER_MS;
   var NODE_INFO_LIVE_DURING_BOOT = {
@@ -231,6 +233,137 @@
     }
   }
 
+  function clean(value) {
+    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  }
+
+  function lower(value) {
+    return clean(value).toLowerCase();
+  }
+
+  function snapshotList() {
+    var out = [];
+    var seen = {};
+    function add(snapshot) {
+      if (!isObject(snapshot)) return;
+      var key = [snapshot.updatedAt || "", snapshot.walletKey || "", snapshot.source || ""].join("|");
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(snapshot);
+    }
+    add(readJSON(PORTFOLIO_SNAPSHOT_KEY, null));
+    var byWallet = readJSON(PORTFOLIO_SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) Object.keys(byWallet).forEach(function (key) { add(byWallet[key]); });
+    out.sort(function (a, b) { return Number(b.updatedAt || 0) - Number(a.updatedAt || 0); });
+    return out;
+  }
+
+  function flattenPortfolioRows(source, out) {
+    out = out || [];
+    if (!source) return out;
+    if (Array.isArray(source)) {
+      source.forEach(function (entry) {
+        flattenPortfolioRows(entry, out);
+      });
+      return out;
+    }
+    if (!isObject(source)) return out;
+    out.push(source);
+    ["assets", "childAssets", "children", "coins", "tokens", "rows", "expandedAssets", "groupedAssets"].forEach(function (key) {
+      if (Array.isArray(source[key])) flattenPortfolioRows(source[key], out);
+    });
+    return out;
+  }
+
+  function portfolioRows(snapshot) {
+    var keys = [
+      "flatSpendableAssets",
+      "unGroupedSpendableAssets",
+      "rawSpendableAssets",
+      "sourceSpendableAssets",
+      "rawTokenSpendableAssets",
+      "spendableAssets",
+      "portfolioPanelAssets",
+      "assets"
+    ];
+    var rows = [];
+    keys.forEach(function (key) {
+      if (Array.isArray(snapshot && snapshot[key])) flattenPortfolioRows(snapshot[key], rows);
+    });
+    return rows;
+  }
+
+  function decimalToAtomic(value, decimals) {
+    var text = clean(value).replace(/,/g, "");
+    if (!/^\d+(?:\.\d+)?$/.test(text)) return "0";
+    decimals = Math.max(0, Number(decimals) || 0);
+    var parts = text.split(".");
+    var whole = parts[0] || "0";
+    var fraction = (parts[1] || "").slice(0, decimals);
+    while (fraction.length < decimals) fraction += "0";
+    return (whole + fraction).replace(/^0+(?=\d)/, "") || "0";
+  }
+
+  function rowAtomicAmount(row) {
+    if (!row) return "0";
+    var raw = clean(row.rawAmount || row.atomicAmount || row.amountRaw || "");
+    if (/^\d+$/.test(raw)) return raw;
+    var amount = row.amount;
+    if (isObject(amount) && amount.amount != null) amount = amount.amount;
+    if (amount == null || amount === "") amount = row.quantity;
+    if (amount == null || amount === "") amount = row.balance;
+    if (isObject(amount) && amount.amount != null) amount = amount.amount;
+    return decimalToAtomic(amount, row.decimals != null ? row.decimals : 6);
+  }
+
+  function snapshotBankCoins(chainID, address) {
+    chainID = clean(chainID);
+    address = lower(address);
+    if (!chainID) return [];
+    var snapshots = snapshotList();
+    for (var index = 0; index < snapshots.length; index += 1) {
+      var seen = {};
+      var coins = [];
+      portfolioRows(snapshots[index]).forEach(function (row) {
+        if (!row) return;
+        var rowChain = clean(row.chainID || row.chainId || row.network || row.chain || row.chainKey);
+        if (rowChain !== chainID) return;
+        var category = lower(row.category || row.type || "wallet");
+        if (/staking|staked|reward|unbonding|delegation/.test(category)) return;
+        var rowAddress = lower(row.walletAddress || row.address || "");
+        if (address && rowAddress && rowAddress !== address) return;
+        var denom = clean(row.denom || row.token || row.baseDenom || "");
+        if (!denom || /^terra1/i.test(denom)) return;
+        var amount = rowAtomicAmount(row);
+        if (!/^\d+$/.test(amount) || amount === "0") return;
+        var key = [denom, rowAddress].join("|");
+        if (seen[key]) return;
+        seen[key] = true;
+        coins.push({ denom: denom, amount: amount });
+      });
+      if (coins.length) return coins;
+    }
+    return [];
+  }
+
+  function snapshotBankFallback(url, byDenom) {
+    var match = url.pathname.match(/^\/station-assets\/api\/lcd\/([^/]+)\/cosmos\/bank\/v1beta1\/balances\/([^/]+)(?:\/by_denom)?$/i);
+    if (!match) return null;
+    var chainID = decodeURIComponent(match[1] || "");
+    var address = decodeURIComponent(match[2] || "");
+    var coins = snapshotBankCoins(chainID, address);
+    if (!coins.length) return null;
+    if (byDenom) {
+      var denom = clean(url.searchParams.get("denom") || "");
+      var coin = coins.find(function (entry) { return entry.denom === denom; }) || { denom: denom, amount: "0" };
+      return jsonResponse(JSON.stringify({ balance: coin }), "snapshot-bank-balance");
+    }
+    return jsonResponse(JSON.stringify({
+      balances: coins,
+      pagination: { next_key: null, total: String(coins.length) }
+    }), "snapshot-bank-balances");
+  }
+
   function nodeInfoChainIDFromInput(input) {
     try {
       var value = typeof input === "string" ? input : input && input.url;
@@ -285,6 +418,8 @@
     if (url.pathname.indexOf(API_LCD_PREFIX) !== 0) return null;
 
     if (/\/cosmos\/bank\/v1beta1\/balances\/[^/]+$/i.test(url.pathname)) {
+      var snapshotBalances = snapshotBankFallback(url, false);
+      if (snapshotBalances) return snapshotBalances;
       return jsonResponse(JSON.stringify({
         balances: [],
         pagination: { next_key: null, total: "0" }
@@ -293,6 +428,8 @@
 
     var balanceByDenom = url.pathname.match(/\/cosmos\/bank\/v1beta1\/balances\/[^/]+\/by_denom$/i);
     if (balanceByDenom) {
+      var snapshotBalance = snapshotBankFallback(url, true);
+      if (snapshotBalance) return snapshotBalance;
       return jsonResponse(JSON.stringify({
         balance: { denom: url.searchParams.get("denom") || "", amount: "0" }
       }), "empty-bank-balance");
