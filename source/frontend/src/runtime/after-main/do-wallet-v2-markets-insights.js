@@ -198,6 +198,11 @@
       ".do-wallet-markets-card-chart{margin-top:10px;display:grid;gap:5px;min-height:44px}",
       ".do-wallet-markets-card-chart svg{display:block;width:100%;height:36px;overflow:visible}",
       ".do-wallet-markets-card-chart-caption{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#c8b9ee;font-size:11px;font-weight:600;line-height:1.2}",
+      ".do-wallet-markets-card-chart-meta{display:inline-flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}",
+      ".do-wallet-markets-card-day-change{font-size:11px;font-weight:800;line-height:1.2;white-space:nowrap}",
+      ".do-wallet-markets-card-day-change--up{color:#22d7aa}",
+      ".do-wallet-markets-card-day-change--down{color:#ff4f5e}",
+      ".do-wallet-markets-card-day-change--flat{color:#c8b9ee}",
       ".do-wallet-markets-card-action{margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#fff;font-size:12px;font-weight:700;line-height:1.2}",
       ".do-wallet-markets-card-action span:last-child{color:#22d7aa}",
       ".do-wallet-markets-gainers-panel{border-top:1px solid rgba(159,70,255,.28);border-bottom:1px solid rgba(159,70,255,.28);background:#20152f;padding:18px 20px}",
@@ -274,7 +279,32 @@
     return "<svg viewBox=\"0 0 " + width + " " + height + "\" role=\"img\" aria-label=\"Top loaded market values\"><defs><linearGradient id=\"" + id + "\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"" + startColor + "\"/><stop offset=\"1\" stop-color=\"" + endColor + "\"/></linearGradient></defs>" + rects + "</svg>";
   }
 
-  function updateChart(card, id, label, totalText, svg) {
+  function formatPercent(value) {
+    var amount = number(value);
+    var text = amount.toFixed(2).replace(/\.00$/, "");
+    return (amount > 0 ? "+" : "") + text + "%";
+  }
+
+  function changeClass(value) {
+    var amount = number(value);
+    if (amount > 0.000001) return "do-wallet-markets-card-day-change--up";
+    if (amount < -0.000001) return "do-wallet-markets-card-day-change--down";
+    return "do-wallet-markets-card-day-change--flat";
+  }
+
+  function weightedDayChange(rows, weightKey) {
+    var totalWeight = 0;
+    var weighted = 0;
+    rows.forEach(function (row) {
+      var weight = number(row && row[weightKey]);
+      if (!(weight > 0)) return;
+      totalWeight += weight;
+      weighted += weight * number(row.change24h);
+    });
+    return totalWeight > 0 ? weighted / totalWeight : 0;
+  }
+
+  function updateChart(card, id, label, totalText, dayChange, svg) {
     if (!card || !svg) return;
     card.setAttribute(CARD_ATTR, "1");
     var chart = card.querySelector("[" + CHART_ATTR + "='" + id + "']");
@@ -284,10 +314,12 @@
       chart.setAttribute(CHART_ATTR, id);
       card.appendChild(chart);
     }
-    var signature = label + "|" + totalText + "|" + svg;
+    var dayChangeText = formatPercent(dayChange) + " 24h";
+    var dayChangeHtml = "<span class=\"do-wallet-markets-card-day-change " + changeClass(dayChange) + "\">" + escapeHtml(dayChangeText) + "</span>";
+    var signature = label + "|" + totalText + "|" + dayChangeText + "|" + svg;
     if (chart.getAttribute("data-signature") === signature) return;
     chart.setAttribute("data-signature", signature);
-    chart.innerHTML = svg + "<div class=\"do-wallet-markets-card-chart-caption\"><span>" + escapeHtml(label) + "</span><span>" + escapeHtml(totalText) + "</span></div>";
+    chart.innerHTML = svg + "<div class=\"do-wallet-markets-card-chart-caption\"><span>" + escapeHtml(label) + "</span><span class=\"do-wallet-markets-card-chart-meta\">" + dayChangeHtml + "<span>" + escapeHtml(totalText) + "</span></span></div>";
   }
 
   function gainers(rows) {
@@ -406,12 +438,15 @@
 
     var totalVolume = rows.reduce(function (sum, row) { return sum + number(row.volume); }, 0);
     var totalMarketCap = rows.reduce(function (sum, row) { return sum + number(row.marketCap); }, 0);
+    var volumeDayChange = weightedDayChange(rows, "volume");
+    var marketCapDayChange = weightedDayChange(rows, "marketCap");
 
     updateChart(
       findCard(grid, "Loaded 24h volume"),
       "volume",
       "Top loaded volumes",
       compactMoney(totalVolume),
+      volumeDayChange,
       chartSvg(rows, "volume", "do-wallet-markets-volume-gradient", "#a33fff", "#22d7aa")
     );
     updateChart(
@@ -419,6 +454,7 @@
       "market-cap",
       "Top loaded caps",
       compactMoney(totalMarketCap),
+      marketCapDayChange,
       chartSvg(rows, "marketCap", "do-wallet-markets-cap-gradient", "#ffb21a", "#a33fff")
     );
     updateGainersCard(findCard(grid, "24h gainers"), rows);
