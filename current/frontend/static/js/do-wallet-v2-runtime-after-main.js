@@ -3303,6 +3303,7 @@ runModule("do-wallet-v2-burn-dodx.js", function(){
   var NAV_CLASS = "dochain-do-burn-nav-link";
   var WALLET_OPEN_TARGET = "dochain-do-burn-dodx";
   var WALLET_OPEN_TYPE = "OPEN_WALLET_POPUP";
+  var burnRouteRetryToken = 0;
 
   var tiers = [
     { id: 1, from: 50000000000n, to: 60000000000n, doPerDodx: 2500000000n },
@@ -3894,8 +3895,13 @@ runModule("do-wallet-v2-burn-dodx.js", function(){
   }
 
   function retryBurnPage(pushRoute) {
+    var token = ++burnRouteRetryToken;
     [0, 50, 150, 350, 750, 1500, 3000].forEach(function (delay) {
-      window.setTimeout(function () { renderBurnPage(pushRoute); }, delay);
+      window.setTimeout(function () {
+        if (token !== burnRouteRetryToken) return;
+        if (pushRoute && !isBurnRoute()) return;
+        renderBurnPage(pushRoute);
+      }, delay);
     });
   }
 
@@ -4155,6 +4161,8 @@ runModule("do-wallet-v2-burn-dodx.js", function(){
       var params = new URLSearchParams(window.location.search);
       if (params.get("burn-do") === "1" || isBurnRoute()) {
         retryBurnPage(true);
+      } else {
+        burnRouteRetryToken += 1;
       }
     } catch (error) {}
   }
