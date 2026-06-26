@@ -2,7 +2,7 @@
   "name": "Do-Wallet",
   "version": "2.0.0",
   "date": "2026-06-26",
-  "build": "20260626SourceRuntime68",
+  "build": "20260626SourceRuntime69",
   "storagePolicy": "preserve-client-local-storage",
   "activeTree": "source/frontend",
   "styles": [
@@ -53,6 +53,7 @@
     "do-wallet-v2-swap-redemption.js",
     "do-wallet-v2-onramper-config.js",
     "do-wallet-v2-onramper-ramp.js",
+    "do-wallet-v2-mobile-connect.js",
     "do-wallet-v2-delete-extension-sync.js"
   ],
   "standaloneAfterMain": [

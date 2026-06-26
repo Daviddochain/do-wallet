@@ -1719,6 +1719,20 @@
           export: chain.export
         };
       });
+      window.doWalletSeedWalletsForReveal = window.doWalletSeedWalletsForReveal || function () {
+        return seedWalletsForReveal().map(function (wallet) {
+          return {
+            name: text(wallet.name || wallet.walletName) || "Do-Wallet",
+            walletName: text(wallet.walletName || wallet.name) || "Do-Wallet",
+            address: primaryAddress(wallet),
+            walletIndex: wallet.__seedRevealIndex,
+            source: wallet.__seedRevealSource,
+            seedToken: wallet.__seedRevealToken,
+            status: wallet.__seedRevealStatus,
+            canReveal: Boolean(wallet.encryptedSeed && wallet.encryptedMnemonic)
+          };
+        });
+      };
       window.doWalletRevealMasterSeedPhrase = window.doWalletRevealMasterSeedPhrase || revealMasterSeedPhrase;
       window.doWalletRevealSeedPhrase = window.doWalletRevealSeedPhrase || window.doWalletRevealMasterSeedPhrase;
       document.documentElement.setAttribute("data-do-wallet-all-chain-count", String(DERIVED_CHAIN_EXPORTS.length));
