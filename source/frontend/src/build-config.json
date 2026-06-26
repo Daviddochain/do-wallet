@@ -1,8 +1,8 @@
 {
   "name": "Do-Wallet",
   "version": "2.0.0",
-  "date": "2026-06-25",
-  "build": "20260625SourceRuntime58",
+  "date": "2026-06-26",
+  "build": "20260626SourceRuntime59",
   "storagePolicy": "preserve-client-local-storage",
   "activeTree": "source/frontend",
   "styles": [
@@ -33,7 +33,6 @@
     "do-wallet-v2-multichain-assets.js",
     "do-wallet-v2-l1-portfolio-assets.js",
     "do-wallet-v2-markets-data.js",
-    "do-wallet-v2-stake-snapshot.js",
     "do-wallet-v2-receive-addresses.js",
     "do-wallet-v2-quarantine-permissions.js",
     "do-wallet-v2-mfa-approval.js"
@@ -42,6 +41,7 @@
   "afterMain": [
     "do-wallet-v2-amount-decimal-guard.js",
     "do-wallet-v2-validator-continuity.js",
+    "do-wallet-v2-stake-chain-dropdown.js",
     "do-wallet-v2-dashboard-overview-assets.js",
     "do-wallet-v2-broadcasting-video.js",
     "do-wallet-v2-website-tx-approval.js",
