@@ -1638,13 +1638,13 @@ runModule("do-wallet-v2-stake-balance-bridge.js", function(){
 (function () {
   "use strict";
 
-  if (window.__doWalletStakeBalanceBridge20260626) return;
-  window.__doWalletStakeBalanceBridge20260626 = true;
+  if (window.__doWalletStakeBalanceBridge20260627) return;
+  window.__doWalletStakeBalanceBridge20260627 = true;
 
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-stake-balance-bridge-style";
-  var VERSION = "20260626-stake-balance-bridge-2";
+  var VERSION = "20260627-stake-balance-bridge-3";
   var APPLY_DELAY_MS = 80;
   var applyTimer = 0;
 
@@ -1667,6 +1667,43 @@ runModule("do-wallet-v2-stake-balance-bridge.js", function(){
     DGN: { chainID: "dungeon-1", denom: "udgn", decimals: 6 }
   };
 
+  var CHAIN_ALIASES = {
+    "do": "Do-Chain",
+    "do-chain": "Do-Chain",
+    "dochain": "Do-Chain",
+    "dochain-1": "Do-Chain",
+    "do-main-1": "Do-Chain",
+    "888": "Do-Chain",
+    "terra-classic": "columbus-5",
+    "terra-classic-lunc": "columbus-5",
+    "lunc": "columbus-5",
+    "columbus-5": "columbus-5",
+    "terra": "phoenix-1",
+    "terra-luna": "phoenix-1",
+    "luna": "phoenix-1",
+    "phoenix-1": "phoenix-1",
+    "osmosis": "osmosis-1",
+    "osmo": "osmosis-1",
+    "osmosis-1": "osmosis-1"
+  };
+
+  var DENOM_SYMBOLS = {
+    udo: "DO",
+    uluna: "LUNC",
+    uusd: "UST",
+    ukrw: "KRT",
+    uidr: "IDT",
+    umyr: "MYT",
+    uthb: "THT",
+    ujpy: "JPT",
+    uosmo: "OSMO",
+    uatom: "ATOM",
+    ujuno: "JUNO",
+    uakt: "AKT",
+    uscrt: "SCRT",
+    udgn: "DGN"
+  };
+
   function clean(value) {
     return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
   }
@@ -1677,6 +1714,20 @@ runModule("do-wallet-v2-stake-balance-bridge.js", function(){
 
   function upper(value) {
     return clean(value).toUpperCase();
+  }
+
+  function keyOf(value) {
+    return lower(value)
+      .replace(/&/g, "and")
+      .replace(/[()]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function canonicalChainID(value) {
+    var raw = clean(value);
+    if (!raw) return "";
+    return CHAIN_ALIASES[keyOf(raw)] || raw;
   }
 
   function isObject(value) {
@@ -1732,7 +1783,18 @@ runModule("do-wallet-v2-stake-balance-bridge.js", function(){
   }
 
   function amountFromRow(row) {
-    var directKeys = ["amount", "quantity", "balance", "displayAmount", "tokenAmount", "amountValue"];
+    var directKeys = [
+      "amount",
+      "quantity",
+      "balance",
+      "displayAmount",
+      "tokenAmount",
+      "amountValue",
+      "amountText",
+      "quantityText",
+      "balanceText",
+      "tokenAmountText"
+    ];
     for (var index = 0; index < directKeys.length; index += 1) {
       var value = row && row[directKeys[index]];
       if (value == null || value === "") continue;
@@ -1773,29 +1835,43 @@ runModule("do-wallet-v2-stake-balance-bridge.js", function(){
 
   function symbolOf(row) {
     var symbol = upper(row && (row.symbol || row.tokenSymbol || row.ticker || ""));
+    if (symbol === "UDO") return "DO";
     if (symbol === "TERRA CLASSIC USD") return "UST";
     if (symbol === "TERRA CLASSIC (LUNC)") return "LUNC";
     if (symbol) return symbol;
     var name = upper(row && row.name);
+    if (/^DO(?: CHAIN| TOKEN)?$|\bDO CHAIN\b|\bDO TOKEN\b/.test(name)) return "DO";
     if (/TERRA CLASSIC \(LUNC\)|\bLUNC\b/.test(name)) return "LUNC";
     if (/TERRA CLASSIC USD|\bUSTC?\b/.test(name)) return "UST";
-    var denom = lower(row && (row.denom || row.token || row.baseDenom || row.contract));
-    if (denom === "uluna" && chainIdOf(row) === "columbus-5") return "LUNC";
-    if (denom === "uusd") return "UST";
-    if (denom === "ukrw") return "KRT";
-    if (denom === "uidr") return "IDT";
-    if (denom === "umyr") return "MYT";
-    if (denom === "uthb") return "THT";
-    if (denom === "ujpy") return "JPT";
+    var denom = denomOf(row);
+    if (denom === "uluna") return chainIdOf(row) === "phoenix-1" ? "LUNA" : "LUNC";
+    if (DENOM_SYMBOLS[denom]) return DENOM_SYMBOLS[denom];
     return upper(denom);
   }
 
   function chainIdOf(row) {
-    return clean(row && (row.chainID || row.chainId || row.network || row.chain || row.chainKey));
+    var value = row && (row.chainID || row.chainId || row.network || row.chain || row.chainKey || row.chainName || row.networkName);
+    if (!value && row && /\bdo\s+(chain|token)\b/i.test(clean(row.name))) value = "Do-Chain";
+    if (!value && row && /(^|[:\s-])do(?:chain|-chain)?([:\s-]|$)/i.test(clean(row.id))) value = "Do-Chain";
+    return canonicalChainID(value);
+  }
+
+  function denomFromCompound(value) {
+    var text = lower(value);
+    if (!text) return "";
+    var denoms = Object.keys(DENOM_SYMBOLS).sort(function (a, b) { return b.length - a.length; });
+    for (var index = 0; index < denoms.length; index += 1) {
+      var denom = denoms[index];
+      if (text === denom || new RegExp("(^|[^a-z0-9])" + denom + "([^a-z0-9]|$)", "i").test(text)) return denom;
+    }
+    return "";
   }
 
   function denomOf(row) {
-    return lower(row && (row.denom || row.token || row.baseDenom || row.contract || row.id));
+    var direct = lower(row && (row.denom || row.token || row.baseDenom || row.tokenDenom || row.minimalDenom || row.contract));
+    if (DENOM_SYMBOLS[direct]) return direct;
+    var compound = denomFromCompound(direct) || denomFromCompound(row && row.id);
+    return compound || direct;
   }
 
   function categoryOf(row) {
@@ -1856,11 +1932,16 @@ runModule("do-wallet-v2-stake-balance-bridge.js", function(){
     var rowSymbol = symbolOf(row);
     var rowChain = chainIdOf(row);
     var rowDenom = denomOf(row);
+    var metaChain = canonicalChainID(meta.chainID);
+    if (symbol === "DO") {
+      var doLike = rowDenom === "udo" || rowSymbol === "DO" || /\bdo\s+(chain|token)\b/i.test(clean(row && row.name));
+      return doLike && (!rowChain || rowChain === "Do-Chain");
+    }
     if (symbol === "LUNC") {
       return (rowChain === "columbus-5" || /terra classic|lunc/i.test(clean(row && (row.chainName || row.networkName || row.name)))) &&
         (rowDenom === "uluna" || rowSymbol === "LUNC");
     }
-    if (meta.chainID && rowChain && rowChain !== meta.chainID) return false;
+    if (metaChain && rowChain && rowChain !== metaChain) return false;
     if (meta.denom && rowDenom && rowDenom !== meta.denom && rowSymbol !== symbol) return false;
     return rowSymbol === symbol || rowDenom === lower(meta.denom || symbol);
   }
