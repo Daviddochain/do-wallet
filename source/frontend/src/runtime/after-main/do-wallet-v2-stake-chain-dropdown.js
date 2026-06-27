@@ -4,7 +4,7 @@
   if (window.__doWalletStakeOverview20260627) return;
   window.__doWalletStakeOverview20260627 = true;
 
-  var VERSION = "20260627-stake-overview-1";
+  var VERSION = "20260627-stake-overview-2";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-stake-overview-style";
@@ -13,9 +13,9 @@
   var RENDER_DELAY_MS = 140;
   var renderTimer = 0;
   var selectedChain = "all";
-  var directDoRows = [];
-  var directDoFetchKey = "";
-  var directDoFetching = false;
+  var directStakeRows = [];
+  var directStakeFetchKey = "";
+  var directStakeFetching = false;
 
   var CHAIN_META = {
     "Do-Chain": { name: "Do Chain", symbol: "DO", denom: "udo", icon: "/do-logo.jpg", price: 1.273e-9 },
@@ -45,7 +45,30 @@
     "terra": "phoenix-1",
     "luna": "phoenix-1",
     "terra-luna": "phoenix-1",
-    "phoenix-1": "phoenix-1"
+    "phoenix-1": "phoenix-1",
+    "cosmos": "cosmoshub-4",
+    "atom": "cosmoshub-4",
+    "cosmoshub-4": "cosmoshub-4",
+    "juno": "juno-1",
+    "juno-1": "juno-1",
+    "akash": "akashnet-2",
+    "akt": "akashnet-2",
+    "akashnet-2": "akashnet-2",
+    "secret": "secret-4",
+    "scrt": "secret-4",
+    "secret-4": "secret-4",
+    "dungeon": "dungeon-1",
+    "dungeon-chain": "dungeon-1",
+    "dungeon-1": "dungeon-1",
+    "chihuahua": "chihuahua-1",
+    "huahua": "chihuahua-1",
+    "chihuahua-1": "chihuahua-1",
+    "stargaze": "stargaze-1",
+    "stars": "stargaze-1",
+    "stargaze-1": "stargaze-1",
+    "injective": "injective-1",
+    "inj": "injective-1",
+    "injective-1": "injective-1"
   };
 
   var DENOM_SYMBOLS = {
@@ -62,7 +85,12 @@
     uatom: "ATOM",
     ujuno: "JUNO",
     uakt: "AKT",
-    uscrt: "SCRT"
+    uscrt: "SCRT",
+    udgn: "DGN",
+    uhuahua: "HUAHUA",
+    ustars: "STARS",
+    inj: "INJ",
+    factory: "TOKEN"
   };
 
   var CATEGORY_LABELS = {
@@ -213,6 +241,80 @@
   function chainMeta(chainID) {
     chainID = canonicalChainID(chainID);
     return CHAIN_META[chainID] || { name: chainID || "Unknown chain", symbol: "", denom: "", icon: "" };
+  }
+
+  function currentChains() {
+    try {
+      var service = window.doWalletMultichainAssets;
+      var chains = service && typeof service.chains === "function" ? service.chains() : null;
+      if (isObject(chains) && Object.keys(chains).length) return chains;
+    } catch (error) {}
+    var fallback = {};
+    Object.keys(CHAIN_META).forEach(function (chainID) {
+      fallback[chainID] = {
+        chainID: chainID,
+        name: CHAIN_META[chainID].name,
+        symbol: CHAIN_META[chainID].symbol,
+        prefix: chainID === "Do-Chain" ? "do" : "",
+        baseAsset: CHAIN_META[chainID].denom,
+        icon: CHAIN_META[chainID].icon
+      };
+    });
+    return fallback;
+  }
+
+  function requestChainCatalogLoad() {
+    try {
+      var service = window.doWalletMultichainAssets;
+      if (service && typeof service.loadChainCatalog === "function") service.loadChainCatalog();
+    } catch (error) {}
+  }
+
+  function chainForID(chainID) {
+    var chains = currentChains();
+    return chains[canonicalChainID(chainID)] || chains[chainID] || null;
+  }
+
+  function chainNameFromChain(chainID, chain) {
+    return clean(chain && (chain.name || chain.chainName || chain.label)) || chainMeta(chainID).name || chainID;
+  }
+
+  function chainIconFromChain(chainID, chain) {
+    return clean(chain && (chain.icon || chain.logo || chain.image)) || chainMeta(chainID).icon || "";
+  }
+
+  function nativeDenom(chainID, chain) {
+    return clean(chain && (chain.baseAsset || chain.denom || chain.token || chain.minimalDenom)) ||
+      chainMeta(chainID).denom ||
+      "";
+  }
+
+  function nativeSymbol(chainID, chain, denom) {
+    var symbol = upper(chain && (chain.symbol || chain.tokenSymbol || chain.ticker || ""));
+    if (symbol) return symbol === "UDO" ? "DO" : symbol;
+    denom = lower(denom);
+    if (chainID === "phoenix-1" && denom === "uluna") return "LUNA";
+    return DENOM_SYMBOLS[denom] || upper((denom || chainMeta(chainID).symbol || "").replace(/^u/, ""));
+  }
+
+  function bech32Prefix(value) {
+    var match = clean(value).match(/^([a-z][a-z0-9]{0,19})1[ac-hj-np-z02-9]{20,110}$/i);
+    return match ? lower(match[1]) : "";
+  }
+
+  function isCosmosStakeChain(chainID, chain) {
+    if (!isObject(chain)) return false;
+    if (lower(chain.networkType) === "testnet") return false;
+    if (chain.evm || chain.chainNamespace === "eip155" || chain.chainNamespace === "bip122" || chain.chainNamespace === "solana") return false;
+    return Boolean(chainID === "Do-Chain" || (clean(chain.prefix) && (chain.lcd || chain.api || chain.rpc || chain.baseAsset)));
+  }
+
+  function addressMatchesChain(chainID, chain, address) {
+    address = clean(address);
+    if (!address) return false;
+    if (chainID === "Do-Chain") return /^do1[ac-hj-np-z02-9]{20,110}$/i.test(address);
+    var expected = lower(chain && chain.prefix);
+    return Boolean(expected && bech32Prefix(address) === expected);
   }
 
   function symbolOf(asset, chainID, denom) {
@@ -429,48 +531,68 @@
     }));
   }
 
-  function collectDoAddresses() {
-    var out = [];
-    var seen = {};
-    function add(value) {
-      var match = clean(value).match(/\bdo1[ac-hj-np-z02-9]{20,90}\b/i);
-      if (!match) return;
-      var address = match[0];
-      var key = lower(address);
-      if (seen[key]) return;
-      seen[key] = true;
-      out.push(address);
-    }
-    [
+  function activeWalletPayloads() {
+    return [
       readJSON("do-wallet-selected-recovered-wallet.v1", null),
       readJSON("user", null),
       readJSON("do-wallet-bridge-wallet", null),
       readJSON("do-wallet-extension-authority.v1", null)
-    ].forEach(function (payload) {
+    ];
+  }
+
+  function collectStakeAddressQueries() {
+    requestChainCatalogLoad();
+    var chains = currentChains();
+    var out = [];
+    var seen = {};
+
+    function add(chainID, address) {
+      chainID = canonicalChainID(chainID);
+      var chain = chains[chainID] || chainForID(chainID);
+      address = clean(address);
+      if (!chainID || !chain || !isCosmosStakeChain(chainID, chain) || !addressMatchesChain(chainID, chain, address)) return;
+      var key = chainID + ":" + lower(address);
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push({ chainID: chainID, chain: chain, address: address });
+    }
+
+    function addMatchingChains(address) {
+      address = clean(address);
+      if (!address) return;
+      Object.keys(chains).forEach(function (chainID) {
+        add(chainID, address);
+      });
+    }
+
+    function addMap(map) {
+      if (!isObject(map)) return;
+      Object.keys(map).forEach(function (key) {
+        var chainID = canonicalChainID(key);
+        if (chains[chainID]) add(chainID, map[key]);
+        else addMatchingChains(map[key]);
+      });
+    }
+
+    activeWalletPayloads().forEach(function (payload) {
       var wallet = walletFromPayload(payload);
       if (!isObject(wallet)) return;
-      add(wallet.address);
-      add(wallet.doAddress);
-      add(wallet.doChainAddress);
-      [wallet.addresses, wallet.addressMap].forEach(function (map) {
-        if (!isObject(map)) return;
-        Object.keys(map).forEach(function (key) {
-          if (canonicalChainID(key) === "Do-Chain" || keyOf(key) === "do" || keyOf(key) === "888") add(map[key]);
-        });
-      });
+      addMatchingChains(wallet.address);
+      add("Do-Chain", wallet.doAddress || wallet.doChainAddress);
+      addMap(wallet.addresses);
+      addMap(wallet.addressMap);
     });
+
     collectSnapshots().forEach(function (snapshot) {
-      [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses].forEach(function (map) {
-        if (!isObject(map)) return;
-        Object.keys(map).forEach(function (key) {
-          if (canonicalChainID(key) === "Do-Chain") add(map[key]);
-        });
-      });
-      rawStakeRowsFromSnapshots().forEach(function (asset) {
-        if (chainIDOf(asset) === "Do-Chain") add(asset.walletAddress || asset.address);
-      });
+      addMap(snapshot.addresses);
+      addMap(snapshot.activeAddresses);
+      addMap(snapshot.allAddresses);
     });
-    return out;
+    rawStakeRowsFromSnapshots().forEach(function (asset) {
+      var chainID = chainIDOf(asset);
+      add(chainID, asset && (asset.walletAddress || asset.address));
+    });
+    return out.slice(0, 128);
   }
 
   function fetchJSON(url) {
@@ -483,50 +605,65 @@
     });
   }
 
-  function lcdURL(path) {
-    return "/station-assets/api/lcd/" + encodeURIComponent("Do-Chain") + path;
+  function fetchJSONSafe(url) {
+    return fetchJSON(url).catch(function () { return {}; });
+  }
+
+  function lcdURL(chainID, path) {
+    return "/station-assets/api/lcd/" + encodeURIComponent(chainID) + path;
   }
 
   function coinTotal(coins, denom) {
     return (Array.isArray(coins) ? coins : []).reduce(function (sum, coin) {
       if (!coin || lower(coin.denom) !== lower(denom)) return sum;
-      return sum + amountFromCoin(coin, 6);
+      return sum + amountFromCoin(coin, decimalsForDenom("", null, denom));
     }, 0);
   }
 
-  function valueForAmount(amount, denom) {
+  function decimalsForDenom(chainID, chain, denom) {
+    denom = lower(denom);
+    if (denom === "inj" || denom === "wei") return 18;
+    if (denom === "lamports") return 9;
+    var decimals = Number(chain && chain.decimals);
+    return Number.isFinite(decimals) ? decimals : 6;
+  }
+
+  function valueForAmount(amount, denom, chainID) {
     var rows = snapshotStakeRows();
     for (var index = 0; index < rows.length; index += 1) {
       var row = rows[index];
-      if (row.chainID !== "Do-Chain" || row.denom !== denom || !(row.amount > 0) || !(row.value > 0)) continue;
+      if (row.chainID !== chainID || row.denom !== denom || !(row.amount > 0) || !(row.value > 0)) continue;
       return amount * (row.value / row.amount);
     }
-    return amount * (CHAIN_META["Do-Chain"].price || 0);
+    var meta = chainMeta(chainID);
+    return amount * (meta.price || 0);
   }
 
-  function doRow(category, amount, address, validatorCount, validators) {
+  function stakeRow(category, chainID, chain, denom, amount, address, validatorCount, validators) {
     if (!(amount > 0)) return null;
-    var symbol = "DO";
-    var name = category === "staking" ? "Staked DO" : category === "reward" ? "Rewards DO" : "Unbonding DO";
-    var value = valueForAmount(amount, "udo");
+    denom = lower(denom || nativeDenom(chainID, chain));
+    var symbol = nativeSymbol(chainID, chain, denom);
+    var chainName = chainNameFromChain(chainID, chain);
+    var name = category === "staking" ? "Staked " + symbol : category === "reward" ? "Rewards " + symbol : "Unbonding " + symbol;
+    var value = valueForAmount(amount, denom, chainID);
     return {
       category: category,
-      chainID: "Do-Chain",
-      chainName: "Do Chain",
-      denom: "udo",
+      chainID: chainID,
+      chainName: chainName,
+      denom: denom,
       symbol: symbol,
       name: name,
       amount: amount,
       amountText: formatToken(amount, symbol),
       value: value,
       valueText: formatUSD(value),
-      icon: "/do-logo.jpg",
+      icon: chainIconFromChain(chainID, chain),
       validatorCount: validatorCount || 0,
       raw: {
-        chainID: "Do-Chain",
-        chainName: "Do Chain",
-        denom: "udo",
-        symbol: "DO",
+        chainID: chainID,
+        chainName: chainName,
+        denom: denom,
+        symbol: symbol,
         name: name,
         category: category,
         walletAddress: address,
@@ -535,66 +672,137 @@
     };
   }
 
-  function fetchDoRowsForAddress(address) {
+  function validatorAddressFromDelegation(entry) {
+    return clean(entry && entry.delegation && entry.delegation.validator_address) ||
+      clean(entry && entry.validator_address);
+  }
+
+  function aggregateStakeCoins(coins, category, chainID, chain, address, validators) {
+    var byDenom = {};
+    (Array.isArray(coins) ? coins : []).forEach(function (coin) {
+      var denom = lower(coin && coin.denom);
+      if (!denom) return;
+      byDenom[denom] = (byDenom[denom] || 0) + amountFromCoin(coin, decimalsForDenom(chainID, chain, denom));
+    });
+    var validatorList = Object.keys(validators || {});
+    return Object.keys(byDenom).map(function (denom) {
+      return stakeRow(category, chainID, chain, denom, byDenom[denom], address, validatorList.length, validatorList);
+    }).filter(Boolean);
+  }
+
+  function fetchStakeRowsForQuery(query) {
+    var chainID = query.chainID;
+    var chain = query.chain || {};
+    var address = query.address;
     var encoded = encodeURIComponent(address);
+    var delegationPath = lcdURL(chainID, "/cosmos/staking/v1beta1/delegations/" + encoded + "?pagination.limit=2000");
+    var rewardsPath = lcdURL(chainID, "/cosmos/distribution/v1beta1/delegators/" + encoded + "/rewards");
+    var unbondingPath = lcdURL(chainID, "/cosmos/staking/v1beta1/delegators/" + encoded + "/unbonding_delegations?pagination.limit=2000");
+
     return Promise.all([
-      fetchJSON(lcdURL("/cosmos/staking/v1beta1/delegations/" + encoded + "?pagination.limit=2000")),
-      fetchJSON(lcdURL("/cosmos/distribution/v1beta1/delegators/" + encoded + "/rewards")),
-      fetchJSON(lcdURL("/cosmos/staking/v1beta1/delegators/" + encoded + "/unbonding_delegations?pagination.limit=2000"))
+      fetchJSONSafe(delegationPath),
+      fetchJSONSafe(rewardsPath),
+      fetchJSONSafe(unbondingPath)
     ]).then(function (responses) {
       var delegations = responses[0] || {};
       var rewards = responses[1] || {};
       var unbonding = responses[2] || {};
       var delegationRows = Array.isArray(delegations.delegation_responses) ? delegations.delegation_responses : [];
-      var validators = {};
-      var staked = delegationRows.reduce(function (sum, row) {
-        var validator = clean(row && row.delegation && row.delegation.validator_address);
-        if (validator) validators[validator] = true;
-        return sum + amountFromCoin(row && row.balance, 6);
-      }, 0);
-      (Array.isArray(rewards.rewards) ? rewards.rewards : []).forEach(function (row) {
-        var validator = clean(row && row.validator_address);
-        if (validator) validators[validator] = true;
-      });
-      var reward = coinTotal(rewards.total, "udo");
-      var unbondingAmount = 0;
-      (Array.isArray(unbonding.unbonding_responses) ? unbonding.unbonding_responses : []).forEach(function (entry) {
-        var validator = clean(entry && entry.validator_address);
-        if (validator) validators[validator] = true;
-        (Array.isArray(entry.entries) ? entry.entries : []).forEach(function (release) {
-          if (release && release.balance) unbondingAmount += amountFromCoin({ denom: "udo", amount: release.balance }, 6);
+      var rewardEntries = Array.isArray(rewards.rewards) ? rewards.rewards : [];
+      var rewardValidators = rewardEntries.map(function (entry) {
+        return clean(entry && entry.validator_address);
+      }).filter(Boolean);
+
+      function finish(entries) {
+        var validators = {};
+        var stakedCoins = [];
+        (Array.isArray(entries) ? entries : []).forEach(function (entry) {
+          var validator = validatorAddressFromDelegation(entry);
+          if (validator) validators[validator] = true;
+          if (entry && entry.balance) stakedCoins.push(entry.balance);
         });
-      });
-      var validatorList = Object.keys(validators);
-      return [
-        doRow("staking", staked, address, validatorList.length, validatorList),
-        doRow("reward", reward, address, validatorList.length, validatorList),
-        doRow("unbonding", unbondingAmount, address, validatorList.length, validatorList)
-      ].filter(Boolean);
-    }, function () {
-      return [];
+        rewardEntries.forEach(function (entry) {
+          var validator = clean(entry && entry.validator_address);
+          if (validator) validators[validator] = true;
+        });
+        var unbondingCoins = [];
+        (Array.isArray(unbonding.unbonding_responses) ? unbonding.unbonding_responses : []).forEach(function (entry) {
+          var validator = clean(entry && entry.validator_address);
+          if (validator) validators[validator] = true;
+          (Array.isArray(entry.entries) ? entry.entries : []).forEach(function (release) {
+            if (release && release.balance) {
+              unbondingCoins.push({ denom: nativeDenom(chainID, chain), amount: release.balance });
+            }
+          });
+        });
+        return aggregateStakeCoins(stakedCoins, "staking", chainID, chain, address, validators)
+          .concat(aggregateStakeCoins(Array.isArray(rewards.total) ? rewards.total : [], "reward", chainID, chain, address, validators))
+          .concat(aggregateStakeCoins(unbondingCoins, "unbonding", chainID, chain, address, validators));
+      }
+
+      if (!delegationRows.length && rewardValidators.length) {
+        return Promise.all(rewardValidators.map(function (validator) {
+          var path = lcdURL(chainID, "/cosmos/staking/v1beta1/validators/" + encodeURIComponent(validator) + "/delegations/" + encoded);
+          return fetchJSONSafe(path).then(function (json) {
+            return json && json.delegation_response ? json.delegation_response : null;
+          });
+        })).then(function (validatorDelegations) {
+          (Array.isArray(validatorDelegations) ? validatorDelegations : []).forEach(function (entry) {
+            if (entry && entry.balance) delegationRows.push(entry);
+          });
+          return finish(delegationRows);
+        });
+      }
+
+      return finish(delegationRows);
     });
   }
 
-  function ensureDirectDoRows() {
-    var addresses = collectDoAddresses();
-    var key = addresses.join("|");
-    if (!key || key === directDoFetchKey || directDoFetching) return;
-    directDoFetchKey = key;
-    directDoFetching = true;
-    Promise.all(addresses.map(fetchDoRowsForAddress)).then(function (sets) {
+  function runLimited(items, limit, worker) {
+    var queue = (Array.isArray(items) ? items : []).slice();
+    var results = [];
+    var active = 0;
+    return new Promise(function (resolve) {
+      function next() {
+        if (!queue.length && active === 0) return resolve(results);
+        while (active < limit && queue.length) {
+          active += 1;
+          Promise.resolve(worker(queue.shift())).then(function (result) {
+            results.push(result);
+          }, function () {
+            results.push([]);
+          }).then(function () {
+            active -= 1;
+            next();
+          });
+        }
+      }
+      next();
+    });
+  }
+
+  function ensureDirectStakeRows() {
+    var queries = collectStakeAddressQueries();
+    var chainCount = Object.keys(currentChains()).length;
+    var key = chainCount + ":" + queries.map(function (query) {
+      return query.chainID + ":" + lower(query.address);
+    }).join("|");
+    if (!queries.length || key === directStakeFetchKey || directStakeFetching) return;
+    directStakeFetchKey = key;
+    directStakeFetching = true;
+    runLimited(queries, 5, fetchStakeRowsForQuery).then(function (sets) {
       var rows = [];
       sets.forEach(function (set) { rows = rows.concat(set || []); });
-      directDoRows = uniqueRows(rows);
-      directDoFetching = false;
+      directStakeRows = uniqueRows(rows);
+      directStakeFetching = false;
       schedule();
     }, function () {
-      directDoFetching = false;
+      directStakeFetching = false;
     });
   }
 
   function stakeRows() {
-    return uniqueRows(snapshotStakeRows().concat(directDoRows)).sort(function (a, b) {
+    return uniqueRows(snapshotStakeRows().concat(directStakeRows)).sort(function (a, b) {
       if (b.value !== a.value) return b.value - a.value;
       if (b.amount !== a.amount) return b.amount - a.amount;
       return a.name.localeCompare(b.name);
@@ -835,7 +1043,7 @@
     renderTimer = 0;
     if (!document.body || !/\/stake(?:\/|$|\?)/i.test(window.location.pathname + window.location.search)) return;
     installStyles();
-    ensureDirectDoRows();
+    ensureDirectStakeRows();
     var rows = stakeRows();
     if (!rows.length) return;
     var card = findStakeCard();
@@ -845,7 +1053,8 @@
       window.__doWalletStakeOverviewDebug = {
         version: VERSION,
         rows: rows.length,
-        directDoRows: directDoRows.length,
+        directStakeRows: directStakeRows.length,
+        directStakeFetching: directStakeFetching,
         selectedChain: selectedChain,
         updatedAt: new Date().toISOString()
       };
