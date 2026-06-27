@@ -4,7 +4,7 @@
   if (window.__doWalletStakingArea20260627Rewrite) return;
   window.__doWalletStakingArea20260627Rewrite = true;
 
-  var VERSION = "20260627-staking-area-stable-2";
+  var VERSION = "20260627-staking-area-stable-3";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-staking-area-style";
@@ -942,6 +942,219 @@
     return '<div class="do-wallet-staking-empty"><strong>' + escapeHTML(loading) + '</strong><small>Delegations, rewards, and unbonding across wallet addresses</small></div>';
   }
 
+  function portfolioValueNumber(row) {
+    return numberFrom(row && (row.valueUsd || row.groupedValueUsd || row.value || row.usdValue || row.fiatValue || row.usd || row.valueText || row.usdValueText || row.fiatValueText || row.valueFormatted));
+  }
+
+  function portfolioPriceText(row) {
+    var text = clean(row && (row.priceText || row.usdPriceText || row.priceFormatted || row.unitPriceText));
+    if (text) return text;
+    var value = numberFrom(row && (row.priceUsd || row.usdPrice || row.price || row.unitPrice));
+    return value > 0 ? formatUSD(value) : "";
+  }
+
+  function portfolioChangeText(row) {
+    var text = clean(row && (row.changeText || row.priceChangeText || row.percentText || row.change24hText || row.priceChange24hText));
+    if (text) return text;
+    var value = Number(row && (row.change24h || row.percentChange24h || row.priceChangePercent || row.priceChangePercent24h || row.changePercent));
+    if (!Number.isFinite(value) || value === 0) return "";
+    return (value > 0 ? "+" : "") + value.toFixed(2) + "%";
+  }
+
+  function portfolioAmountText(row, amount, symbol) {
+    var text = clean(row && (row.displayAmount || row.amountText || row.balanceText || row.quantityText));
+    if (text) return text;
+    return amount > 0 ? formatToken(amount, symbol) : "";
+  }
+
+  function portfolioAssetName(row, symbol, category) {
+    var name = clean(row && (row.displayName || row.name || row.label)) || symbol;
+    if (/^(staking|staked)$/.test(category) && !/^staked\b/i.test(name)) return "Staked " + symbol;
+    if (/^(reward|rewards)$/.test(category) && !/^rewards?\b/i.test(name)) return "Rewards " + symbol;
+    if (category === "unbonding" && !/^unbonding\b/i.test(name)) return "Unbonding " + symbol;
+    return name;
+  }
+
+  function normalizePortfolioRow(row, index) {
+    if (!isObject(row)) return null;
+    var chainID = chainIDOf(row);
+    var chain = chainMeta(chainID);
+    var denom = denomOf(row) || nativeDenom(chainID, chain);
+    var symbol = symbolOf(row, chainID, denom);
+    if (!symbol || /^[0-9.]+$/.test(symbol)) return null;
+    var category = categoryOf(row);
+    var amount = amountFromAsset(row);
+    var value = portfolioValueNumber(row);
+    var price = numberFrom(row && (row.priceUsd || row.usdPrice || row.price || row.unitPrice));
+    if (!(value > 0) && amount > 0 && price > 0) value = amount * price;
+    var normalized = {
+      index: Number(index) || 0,
+      chainID: chainID,
+      chainName: clean(row.chainName || row.networkName || row.chainLabel || row.networkLabel) || chainName(chainID, chain),
+      denom: denom || symbol,
+      symbol: symbol,
+      name: portfolioAssetName(row, symbol, category),
+      category: category,
+      amount: amount,
+      amountText: portfolioAmountText(row, amount, symbol),
+      value: value,
+      valueText: clean(row.valueText || row.usdValueText || row.fiatValueText || row.valueFormatted) || formatUSD(value),
+      priceText: portfolioPriceText(row),
+      changeText: portfolioChangeText(row),
+      icon: iconOf(row, chainID),
+      chainIcon: clean(row && row.chainIcon) || chainIcon(chainID, chain),
+      raw: row
+    };
+    if (!assetAllowed(normalized)) return null;
+    if (normalized.value > 0 || normalized.amount > 0 || normalized.amountText) return normalized;
+    if (normalized.symbol === "DO" && normalized.chainID === "Do-Chain") return normalized;
+    return null;
+  }
+
+  function portfolioRowKey(row) {
+    return [row.chainID, row.category, lower(row.denom || row.symbol), row.symbol, lower(row.name)].join("|");
+  }
+
+  function betterPortfolioRow(left, right) {
+    if (!left) return right;
+    if (!right) return left;
+    if ((right.valueText && right.valueText !== "$-") !== (left.valueText && left.valueText !== "$-")) return right.valueText && right.valueText !== "$-" ? right : left;
+    if ((right.amountText && right.amountText.length) !== (left.amountText && left.amountText.length)) return right.amountText ? right : left;
+    if (right.value !== left.value) return right.value > left.value ? right : left;
+    if (right.amount !== left.amount) return right.amount > left.amount ? right : left;
+    return right.index < left.index ? right : left;
+  }
+
+  function uniquePortfolioRows(rows) {
+    var byKey = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (row) {
+      if (!row) return;
+      byKey[portfolioRowKey(row)] = betterPortfolioRow(byKey[portfolioRowKey(row)], row);
+    });
+    return Object.keys(byKey).map(function (key) { return byKey[key]; });
+  }
+
+  function portfolioRows() {
+    var out = [];
+    var order = 0;
+    spendableRowsFromSnapshots().forEach(function (row) {
+      var normalized = normalizePortfolioRow(row, order += 1);
+      if (normalized) out.push(normalized);
+    });
+    snapshotStakeRows().concat(directRows).forEach(function (row) {
+      var normalized = normalizePortfolioRow(row.raw || row, order += 1);
+      if (!normalized && row) normalized = Object.assign({ index: order, chainIcon: row.icon }, row);
+      if (normalized) out.push(normalized);
+    });
+    return uniquePortfolioRows(out);
+  }
+
+  function portfolioCategoryRank(category) {
+    if (category === "wallet" || category === "asset" || category === "balance" || category === "spendable") return 0;
+    if (category === "staking" || category === "staked") return 1;
+    if (category === "reward" || category === "rewards") return 2;
+    if (category === "unbonding") return 3;
+    return 4;
+  }
+
+  function portfolioGroups() {
+    var groups = {};
+    portfolioRows().forEach(function (row) {
+      var chainID = row.chainID || chainIDOf(row);
+      if (!chainID) return;
+      var meta = chainMeta(chainID);
+      if (!groups[chainID]) {
+        groups[chainID] = {
+          key: chainID,
+          name: chainName(chainID, meta),
+          nativeSymbol: symbolForDenom(chainID, meta, nativeDenom(chainID, meta)),
+          icon: row.chainIcon || chainIcon(chainID, meta) || row.icon,
+          firstIndex: row.index,
+          assetsByKey: {}
+        };
+      }
+      var group = groups[chainID];
+      group.firstIndex = Math.min(group.firstIndex, row.index);
+      if (!group.icon && (row.chainIcon || row.icon)) group.icon = row.chainIcon || row.icon;
+      group.assetsByKey[portfolioRowKey(row)] = betterPortfolioRow(group.assetsByKey[portfolioRowKey(row)], row);
+    });
+    return Object.keys(groups).map(function (key) {
+      var group = groups[key];
+      var assets = Object.keys(group.assetsByKey).map(function (assetKey) {
+        return group.assetsByKey[assetKey];
+      }).sort(function (left, right) {
+        var leftNative = upper(left.symbol) === upper(group.nativeSymbol) ? -1 : 0;
+        var rightNative = upper(right.symbol) === upper(group.nativeSymbol) ? -1 : 0;
+        return (leftNative - rightNative) ||
+          (portfolioCategoryRank(left.category) - portfolioCategoryRank(right.category)) ||
+          (Number(right.value || 0) - Number(left.value || 0)) ||
+          upper(left.symbol).localeCompare(upper(right.symbol)) ||
+          clean(left.name).localeCompare(clean(right.name));
+      });
+      var total = assets.reduce(function (sum, asset) { return sum + (Number(asset.value) || 0); }, 0);
+      return Object.assign({}, group, {
+        assets: assets,
+        totalValue: total,
+        totalValueText: formatUSD(total)
+      });
+    }).filter(function (group) {
+      return group.assets.length > 0;
+    }).sort(function (left, right) {
+      var leftValue = left.totalValue > 0 ? 0 : 1;
+      var rightValue = right.totalValue > 0 ? 0 : 1;
+      return (leftValue - rightValue) || (right.totalValue - left.totalValue) || (left.firstIndex - right.firstIndex) || left.name.localeCompare(right.name);
+    });
+  }
+
+  function nativePortfolioAsset(group) {
+    var native = upper(group && group.nativeSymbol);
+    var assets = Array.isArray(group && group.assets) ? group.assets : [];
+    return assets.filter(function (asset) { return upper(asset.symbol) === native; })[0] || assets[0] || null;
+  }
+
+  function portfolioGroupRowHTML(group) {
+    var native = nativePortfolioAsset(group) || {};
+    var count = group.assets.length === 1 ? "1 asset" : group.assets.length + " assets";
+    var amount = clean(native.amountText);
+    var change = clean(native.changeText);
+    var changeClass = change.indexOf("-") >= 0 ? "negative" : "positive";
+    return [
+      '<article class="do-wallet-staking-portfolio-asset">',
+        '<div class="do-wallet-staking-portfolio-left">',
+          iconHTML(group.icon || native.icon, group.nativeSymbol, "do-wallet-staking-portfolio-icon"),
+          '<span><strong>' + escapeHTML(group.name) + (native.priceText ? ' <small>' + escapeHTML(native.priceText) + '</small>' : '') + '</strong>' + (change ? '<em class="' + changeClass + '">' + escapeHTML(change) + '</em>' : '<small>' + escapeHTML(count) + '</small>') + '</span>',
+        '</div>',
+        '<div class="do-wallet-staking-portfolio-right">',
+          '<strong>' + escapeHTML(group.totalValueText) + '</strong>',
+          '<small>' + escapeHTML(amount || count) + '</small>',
+        '</div>',
+      '</article>'
+    ].join("");
+  }
+
+  function portfolioRailHTML() {
+    var groups = portfolioGroups();
+    var total = groups.reduce(function (sum, group) { return sum + (Number(group.totalValue) || 0); }, 0);
+    return [
+      '<aside class="do-wallet-staking-portfolio" aria-label="Portfolio value">',
+        '<section class="do-wallet-staking-portfolio-top">',
+          '<span>Portfolio value</span>',
+          '<strong>' + escapeHTML(formatUSD(total)) + '</strong>',
+          '<div class="do-wallet-staking-portfolio-actions">',
+            '<a class="is-primary" href="/send" aria-label="Send"><small>Send</small></a>',
+            '<a href="/receive" aria-label="Receive"><small>Receive</small></a>',
+            '<a href="/buy-sell" aria-label="Buy or Sell"><small>Buy / Sell</small></a>',
+            '<a href="/burn" aria-label="Burn DO"><small>Burn DO</small></a>',
+          '</div>',
+        '</section>',
+        '<section class="do-wallet-staking-portfolio-assets">',
+          '<div class="do-wallet-staking-portfolio-assets-head"><h2>Assets</h2><a href="/wallet">Manage</a></div>',
+          groups.length ? groups.map(portfolioGroupRowHTML).join("") : '<div class="do-wallet-staking-portfolio-empty">No assets found</div>',
+        '</section>',
+      '</aside>'
+    ].join("");
+  }
+
   function overviewHTML(rows) {
     var chainList = chainsFromRows(rows);
     if (selectedChain() !== "all" && !chainList.some(function (chain) { return chain.chainID === selectedChain(); })) setSelectedChain("all");
@@ -953,37 +1166,42 @@
     }).join("");
     return [
       '<section ' + ROOT_ATTR + '="' + escapeHTML(VERSION) + '" class="do-wallet-staking-page">',
-        '<header class="do-wallet-staking-page-head">',
-          '<div><h1>Stake</h1><p>Delegations, rewards, and unbonding across wallet addresses</p></div>',
-          '<button type="button" class="do-wallet-staking-withdraw" data-do-wallet-staking-refresh>Refresh staking</button>',
-        '</header>',
-        '<section class="do-wallet-staking-card">',
-          '<div class="do-wallet-staking-card-head">',
-            '<div><h2>Staked funds</h2><p>Delegations, unbonding, and rewards across wallet addresses</p></div>',
-            '<strong>' + escapeHTML(formatUSD(totalValue)) + '</strong>',
-          '</div>',
-          '<div class="do-wallet-staking-filter">',
-            '<label for="do-wallet-staking-chain">Network</label>',
-            '<span><select id="do-wallet-staking-chain" aria-label="Stake network">' + chainOptionsHTML(chainList) + '</select></span>',
-          '</div>',
-          '<div class="do-wallet-staking-body">',
-            '<div class="do-wallet-staking-chart-wrap">',
-              '<div class="do-wallet-staking-chart" style="' + escapeHTML(chartStyle(scoped)) + '"></div>',
-              '<div class="do-wallet-staking-legend">' + legend + '</div>',
+        '<div class="do-wallet-staking-layout">',
+          '<div class="do-wallet-staking-main">',
+            '<header class="do-wallet-staking-page-head">',
+              '<div><h1>Stake</h1><p>Delegations, rewards, and unbonding across wallet addresses</p></div>',
+              '<button type="button" class="do-wallet-staking-withdraw" data-do-wallet-staking-refresh>Refresh staking</button>',
+            '</header>',
+            '<section class="do-wallet-staking-card">',
+              '<div class="do-wallet-staking-card-head">',
+                '<div><h2>Staked funds</h2><p>Delegations, unbonding, and rewards across wallet addresses</p></div>',
+                '<strong>' + escapeHTML(formatUSD(totalValue)) + '</strong>',
+              '</div>',
+              '<div class="do-wallet-staking-filter">',
+                '<label for="do-wallet-staking-chain">Network</label>',
+                '<span><select id="do-wallet-staking-chain" aria-label="Stake network">' + chainOptionsHTML(chainList) + '</select></span>',
+              '</div>',
+              '<div class="do-wallet-staking-body">',
+                '<div class="do-wallet-staking-chart-wrap">',
+                  '<div class="do-wallet-staking-chart" style="' + escapeHTML(chartStyle(scoped)) + '"></div>',
+                  '<div class="do-wallet-staking-legend">' + legend + '</div>',
+                '</div>',
+                '<div class="do-wallet-staking-summaries">',
+                  summaryCard("Delegations", total.staking, amountSummary(scoped, "staking")),
+                  summaryCard("Undelegations", total.unbonding, amountSummary(scoped, "unbonding")),
+                  summaryCard("Staking rewards", total.reward, amountSummary(scoped, "reward")),
+                '</div>',
+              '</div>',
+              '<div class="do-wallet-staking-positions-head"><strong>Positions</strong><small>' + escapeHTML(scoped.length + " " + (scoped.length === 1 ? "position" : "positions")) + '</small></div>',
+              '<div class="do-wallet-staking-positions">' + (scoped.length ? scoped.map(positionRow).join("") : emptyStateHTML()) + '</div>',
+            '</section>',
+            '<section class="do-wallet-staking-actions">',
+              '<div><h2>Stake assets</h2><p>Validators and delegation actions</p></div>',
+              '<a href="/validator" data-discover="true">Open validators</a>',
+            '</section>',
             '</div>',
-            '<div class="do-wallet-staking-summaries">',
-              summaryCard("Delegations", total.staking, amountSummary(scoped, "staking")),
-              summaryCard("Undelegations", total.unbonding, amountSummary(scoped, "unbonding")),
-              summaryCard("Staking rewards", total.reward, amountSummary(scoped, "reward")),
-            '</div>',
-          '</div>',
-          '<div class="do-wallet-staking-positions-head"><strong>Positions</strong><small>' + escapeHTML(scoped.length + " " + (scoped.length === 1 ? "position" : "positions")) + '</small></div>',
-          '<div class="do-wallet-staking-positions">' + (scoped.length ? scoped.map(positionRow).join("") : emptyStateHTML()) + '</div>',
-        '</section>',
-        '<section class="do-wallet-staking-actions">',
-          '<div><h2>Stake assets</h2><p>Validators and delegation actions</p></div>',
-          '<a href="/validator" data-discover="true">Open validators</a>',
-        '</section>',
+          portfolioRailHTML(),
+        '</div>',
       '</section>'
     ].join("");
   }
@@ -1319,6 +1537,8 @@
       "[" + ROOT_ATTR + "]{box-sizing:border-box;color:#fff;padding:0 0 44px;}",
       "[" + ROOT_ATTR + "] *{box-sizing:border-box;}",
       ".do-wallet-staking-page{display:grid;gap:24px;width:100%;}",
+      ".do-wallet-staking-layout{align-items:start;display:grid;gap:20px;grid-template-columns:minmax(0,1fr) minmax(340px,420px);width:100%;}",
+      ".do-wallet-staking-main{display:grid;gap:24px;min-width:0;}",
       ".do-wallet-staking-page-head{align-items:center;display:flex;gap:18px;justify-content:space-between;margin:0 0 2px;}",
       ".do-wallet-staking-page-head h1{font-size:36px;line-height:1.1;margin:0;font-weight:var(--bold,500);}",
       ".do-wallet-staking-page-head p{color:#c9bbef;font-size:13px;font-weight:var(--bold,500);margin:7px 0 0;}",
@@ -1361,10 +1581,41 @@
       ".do-wallet-staking-empty strong{color:#fff;font-size:16px;font-weight:var(--bold,500);}",
       ".do-wallet-staking-empty small{max-width:420px;}",
       ".do-wallet-staking-actions{align-items:center;display:flex;gap:20px;justify-content:space-between;padding:22px 30px;}",
+      ".do-wallet-staking-portfolio{align-self:start;background:#1f1731;border:1px solid rgba(159,70,255,.32);border-radius:8px;display:flex;flex-direction:column;max-height:calc(100vh - 96px);min-width:0;overflow:hidden;position:sticky;top:84px;}",
+      ".do-wallet-staking-portfolio-top{border-bottom:1px solid rgba(159,70,255,.28);padding:26px 22px 22px;text-align:center;}",
+      ".do-wallet-staking-portfolio-top>span{color:#c9bbef;display:block;font-size:13px;font-weight:var(--bold,500);margin-bottom:8px;}",
+      ".do-wallet-staking-portfolio-top>strong{display:block;font-size:34px;font-weight:var(--bold,500);line-height:1.05;margin-bottom:22px;}",
+      ".do-wallet-staking-portfolio-actions{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));}",
+      ".do-wallet-staking-portfolio-actions a{align-items:center;color:#fff;display:flex;flex-direction:column;font-size:0;font-weight:var(--bold,500);gap:8px;min-width:0;text-decoration:none;}",
+      ".do-wallet-staking-portfolio-actions a:before{align-items:center;background:#2e2541;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);display:flex;font-size:18px;height:54px;justify-content:center;line-height:1;width:54px;}",
+      ".do-wallet-staking-portfolio-actions a:nth-child(1):before{content:'S';}",
+      ".do-wallet-staking-portfolio-actions a:nth-child(2):before{content:'R';}",
+      ".do-wallet-staking-portfolio-actions a:nth-child(3):before{content:'B';}",
+      ".do-wallet-staking-portfolio-actions a:nth-child(4):before{content:'D';}",
+      ".do-wallet-staking-portfolio-actions a.is-primary:before{background:#9b3dff;box-shadow:0 10px 26px rgba(155,61,255,.22);}",
+      ".do-wallet-staking-portfolio-actions small{display:block;font-size:12px;font-weight:var(--bold,500);line-height:1.12;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;}",
+      ".do-wallet-staking-portfolio-assets{display:flex;flex:1;flex-direction:column;min-height:0;overflow:auto;padding:18px 12px 16px;}",
+      ".do-wallet-staking-portfolio-assets-head{align-items:center;display:flex;gap:12px;justify-content:space-between;margin:0 0 12px;padding:0 6px;}",
+      ".do-wallet-staking-portfolio-assets-head h2{font-size:15px;font-weight:var(--bold,500);line-height:1;margin:0;}",
+      ".do-wallet-staking-portfolio-assets-head a{color:#a13fff;font-size:13px;font-weight:var(--bold,500);text-decoration:none;}",
+      ".do-wallet-staking-portfolio-asset{align-items:center;border-bottom:1px solid rgba(159,70,255,.24);display:flex;gap:12px;justify-content:space-between;min-height:64px;padding:10px 6px;text-decoration:none;}",
+      ".do-wallet-staking-portfolio-left{align-items:center;display:flex;gap:11px;min-width:0;}",
+      ".do-wallet-staking-portfolio-left span{display:flex;flex-direction:column;gap:4px;min-width:0;}",
+      ".do-wallet-staking-portfolio-left strong{align-items:baseline;display:flex;flex-wrap:wrap;font-size:14px;font-weight:var(--bold,500);gap:5px;line-height:1.14;min-width:0;}",
+      ".do-wallet-staking-portfolio-left strong small{color:#c9bbef;font-size:11px;font-weight:var(--bold,500);}",
+      ".do-wallet-staking-portfolio-left em,.do-wallet-staking-portfolio-left small{color:#c9bbef;font-size:12px;font-style:normal;font-weight:var(--bold,500);line-height:1.1;}",
+      ".do-wallet-staking-portfolio-left em.negative{color:#ff4b5c;}",
+      ".do-wallet-staking-portfolio-left em.positive{color:#00c8a4;}",
+      ".do-wallet-staking-portfolio-right{align-items:flex-end;display:flex;flex-direction:column;gap:4px;min-width:108px;text-align:right;}",
+      ".do-wallet-staking-portfolio-right strong{font-size:14px;font-weight:var(--bold,500);line-height:1.12;}",
+      ".do-wallet-staking-portfolio-right small{color:#c9bbef;font-size:12px;font-weight:var(--bold,500);line-height:1.1;}",
+      ".do-wallet-staking-portfolio-icon{background:#2c2140;border-radius:50%;height:34px;min-width:34px;object-fit:cover;width:34px;}",
+      ".do-wallet-staking-portfolio-empty{color:#c9bbef;font-size:13px;font-weight:var(--bold,500);padding:18px 6px;}",
       "[data-do-wallet-staking-balance-hidden='1']{display:none!important;}",
       "[" + BALANCE_ATTR + "] button[disabled]{pointer-events:auto;}",
+      "@media(max-width:1180px){.do-wallet-staking-layout{grid-template-columns:1fr}.do-wallet-staking-portfolio{max-height:none;position:static;}}",
       "@media(max-width:900px){.do-wallet-staking-body{grid-template-columns:1fr}.do-wallet-staking-summaries{grid-template-columns:repeat(3,minmax(0,1fr))}.do-wallet-staking-chart-wrap{min-height:140px}.do-wallet-staking-chart{width:min(124px,38vw)}}",
-      "@media(max-width:640px){.do-wallet-staking-page{gap:16px;padding-bottom:20px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-body,.do-wallet-staking-positions-head,.do-wallet-staking-position,.do-wallet-staking-actions{padding-left:18px;padding-right:18px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-actions{align-items:stretch;flex-direction:column}.do-wallet-staking-page-head h1{font-size:32px}.do-wallet-staking-filter span{min-width:0;width:100%}.do-wallet-staking-body{gap:16px;padding-bottom:16px;padding-top:16px}.do-wallet-staking-chart-wrap{min-height:116px}.do-wallet-staking-chart{width:96px}.do-wallet-staking-summaries{grid-template-columns:1fr}.do-wallet-staking-position{gap:10px}.do-wallet-staking-position-value{min-width:118px}.do-wallet-staking-position-main strong,.do-wallet-staking-position-value strong{font-size:14px}.do-wallet-staking-withdraw,.do-wallet-staking-actions a{width:100%;}}"
+      "@media(max-width:640px){.do-wallet-staking-page{gap:16px;padding-bottom:20px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-body,.do-wallet-staking-positions-head,.do-wallet-staking-position,.do-wallet-staking-actions{padding-left:18px;padding-right:18px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-actions{align-items:stretch;flex-direction:column}.do-wallet-staking-page-head h1{font-size:32px}.do-wallet-staking-filter span{min-width:0;width:100%}.do-wallet-staking-body{gap:16px;padding-bottom:16px;padding-top:16px}.do-wallet-staking-chart-wrap{min-height:116px}.do-wallet-staking-chart{width:96px}.do-wallet-staking-summaries{grid-template-columns:1fr}.do-wallet-staking-position{gap:10px}.do-wallet-staking-position-value{min-width:118px}.do-wallet-staking-position-main strong,.do-wallet-staking-position-value strong{font-size:14px}.do-wallet-staking-withdraw,.do-wallet-staking-actions a{width:100%;}.do-wallet-staking-portfolio-actions{gap:8px}.do-wallet-staking-portfolio-actions a:before{height:48px;width:48px}.do-wallet-staking-portfolio-assets{max-height:60vh}.do-wallet-staking-portfolio-right{min-width:96px}}"
     ].join("\n");
     (document.head || document.documentElement).appendChild(style);
   }
