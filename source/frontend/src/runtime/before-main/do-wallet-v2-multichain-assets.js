@@ -619,7 +619,10 @@
         host.endsWith(".do-wallet.com") ||
         host === "do-chain.com" ||
         host === "www.do-chain.com" ||
-        host.endsWith(".do-chain.com")
+        host.endsWith(".do-chain.com") ||
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host === "::1"
       );
     } catch (error) {
       return false;

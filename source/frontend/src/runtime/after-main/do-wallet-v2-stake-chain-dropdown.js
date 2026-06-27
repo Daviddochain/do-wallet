@@ -1,33 +1,735 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletStakeChainDropdown20260626) return;
-  window.__doWalletStakeChainDropdown20260626 = true;
+  if (window.__doWalletStakeOverview20260627) return;
+  window.__doWalletStakeOverview20260627 = true;
 
-  var WRAP_ATTR = "data-do-wallet-stake-chain-dropdown";
-  var ROW_HIDDEN_ATTR = "data-do-wallet-stake-chain-chip-row-hidden";
-  var APPLIED_ATTR = "data-do-wallet-stake-chain-row";
-  var STYLE_ID = "do-wallet-stake-chain-dropdown-style";
-  var UPDATE_DELAY_MS = 120;
-  var updateTimer = 0;
+  var VERSION = "20260627-stake-overview-1";
+  var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
+  var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
+  var STYLE_ID = "do-wallet-stake-overview-style";
+  var CARD_ATTR = "data-do-wallet-stake-overview";
+  var SIGNATURE_ATTR = "data-do-wallet-stake-overview-signature";
+  var RENDER_DELAY_MS = 140;
+  var renderTimer = 0;
+  var selectedChain = "all";
+  var directDoRows = [];
+  var directDoFetchKey = "";
+  var directDoFetching = false;
 
-  var KNOWN_CHAIN_RE = /\b(Do Chain|Terra Classic|Osmosis|BNB Smart Chain|Bnb Smart Chain|Solana|Cardano|Ethereum|Bitcoin|Avalanche|Base|Polygon|Arbitrum|Optimism|Cosmos|Mars|Kujira|Juno|Akash|Tron|Xrp|XRP|Terra|LUNC|Luna)\b/i;
-  var BLOCKED_TEXT_RE = /\b(Delegations|Undelegations|Staking rewards|Staked funds|Quick Stake|Manual Stake|Withdraw all rewards|Positions|Select staking asset)\b/i;
+  var CHAIN_META = {
+    "Do-Chain": { name: "Do Chain", symbol: "DO", denom: "udo", icon: "/do-logo.jpg", price: 1.273e-9 },
+    "columbus-5": { name: "Terra Classic (LUNC)", symbol: "LUNC", denom: "uluna", icon: "/img/chains/TerraClassic.svg" },
+    "osmosis-1": { name: "Osmosis", symbol: "OSMO", denom: "uosmo", icon: "/img/chains/Osmosis.svg" },
+    "phoenix-1": { name: "Terra (LUNA)", symbol: "LUNA", denom: "uluna", icon: "/img/chains/Terra.svg" },
+    "cosmoshub-4": { name: "Cosmos", symbol: "ATOM", denom: "uatom", icon: "/img/chains/Cosmos.svg" },
+    "juno-1": { name: "Juno", symbol: "JUNO", denom: "ujuno", icon: "/img/chains/Juno.svg" },
+    "akashnet-2": { name: "Akash", symbol: "AKT", denom: "uakt", icon: "/img/chains/Akash.svg" },
+    "secret-4": { name: "Secret Network", symbol: "SCRT", denom: "uscrt", icon: "/img/chains/Secret.png" }
+  };
+
+  var CHAIN_ALIASES = {
+    "do": "Do-Chain",
+    "do-chain": "Do-Chain",
+    "dochain": "Do-Chain",
+    "dochain-1": "Do-Chain",
+    "do-main-1": "Do-Chain",
+    "888": "Do-Chain",
+    "terra-classic": "columbus-5",
+    "terra-classic-lunc": "columbus-5",
+    "lunc": "columbus-5",
+    "columbus-5": "columbus-5",
+    "osmosis": "osmosis-1",
+    "osmo": "osmosis-1",
+    "osmosis-1": "osmosis-1",
+    "terra": "phoenix-1",
+    "luna": "phoenix-1",
+    "terra-luna": "phoenix-1",
+    "phoenix-1": "phoenix-1"
+  };
+
+  var DENOM_SYMBOLS = {
+    udo: "DO",
+    udodx: "DODx",
+    uluna: "LUNC",
+    uusd: "UST",
+    ukrw: "KRT",
+    uidr: "IDT",
+    umyr: "MYT",
+    uthb: "THT",
+    ujpy: "JPT",
+    uosmo: "OSMO",
+    uatom: "ATOM",
+    ujuno: "JUNO",
+    uakt: "AKT",
+    uscrt: "SCRT"
+  };
+
+  var CATEGORY_LABELS = {
+    staking: "Delegations",
+    staked: "Delegations",
+    reward: "Staking rewards",
+    rewards: "Staking rewards",
+    unbonding: "Undelegations"
+  };
+
+  var CHART_COLORS = ["#7b95f2", "#ffd84d", "#9d42ff", "#27d3a2", "#ff6a8a", "#35b8ff", "#ff9f1a"];
 
   function clean(value) {
     return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
   }
 
-  function visible(node) {
-    if (!node || !node.getBoundingClientRect) return false;
-    var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
-    if (style && (style.display === "none" || style.visibility === "hidden")) return false;
-    var rect = node.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+  function lower(value) {
+    return clean(value).toLowerCase();
   }
 
-  function isStakeRoute() {
-    return /\/stake(?:\/|$|\?)/i.test(window.location.pathname + window.location.search);
+  function upper(value) {
+    return clean(value).toUpperCase();
+  }
+
+  function keyOf(value) {
+    return lower(value)
+      .replace(/&/g, "and")
+      .replace(/[()]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function canonicalChainID(value) {
+    var raw = clean(value);
+    if (!raw) return "";
+    return CHAIN_ALIASES[keyOf(raw)] || raw;
+  }
+
+  function isObject(value) {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  }
+
+  function escapeHTML(value) {
+    return clean(value).replace(/[&<>"']/g, function (char) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char];
+    });
+  }
+
+  function readJSON(key, fallback) {
+    try {
+      var raw = window.localStorage && window.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function numberFrom(value) {
+    if (value == null || value === "") return 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    if (typeof value === "object") {
+      if (value.amount != null) return numberFrom(value.amount);
+      if (value.value != null) return numberFrom(value.value);
+      if (value.quantity != null) return numberFrom(value.quantity);
+      return 0;
+    }
+    var match = clean(value).replace(/[$,%]/g, "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) || 0 : 0;
+  }
+
+  function decimalString(raw, decimals) {
+    var value = clean(raw).replace(/,/g, "");
+    var negative = value.charAt(0) === "-";
+    if (negative) value = value.slice(1);
+    if (/^\d+\.\d+$/.test(value)) value = value.split(".")[0];
+    if (!/^\d+$/.test(value)) return "0";
+    decimals = Math.max(0, Number(decimals) || 0);
+    if (decimals <= 0) return (negative ? "-" : "") + value;
+    if (value.length <= decimals) value = "0".repeat(decimals - value.length + 1) + value;
+    var whole = value.slice(0, -decimals) || "0";
+    var fraction = value.slice(-decimals).replace(/0+$/, "");
+    return (negative ? "-" : "") + (fraction ? whole + "." + fraction : whole);
+  }
+
+  function amountFromCoin(coin, decimals) {
+    if (!coin || coin.amount == null) return 0;
+    if (String(coin.amount).indexOf(".") >= 0) return Number(decimalString(coin.amount, decimals)) || 0;
+    return Number(decimalString(coin.amount, decimals)) || 0;
+  }
+
+  function amountFromAsset(asset) {
+    var direct = numberFrom(asset && (asset.amount || asset.quantity || asset.balance || asset.displayAmount || asset.tokenAmount || asset.amountText));
+    if (direct > 0) return direct;
+    if (asset && asset.rawAmount != null) return Number(decimalString(asset.rawAmount, decimalsOf(asset))) || 0;
+    if (asset && asset.balance && typeof asset.balance === "object") return amountFromCoin(asset.balance, decimalsOf(asset));
+    if (asset && asset.amount && typeof asset.amount === "object") return amountFromCoin(asset.amount, decimalsOf(asset));
+    return 0;
+  }
+
+  function decimalsOf(asset) {
+    var decimals = Number(asset && asset.decimals);
+    return Number.isFinite(decimals) ? decimals : 6;
+  }
+
+  function formatUSD(value) {
+    value = Number(value);
+    if (!Number.isFinite(value) || value <= 0) return "$-";
+    if (value < 0.01) return "< $0.01";
+    var digits = value >= 100 ? 2 : value >= 1 ? 4 : 8;
+    return "$" + value.toLocaleString(undefined, { maximumFractionDigits: digits });
+  }
+
+  function formatToken(value, symbol) {
+    value = Number(value);
+    if (!Number.isFinite(value) || value <= 0) return "0 " + symbol;
+    var digits = value >= 100 ? 2 : value >= 1 ? 4 : 8;
+    return value.toLocaleString(undefined, { maximumFractionDigits: digits }) + " " + symbol;
+  }
+
+  function categoryOf(asset) {
+    var category = lower(asset && (asset.category || asset.type || asset.assetType || ""));
+    var name = lower(asset && asset.name);
+    if (!category && /^staked\b/.test(name)) category = "staking";
+    if (!category && /^rewards?\b/.test(name)) category = "reward";
+    if (!category && /^unbonding\b/.test(name)) category = "unbonding";
+    return category || "wallet";
+  }
+
+  function denomOf(asset) {
+    var direct = lower(asset && (asset.denom || asset.token || asset.baseDenom || asset.tokenDenom || asset.minimalDenom || asset.contract));
+    if (DENOM_SYMBOLS[direct]) return direct;
+    var id = lower(asset && asset.id);
+    var denoms = Object.keys(DENOM_SYMBOLS);
+    for (var index = 0; index < denoms.length; index += 1) {
+      if (new RegExp("(^|[^a-z0-9])" + denoms[index] + "([^a-z0-9]|$)", "i").test(id)) return denoms[index];
+    }
+    return direct;
+  }
+
+  function chainIDOf(asset) {
+    var raw = asset && (asset.chainID || asset.chainId || asset.network || asset.chain || asset.chainKey || asset.chainName || asset.networkName);
+    var denom = denomOf(asset);
+    if (!raw && denom === "udo") raw = "Do-Chain";
+    if (!raw && /\bdo\s+(chain|token)\b/i.test(clean(asset && asset.name))) raw = "Do-Chain";
+    return canonicalChainID(raw);
+  }
+
+  function chainMeta(chainID) {
+    chainID = canonicalChainID(chainID);
+    return CHAIN_META[chainID] || { name: chainID || "Unknown chain", symbol: "", denom: "", icon: "" };
+  }
+
+  function symbolOf(asset, chainID, denom) {
+    var symbol = upper(asset && (asset.symbol || asset.tokenSymbol || asset.ticker || ""));
+    if (symbol === "UDO") return "DO";
+    if (symbol) return symbol;
+    if (denom === "uluna" && chainID === "phoenix-1") return "LUNA";
+    if (DENOM_SYMBOLS[denom]) return DENOM_SYMBOLS[denom];
+    return upper(denom || chainMeta(chainID).symbol || "");
+  }
+
+  function nameOf(asset, chainID, symbol, category) {
+    var name = clean(asset && (asset.displayName || asset.name || asset.label));
+    if (name) return name;
+    if (category === "staking" || category === "staked") return "Staked " + symbol;
+    if (category === "reward" || category === "rewards") return "Rewards " + symbol;
+    if (category === "unbonding") return "Unbonding " + symbol;
+    return chainMeta(chainID).name || symbol;
+  }
+
+  function chainNameOf(asset, chainID) {
+    return clean(asset && (asset.chainName || asset.networkName || asset.chainLabel || asset.networkLabel)) ||
+      chainMeta(chainID).name ||
+      chainID;
+  }
+
+  function iconOf(asset, chainID) {
+    return clean(asset && (asset.chainIcon || asset.icon || asset.logo || asset.image)) || chainMeta(chainID).icon || "";
+  }
+
+  function validatorCountOf(asset) {
+    var direct = Number(asset && asset.validatorCount);
+    if (Number.isFinite(direct) && direct > 0) return direct;
+    if (Array.isArray(asset && asset.validators)) return asset.validators.length;
+    if (Array.isArray(asset && asset.validatorDelegations)) return asset.validatorDelegations.length;
+    if (isObject(asset && asset.validatorDelegationsByAddress)) return Object.keys(asset.validatorDelegationsByAddress).length;
+    return 0;
+  }
+
+  function normalizeRow(asset) {
+    if (!isObject(asset)) return null;
+    var category = categoryOf(asset);
+    if (!/^(staking|staked|reward|rewards|unbonding)$/.test(category)) return null;
+    var chainID = chainIDOf(asset);
+    var denom = denomOf(asset);
+    var symbol = symbolOf(asset, chainID, denom);
+    if (!symbol || /^[0-9.]+$/.test(symbol)) return null;
+    var amount = amountFromAsset(asset);
+    var value = numberFrom(asset && (asset.valueUsd || asset.groupedValueUsd || asset.value || asset.usdValue || asset.usd || asset.valueText || asset.usdValueText));
+    var price = numberFrom(asset && (asset.priceUsd || asset.usdPrice || asset.price || asset.unitPrice));
+    if (!(value > 0) && amount > 0 && price > 0) value = amount * price;
+    return {
+      category: category === "staked" ? "staking" : category === "rewards" ? "reward" : category,
+      chainID: chainID,
+      chainName: chainNameOf(asset, chainID),
+      denom: denom,
+      symbol: symbol,
+      name: nameOf(asset, chainID, symbol, category),
+      amount: amount,
+      amountText: clean(asset.displayAmount || asset.amountText || asset.balanceText || asset.quantityText) || formatToken(amount, symbol),
+      value: value,
+      valueText: clean(asset.valueText || asset.usdValueText || asset.fiatValueText || asset.valueFormatted) || formatUSD(value),
+      icon: iconOf(asset, chainID),
+      validatorCount: validatorCountOf(asset),
+      raw: asset
+    };
+  }
+
+  function rowKey(row) {
+    return [row.chainID, row.category, row.denom || row.symbol, lower(row.name)].join("|");
+  }
+
+  function betterRow(left, right) {
+    if (!left) return right;
+    if (!right) return left;
+    if (right.value !== left.value) return right.value > left.value ? right : left;
+    if (right.amount !== left.amount) return right.amount > left.amount ? right : left;
+    return left;
+  }
+
+  function uniqueRows(rows) {
+    var byKey = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (row) {
+      if (!row) return;
+      byKey[rowKey(row)] = betterRow(byKey[rowKey(row)], row);
+    });
+    return Object.keys(byKey).map(function (key) { return byKey[key]; });
+  }
+
+  function walletFromPayload(payload) {
+    if (!isObject(payload)) return null;
+    return isObject(payload.wallet) ? payload.wallet : payload;
+  }
+
+  function walletIdentityKeys(wallet) {
+    wallet = walletFromPayload(wallet) || wallet;
+    if (!isObject(wallet)) return [];
+    var keys = [wallet.address, wallet.name, wallet.walletName, wallet.label, wallet.id];
+    [wallet.addresses, wallet.addressMap].forEach(function (map) {
+      if (!isObject(map)) return;
+      Object.keys(map).forEach(function (key) {
+        keys.push(key + ":" + map[key]);
+        keys.push(map[key]);
+      });
+    });
+    return keys.map(lower).filter(Boolean).filter(function (key, index, list) {
+      return list.indexOf(key) === index;
+    });
+  }
+
+  function activeWalletKeys() {
+    var payloads = [
+      readJSON("do-wallet-selected-recovered-wallet.v1", null),
+      readJSON("user", null),
+      readJSON("do-wallet-bridge-wallet", null),
+      readJSON("do-wallet-extension-authority.v1", null)
+    ];
+    var keys = [];
+    for (var index = 0; index < payloads.length; index += 1) {
+      keys = keys.concat(walletIdentityKeys(payloads[index]));
+    }
+    return keys.filter(Boolean).filter(function (key, index, list) {
+      return list.indexOf(key) === index;
+    });
+  }
+
+  function snapshotKeys(snapshot) {
+    if (!isObject(snapshot)) return [];
+    var keys = walletIdentityKeys(snapshot.wallet || snapshot);
+    if (snapshot.walletKey) keys.push(lower(snapshot.walletKey));
+    [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses].forEach(function (map) {
+      if (!isObject(map)) return;
+      Object.keys(map).forEach(function (key) {
+        keys.push(lower(key + ":" + map[key]));
+        keys.push(lower(map[key]));
+      });
+    });
+    return keys.filter(Boolean).filter(function (key, index, list) {
+      return list.indexOf(key) === index;
+    });
+  }
+
+  function snapshotMatchesActiveWallet(snapshot, activeKeys) {
+    if (!activeKeys.length) return true;
+    var keys = snapshotKeys(snapshot);
+    if (!keys.length) return false;
+    return keys.some(function (key) { return activeKeys.indexOf(key) >= 0; });
+  }
+
+  function collectSnapshots() {
+    var out = [];
+    var seen = {};
+    var activeKeys = activeWalletKeys();
+    function add(snapshot) {
+      if (!isObject(snapshot) || !snapshotMatchesActiveWallet(snapshot, activeKeys)) return;
+      var key = [snapshot.schemaVersion || "", snapshot.updatedAt || "", snapshotKeys(snapshot).join("|")].join(":");
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(snapshot);
+    }
+    add(readJSON(SNAPSHOT_KEY, null));
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) Object.keys(byWallet).forEach(function (key) { add(byWallet[key]); });
+    return out.sort(function (a, b) { return Number(b.updatedAt || 0) - Number(a.updatedAt || 0); });
+  }
+
+  function firstArray(source, keys) {
+    if (!isObject(source)) return [];
+    for (var index = 0; index < keys.length; index += 1) {
+      if (Array.isArray(source[keys[index]])) return source[keys[index]];
+    }
+    return [];
+  }
+
+  function flattenAsset(asset, out) {
+    out = out || [];
+    if (!isObject(asset)) return out;
+    var children = firstArray(asset, ["childAssets", "expandedAssets", "subAssets", "tokens", "children", "rows"]);
+    if (children.length) {
+      children.forEach(function (child) { flattenAsset(child, out); });
+      if (asset.isChainGroup || asset.portfolioGroup || asset.groupedUnderChain) return out;
+    }
+    out.push(asset);
+    return out;
+  }
+
+  function rawStakeRowsFromSnapshots() {
+    var keys = ["staking", "sourceStakingAssets", "flatPortfolioAssets", "rawPortfolioAssets", "detailPortfolioAssets", "portfolioAssets", "assets"];
+    var rows = [];
+    collectSnapshots().forEach(function (snapshot) {
+      keys.forEach(function (key) {
+        if (!Array.isArray(snapshot && snapshot[key])) return;
+        snapshot[key].forEach(function (asset) { flattenAsset(asset, rows); });
+      });
+    });
+    return rows;
+  }
+
+  function assetAllowedByVisibility(row) {
+    try {
+      var quarantine = window.doWalletQuarantine;
+      var payload = row && row.raw || row;
+      if (quarantine && typeof quarantine.isVisibleAsset === "function") return quarantine.isVisibleAsset(payload);
+      if (quarantine && typeof quarantine.isHiddenAsset === "function" && quarantine.isHiddenAsset(payload)) return false;
+      if (quarantine && typeof quarantine.isBlockedAsset === "function" && quarantine.isBlockedAsset(payload)) return false;
+    } catch (error) {}
+    return true;
+  }
+
+  function snapshotStakeRows() {
+    return uniqueRows(rawStakeRowsFromSnapshots().map(normalizeRow).filter(function (row) {
+      if (!row || !assetAllowedByVisibility(row)) return false;
+      return row.amount > 0 || row.value > 0 || row.amountText;
+    }));
+  }
+
+  function collectDoAddresses() {
+    var out = [];
+    var seen = {};
+    function add(value) {
+      var match = clean(value).match(/\bdo1[ac-hj-np-z02-9]{20,90}\b/i);
+      if (!match) return;
+      var address = match[0];
+      var key = lower(address);
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(address);
+    }
+    [
+      readJSON("do-wallet-selected-recovered-wallet.v1", null),
+      readJSON("user", null),
+      readJSON("do-wallet-bridge-wallet", null),
+      readJSON("do-wallet-extension-authority.v1", null)
+    ].forEach(function (payload) {
+      var wallet = walletFromPayload(payload);
+      if (!isObject(wallet)) return;
+      add(wallet.address);
+      add(wallet.doAddress);
+      add(wallet.doChainAddress);
+      [wallet.addresses, wallet.addressMap].forEach(function (map) {
+        if (!isObject(map)) return;
+        Object.keys(map).forEach(function (key) {
+          if (canonicalChainID(key) === "Do-Chain" || keyOf(key) === "do" || keyOf(key) === "888") add(map[key]);
+        });
+      });
+    });
+    collectSnapshots().forEach(function (snapshot) {
+      [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses].forEach(function (map) {
+        if (!isObject(map)) return;
+        Object.keys(map).forEach(function (key) {
+          if (canonicalChainID(key) === "Do-Chain") add(map[key]);
+        });
+      });
+      rawStakeRowsFromSnapshots().forEach(function (asset) {
+        if (chainIDOf(asset) === "Do-Chain") add(asset.walletAddress || asset.address);
+      });
+    });
+    return out;
+  }
+
+  function fetchJSON(url) {
+    return window.fetch(url, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    }).then(function (response) {
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      return response.json();
+    });
+  }
+
+  function lcdURL(path) {
+    return "/station-assets/api/lcd/" + encodeURIComponent("Do-Chain") + path;
+  }
+
+  function coinTotal(coins, denom) {
+    return (Array.isArray(coins) ? coins : []).reduce(function (sum, coin) {
+      if (!coin || lower(coin.denom) !== lower(denom)) return sum;
+      return sum + amountFromCoin(coin, 6);
+    }, 0);
+  }
+
+  function valueForAmount(amount, denom) {
+    var rows = snapshotStakeRows();
+    for (var index = 0; index < rows.length; index += 1) {
+      var row = rows[index];
+      if (row.chainID !== "Do-Chain" || row.denom !== denom || !(row.amount > 0) || !(row.value > 0)) continue;
+      return amount * (row.value / row.amount);
+    }
+    return amount * (CHAIN_META["Do-Chain"].price || 0);
+  }
+
+  function doRow(category, amount, address, validatorCount, validators) {
+    if (!(amount > 0)) return null;
+    var symbol = "DO";
+    var name = category === "staking" ? "Staked DO" : category === "reward" ? "Rewards DO" : "Unbonding DO";
+    var value = valueForAmount(amount, "udo");
+    return {
+      category: category,
+      chainID: "Do-Chain",
+      chainName: "Do Chain",
+      denom: "udo",
+      symbol: symbol,
+      name: name,
+      amount: amount,
+      amountText: formatToken(amount, symbol),
+      value: value,
+      valueText: formatUSD(value),
+      icon: "/do-logo.jpg",
+      validatorCount: validatorCount || 0,
+      raw: {
+        chainID: "Do-Chain",
+        chainName: "Do Chain",
+        denom: "udo",
+        symbol: "DO",
+        name: name,
+        category: category,
+        walletAddress: address,
+        validators: validators || []
+      }
+    };
+  }
+
+  function fetchDoRowsForAddress(address) {
+    var encoded = encodeURIComponent(address);
+    return Promise.all([
+      fetchJSON(lcdURL("/cosmos/staking/v1beta1/delegations/" + encoded + "?pagination.limit=2000")),
+      fetchJSON(lcdURL("/cosmos/distribution/v1beta1/delegators/" + encoded + "/rewards")),
+      fetchJSON(lcdURL("/cosmos/staking/v1beta1/delegators/" + encoded + "/unbonding_delegations?pagination.limit=2000"))
+    ]).then(function (responses) {
+      var delegations = responses[0] || {};
+      var rewards = responses[1] || {};
+      var unbonding = responses[2] || {};
+      var delegationRows = Array.isArray(delegations.delegation_responses) ? delegations.delegation_responses : [];
+      var validators = {};
+      var staked = delegationRows.reduce(function (sum, row) {
+        var validator = clean(row && row.delegation && row.delegation.validator_address);
+        if (validator) validators[validator] = true;
+        return sum + amountFromCoin(row && row.balance, 6);
+      }, 0);
+      (Array.isArray(rewards.rewards) ? rewards.rewards : []).forEach(function (row) {
+        var validator = clean(row && row.validator_address);
+        if (validator) validators[validator] = true;
+      });
+      var reward = coinTotal(rewards.total, "udo");
+      var unbondingAmount = 0;
+      (Array.isArray(unbonding.unbonding_responses) ? unbonding.unbonding_responses : []).forEach(function (entry) {
+        var validator = clean(entry && entry.validator_address);
+        if (validator) validators[validator] = true;
+        (Array.isArray(entry.entries) ? entry.entries : []).forEach(function (release) {
+          if (release && release.balance) unbondingAmount += amountFromCoin({ denom: "udo", amount: release.balance }, 6);
+        });
+      });
+      var validatorList = Object.keys(validators);
+      return [
+        doRow("staking", staked, address, validatorList.length, validatorList),
+        doRow("reward", reward, address, validatorList.length, validatorList),
+        doRow("unbonding", unbondingAmount, address, validatorList.length, validatorList)
+      ].filter(Boolean);
+    }, function () {
+      return [];
+    });
+  }
+
+  function ensureDirectDoRows() {
+    var addresses = collectDoAddresses();
+    var key = addresses.join("|");
+    if (!key || key === directDoFetchKey || directDoFetching) return;
+    directDoFetchKey = key;
+    directDoFetching = true;
+    Promise.all(addresses.map(fetchDoRowsForAddress)).then(function (sets) {
+      var rows = [];
+      sets.forEach(function (set) { rows = rows.concat(set || []); });
+      directDoRows = uniqueRows(rows);
+      directDoFetching = false;
+      schedule();
+    }, function () {
+      directDoFetching = false;
+    });
+  }
+
+  function stakeRows() {
+    return uniqueRows(snapshotStakeRows().concat(directDoRows)).sort(function (a, b) {
+      if (b.value !== a.value) return b.value - a.value;
+      if (b.amount !== a.amount) return b.amount - a.amount;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  function rowsForSelection(rows) {
+    if (selectedChain === "all") return rows;
+    var filtered = rows.filter(function (row) { return row.chainID === selectedChain; });
+    return filtered.length ? filtered : rows;
+  }
+
+  function totals(rows) {
+    var out = { staking: 0, reward: 0, unbonding: 0 };
+    rows.forEach(function (row) {
+      if (row.category === "staking") out.staking += Number(row.value || 0) || 0;
+      if (row.category === "reward") out.reward += Number(row.value || 0) || 0;
+      if (row.category === "unbonding") out.unbonding += Number(row.value || 0) || 0;
+    });
+    return out;
+  }
+
+  function amountSummary(rows, category) {
+    var bySymbol = {};
+    rows.forEach(function (row) {
+      if (row.category !== category) return;
+      var key = row.symbol || "";
+      if (!key) return;
+      bySymbol[key] = (bySymbol[key] || 0) + (Number(row.amount) || 0);
+    });
+    var symbols = Object.keys(bySymbol).filter(function (key) { return bySymbol[key] > 0; });
+    if (!symbols.length) return "";
+    if (symbols.length === 1) return formatToken(bySymbol[symbols[0]], symbols[0]);
+    return symbols.length + " assets";
+  }
+
+  function chainsFromRows(rows) {
+    var map = {};
+    rows.forEach(function (row) {
+      if (!row.chainID) return;
+      if (!map[row.chainID]) map[row.chainID] = { chainID: row.chainID, name: row.chainName || chainMeta(row.chainID).name, value: 0, icon: row.icon };
+      map[row.chainID].value += Number(row.value || 0) || 0;
+      if (!map[row.chainID].icon && row.icon) map[row.chainID].icon = row.icon;
+    });
+    return Object.keys(map).map(function (key) { return map[key]; }).sort(function (a, b) {
+      return b.value - a.value || a.name.localeCompare(b.name);
+    });
+  }
+
+  function chartStyle(rows) {
+    var byChain = chainsFromRows(rows);
+    var total = byChain.reduce(function (sum, chain) { return sum + Math.max(0, chain.value); }, 0);
+    if (!(total > 0)) return "background:rgba(123,149,242,.35)";
+    var current = 0;
+    var parts = [];
+    byChain.forEach(function (chain, index) {
+      var start = current;
+      current += (Math.max(0, chain.value) / total) * 360;
+      parts.push(CHART_COLORS[index % CHART_COLORS.length] + " " + start.toFixed(2) + "deg " + current.toFixed(2) + "deg");
+    });
+    return "background:conic-gradient(" + parts.join(",") + ")";
+  }
+
+  function iconHTML(src, label) {
+    if (!src) return '<span class="do-wallet-stake-overview-icon-fallback">' + escapeHTML(clean(label).slice(0, 3) || "?") + '</span>';
+    return '<img class="do-wallet-stake-overview-icon" src="' + escapeHTML(src) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';" />';
+  }
+
+  function chainOptionsHTML(chains) {
+    var html = ['<option value="all">All</option>'];
+    chains.forEach(function (chain) {
+      html.push('<option value="' + escapeHTML(chain.chainID) + '"' + (selectedChain === chain.chainID ? " selected" : "") + '>' + escapeHTML(chain.name) + '</option>');
+    });
+    return html.join("");
+  }
+
+  function summaryCardHTML(label, value, subtext) {
+    return [
+      '<div class="do-wallet-stake-overview-summary-card">',
+        '<span>' + escapeHTML(label) + '</span>',
+        '<strong>' + escapeHTML(formatUSD(value)) + '</strong>',
+        '<small>' + escapeHTML(subtext || "0 assets") + '</small>',
+      '</div>'
+    ].join("");
+  }
+
+  function rowHTML(row) {
+    var label = CATEGORY_LABELS[row.category] || row.category;
+    var validatorText = row.validatorCount > 0 ? " - " + row.validatorCount + (row.validatorCount === 1 ? " validator" : " validators") : "";
+    return [
+      '<div class="do-wallet-stake-overview-row">',
+        '<div class="do-wallet-stake-overview-row-left">',
+          iconHTML(row.icon, row.symbol),
+          '<span>',
+            '<strong>' + escapeHTML(row.name) + '</strong>',
+            '<small>' + escapeHTML(row.chainName + validatorText) + '</small>',
+          '</span>',
+        '</div>',
+        '<div class="do-wallet-stake-overview-row-right">',
+          '<strong>' + escapeHTML(row.valueText || formatUSD(row.value)) + '</strong>',
+          '<small>' + escapeHTML(row.amountText || formatToken(row.amount, row.symbol)) + '</small>',
+          '<em>' + escapeHTML(label) + '</em>',
+        '</div>',
+      '</div>'
+    ].join("");
+  }
+
+  function visible(node) {
+    if (!node || !node.getBoundingClientRect) return false;
+    var rect = node.getBoundingClientRect();
+    if (rect.width < 240 || rect.height < 120) return false;
+    try {
+      var style = window.getComputedStyle(node);
+      return style.display !== "none" && style.visibility !== "hidden";
+    } catch (error) {
+      return true;
+    }
+  }
+
+  function findStakeCard() {
+    if (!/\/stake(?:\/|$|\?)/i.test(window.location.pathname + window.location.search)) return null;
+    var nodes = Array.prototype.slice.call(document.querySelectorAll("main section,main article,main div,section,article,div"));
+    return nodes.filter(function (node) {
+      if (!visible(node)) return false;
+      var text = clean(node.innerText || node.textContent);
+      if (!/\bStaked funds\b/i.test(text)) return false;
+      if (!/\bDelegations\b/i.test(text) || !/\bUndelegations\b/i.test(text)) return false;
+      if (/\bQuick Stake\b|\bManual Stake\b/.test(text)) return false;
+      var rect = node.getBoundingClientRect();
+      return rect.width >= 320 && rect.height >= 180 && rect.height <= Math.max(760, (window.innerHeight || 900) * 0.9);
+    }).sort(function (a, b) {
+      var ar = a.getBoundingClientRect();
+      var br = b.getBoundingClientRect();
+      return (ar.width * ar.height) - (br.width * br.height);
+    })[0] || null;
   }
 
   function installStyles() {
@@ -35,229 +737,142 @@
     var style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = [
-      "[" + ROW_HIDDEN_ATTR + "='1']{display:none!important}",
-      ".do-wallet-stake-chain-dropdown-wrap{display:flex;align-items:center;gap:12px;padding:12px 28px;border-bottom:1px solid rgba(159,70,255,.26)}",
-      ".do-wallet-stake-chain-dropdown-label{color:#c7b9ef;font-size:13px;font-weight:600;line-height:1}",
-      ".do-wallet-stake-chain-dropdown-shell{position:relative;display:inline-flex;min-width:260px}",
-      ".do-wallet-stake-chain-dropdown{appearance:none;-webkit-appearance:none;width:100%;min-height:38px;padding:0 42px 0 16px;border:1px solid rgba(159,70,255,.52);border-radius:999px;background:#251b39;color:#fff;font:inherit;font-size:13px;font-weight:600;line-height:38px;outline:none;cursor:pointer}",
-      ".do-wallet-stake-chain-dropdown-shell:after{content:'';position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid #c7b9ef;border-bottom:2px solid #c7b9ef;transform:translateY(-65%) rotate(45deg);pointer-events:none}",
-      ".do-wallet-stake-chain-dropdown:focus{border-color:#a33fff;box-shadow:0 0 0 2px rgba(163,63,255,.18)}",
-      "@media (max-width:720px){.do-wallet-stake-chain-dropdown-wrap{align-items:stretch;flex-direction:column;padding:12px 18px}.do-wallet-stake-chain-dropdown-shell{min-width:0;width:100%}}"
+      "[" + CARD_ATTR + "]{box-sizing:border-box!important;overflow:hidden!important;padding:0!important;color:#fff!important;}",
+      "[" + CARD_ATTR + "] *{box-sizing:border-box;}",
+      ".do-wallet-stake-overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:26px 30px;border-bottom:1px solid rgba(159,70,255,.28);}",
+      ".do-wallet-stake-overview-head h2{margin:0 0 6px;font-size:22px;line-height:1.12;font-weight:var(--bold,500);letter-spacing:0;color:#fff;}",
+      ".do-wallet-stake-overview-head p{margin:0;color:#c9bbef;font-size:13px;line-height:1.35;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-total{text-align:right;color:#fff;font-size:26px;line-height:1;font-weight:var(--bold,500);white-space:nowrap;}",
+      ".do-wallet-stake-overview-filter{display:flex;align-items:center;gap:12px;padding:14px 30px;border-bottom:1px solid rgba(159,70,255,.28);}",
+      ".do-wallet-stake-overview-filter label{color:#c9bbef;font-size:13px;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-select-wrap{position:relative;display:inline-flex;min-width:270px;}",
+      ".do-wallet-stake-overview-select{appearance:none;-webkit-appearance:none;width:100%;min-height:38px;padding:0 42px 0 16px;border:1px solid rgba(159,70,255,.52);border-radius:999px;background:#251b39;color:#fff;font:inherit;font-size:13px;font-weight:var(--bold,500);outline:none;cursor:pointer;}",
+      ".do-wallet-stake-overview-select-wrap:after{content:'';position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid #c7b9ef;border-bottom:2px solid #c7b9ef;transform:translateY(-65%) rotate(45deg);pointer-events:none;}",
+      ".do-wallet-stake-overview-body{display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,390px);gap:30px;padding:26px 30px;}",
+      ".do-wallet-stake-overview-chart-wrap{min-height:260px;display:grid;place-items:center;}",
+      ".do-wallet-stake-overview-chart{width:min(230px,52vw);aspect-ratio:1;border-radius:50%;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);}",
+      ".do-wallet-stake-overview-chart:after{content:'';position:absolute;inset:28%;border-radius:50%;background:#181125;box-shadow:0 0 0 1px rgba(255,255,255,.03);}",
+      ".do-wallet-stake-overview-legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:18px;justify-content:center;color:#c9bbef;font-size:13px;}",
+      ".do-wallet-stake-overview-legend span{display:inline-flex;align-items:center;gap:7px;}",
+      ".do-wallet-stake-overview-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}",
+      ".do-wallet-stake-overview-summary{display:grid;gap:14px;}",
+      ".do-wallet-stake-overview-summary-card{min-height:104px;border:1px solid rgba(159,70,255,.42);border-radius:7px;padding:18px 20px;background:#171023;}",
+      ".do-wallet-stake-overview-summary-card span{display:block;margin-bottom:12px;color:#fff;font-size:15px;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-summary-card strong{display:block;margin-bottom:8px;color:#fff;font-size:28px;line-height:1;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-summary-card small{display:block;color:#c9bbef;font-size:12px;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-positions{border-top:1px solid rgba(159,70,255,.28);}",
+      ".do-wallet-stake-overview-positions-head{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 30px;color:#fff;}",
+      ".do-wallet-stake-overview-positions-head strong{font-size:16px;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-positions-head small{color:#c9bbef;font-size:12px;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-list{max-height:360px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}",
+      ".do-wallet-stake-overview-row{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:76px;padding:14px 30px;border-top:1px solid rgba(159,70,255,.24);}",
+      ".do-wallet-stake-overview-row-left{display:flex;align-items:center;gap:14px;min-width:0;}",
+      ".do-wallet-stake-overview-row-left span{display:flex;flex-direction:column;gap:5px;min-width:0;}",
+      ".do-wallet-stake-overview-row-left strong{color:#fff;font-size:15px;line-height:1.12;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-row-left small{color:#c9bbef;font-size:12px;line-height:1.1;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-row-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;min-width:150px;}",
+      ".do-wallet-stake-overview-row-right strong{color:#fff;font-size:15px;line-height:1.1;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-row-right small,.do-wallet-stake-overview-row-right em{color:#c9bbef;font-size:12px;line-height:1.1;font-style:normal;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-icon,.do-wallet-stake-overview-icon-fallback{width:38px;height:38px;min-width:38px;border-radius:50%;object-fit:cover;background:#2c2140;}",
+      ".do-wallet-stake-overview-icon-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
+      "@media(max-width:900px){.do-wallet-stake-overview-body{grid-template-columns:1fr}.do-wallet-stake-overview-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.do-wallet-stake-overview-chart-wrap{min-height:210px}}",
+      "@media(max-width:640px){.do-wallet-stake-overview-head,.do-wallet-stake-overview-filter,.do-wallet-stake-overview-body,.do-wallet-stake-overview-positions-head,.do-wallet-stake-overview-row{padding-left:18px;padding-right:18px}.do-wallet-stake-overview-head{flex-direction:column}.do-wallet-stake-overview-total{text-align:left}.do-wallet-stake-overview-filter{align-items:stretch;flex-direction:column}.do-wallet-stake-overview-select-wrap{min-width:0;width:100%}.do-wallet-stake-overview-summary{grid-template-columns:1fr}.do-wallet-stake-overview-row{gap:10px}.do-wallet-stake-overview-row-right{min-width:118px}.do-wallet-stake-overview-row-left strong,.do-wallet-stake-overview-row-right strong{font-size:14px}}"
     ].join("\n");
     document.head.appendChild(style);
   }
 
-  function findStakeCard() {
-    if (!isStakeRoute()) return null;
-    var nodes = Array.prototype.slice.call(document.querySelectorAll("main section,main article,main div,section,article,div"));
-    var best = null;
-    var bestArea = Infinity;
-
-    nodes.forEach(function (node) {
-      if (!visible(node)) return;
-      var text = clean(node.innerText || node.textContent);
-      if (!/\bStaked funds\b/i.test(text)) return;
-      if (!/\bDelegations\b/i.test(text) || !/\bUndelegations\b/i.test(text)) return;
-      if (/\bNo staked assets\b/i.test(text)) return;
-      var rect = node.getBoundingClientRect();
-      if (rect.width < 320 || rect.height < 150) return;
-      if (rect.height > Math.max(900, window.innerHeight * 1.25)) return;
-      var area = rect.width * rect.height;
-      if (area < bestArea) {
-        best = node;
-        bestArea = area;
-      }
-    });
-
-    return best;
-  }
-
-  function looksLikeChipRow(node) {
-    if (!visible(node)) return false;
-    var text = clean(node.innerText || node.textContent);
-    if (!/\bAll\b/i.test(text)) return false;
-    if (BLOCKED_TEXT_RE.test(text.replace(/\bAll\b/i, ""))) return false;
-    if (!KNOWN_CHAIN_RE.test(text) && !/\+\s*\d+/.test(text)) return false;
-    var rect = node.getBoundingClientRect();
-    if (rect.width < 180 || rect.height < 24 || rect.height > 92) return false;
+  function render(card, rows) {
+    var chains = chainsFromRows(rows);
+    if (selectedChain !== "all" && !chains.some(function (chain) { return chain.chainID === selectedChain; })) selectedChain = "all";
+    var scoped = rowsForSelection(rows);
+    var total = totals(scoped);
+    var totalValue = total.staking + total.reward + total.unbonding;
+    var signature = VERSION + ":" + selectedChain + ":" + rows.map(function (row) {
+      return rowKey(row) + ":" + row.amountText + ":" + row.valueText;
+    }).join("||");
+    if (card.getAttribute(SIGNATURE_ATTR) === signature) return true;
+    card.setAttribute(CARD_ATTR, VERSION);
+    card.setAttribute(SIGNATURE_ATTR, signature);
+    var legend = chainsFromRows(scoped).map(function (chain, index) {
+      return '<span><i class="do-wallet-stake-overview-dot" style="background:' + CHART_COLORS[index % CHART_COLORS.length] + '"></i>' + escapeHTML(chain.name) + '</span>';
+    }).join("");
+    card.innerHTML = [
+      '<div class="do-wallet-stake-overview-head">',
+        '<div><h2>Staked funds</h2><p>Delegations, unbonding, and rewards across wallet addresses</p></div>',
+        '<div class="do-wallet-stake-overview-total">' + escapeHTML(formatUSD(totalValue)) + '</div>',
+      '</div>',
+      '<div class="do-wallet-stake-overview-filter">',
+        '<label for="do-wallet-stake-overview-network">Network</label>',
+        '<span class="do-wallet-stake-overview-select-wrap"><select id="do-wallet-stake-overview-network" class="do-wallet-stake-overview-select" aria-label="Stake network">' + chainOptionsHTML(chains) + '</select></span>',
+      '</div>',
+      '<div class="do-wallet-stake-overview-body">',
+        '<div class="do-wallet-stake-overview-chart-wrap">',
+          '<div><div class="do-wallet-stake-overview-chart" style="' + escapeHTML(chartStyle(scoped)) + '"></div><div class="do-wallet-stake-overview-legend">' + legend + '</div></div>',
+        '</div>',
+        '<div class="do-wallet-stake-overview-summary">',
+          summaryCardHTML("Delegations", total.staking, amountSummary(scoped, "staking")),
+          summaryCardHTML("Undelegations", total.unbonding, amountSummary(scoped, "unbonding")),
+          summaryCardHTML("Staking rewards", total.reward, amountSummary(scoped, "reward")),
+        '</div>',
+      '</div>',
+      '<div class="do-wallet-stake-overview-positions">',
+        '<div class="do-wallet-stake-overview-positions-head"><strong>Positions</strong><small>' + escapeHTML(scoped.length + " " + (scoped.length === 1 ? "position" : "positions")) + '</small></div>',
+        '<div class="do-wallet-stake-overview-list">' + scoped.map(rowHTML).join("") + '</div>',
+      '</div>'
+    ].join("");
+    var select = card.querySelector(".do-wallet-stake-overview-select");
+    if (select) {
+      select.value = selectedChain;
+      select.addEventListener("change", function () {
+        selectedChain = select.value || "all";
+        schedule(0);
+      });
+    }
     return true;
   }
 
-  function findChipRow(card) {
-    var candidates = Array.prototype.slice.call(card.querySelectorAll("div,section,nav"));
-    var best = null;
-    var bestScore = -1;
-
-    candidates.forEach(function (node) {
-      if (node.getAttribute(WRAP_ATTR) === "1") return;
-      if (!looksLikeChipRow(node)) return;
-      var text = clean(node.innerText || node.textContent);
-      var rect = node.getBoundingClientRect();
-      var score = 100 - Math.min(60, Math.round(rect.height));
-      if (KNOWN_CHAIN_RE.test(text)) score += 20;
-      if (/\+\s*\d+/.test(text)) score += 5;
-      if ((node.children || []).length > 1) score += 10;
-      if (score > bestScore) {
-        best = node;
-        bestScore = score;
-      }
-    });
-
-    return best;
-  }
-
-  function chipText(node) {
-    return clean(node.innerText || node.textContent);
-  }
-
-  function findClickable(node, row) {
-    var target = node.closest && node.closest("button,[role='button'],[tabindex]");
-    return target && row.contains(target) ? target : node;
-  }
-
-  function collectChipOptions(row) {
-    var selector = "button,[role='button'],[tabindex]";
-    var nodes = Array.prototype.slice.call(row.querySelectorAll(selector)).filter(visible);
-    if (nodes.length < 2) {
-      nodes = Array.prototype.slice.call(row.children || []).filter(visible);
-    }
-
-    var seen = Object.create(null);
-    var options = [];
-
-    nodes.forEach(function (node) {
-      var label = chipText(node);
-      if (!label || label.length > 42) return;
-      if (/^\+\s*\d+/.test(label)) return;
-      if (BLOCKED_TEXT_RE.test(label)) return;
-      if (!/^All$/i.test(label) && !KNOWN_CHAIN_RE.test(label) && !/^[A-Z][A-Za-z0-9 .()/-]{1,40}$/.test(label)) return;
-      var key = label.toLowerCase();
-      if (seen[key]) return;
-      seen[key] = true;
-      options.push({ label: label, node: findClickable(node, row) });
-    });
-
-    if (!options.some(function (option) { return /^All$/i.test(option.label); })) {
-      options.unshift({ label: "All", node: row });
-    }
-
-    return options;
-  }
-
-  function optionSignature(options) {
-    return options.map(function (option) { return option.label; }).join("|");
-  }
-
-  function clickOption(option) {
-    if (!option || !option.node) return;
-    option.node.dispatchEvent(new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      view: window
-    }));
-  }
-
-  function renderDropdown(row, options) {
-    var signature = optionSignature(options);
-    var existing = row.previousElementSibling;
-    if (existing && existing.getAttribute && existing.getAttribute(WRAP_ATTR) === "1") {
-      if (existing.getAttribute("data-options") === signature) return;
-      existing.remove();
-    }
-
-    var wrap = document.createElement("div");
-    wrap.className = "do-wallet-stake-chain-dropdown-wrap";
-    wrap.setAttribute(WRAP_ATTR, "1");
-    wrap.setAttribute("data-options", signature);
-
-    var label = document.createElement("span");
-    label.className = "do-wallet-stake-chain-dropdown-label";
-    label.textContent = "Network";
-
-    var shell = document.createElement("span");
-    shell.className = "do-wallet-stake-chain-dropdown-shell";
-
-    var select = document.createElement("select");
-    select.className = "do-wallet-stake-chain-dropdown";
-    select.setAttribute("aria-label", "Stake network");
-
-    options.forEach(function (option, index) {
-      var item = document.createElement("option");
-      item.value = String(index);
-      item.textContent = option.label;
-      select.appendChild(item);
-    });
-
-    select.addEventListener("change", function () {
-      clickOption(options[Number(select.value)]);
-    });
-
-    shell.appendChild(select);
-    wrap.appendChild(label);
-    wrap.appendChild(shell);
-    row.parentNode.insertBefore(wrap, row);
-  }
-
-  function cleanupInactiveRoute() {
-    Array.prototype.slice.call(document.querySelectorAll("[" + WRAP_ATTR + "='1']")).forEach(function (node) {
-      node.remove();
-    });
-    Array.prototype.slice.call(document.querySelectorAll("[" + ROW_HIDDEN_ATTR + "='1']")).forEach(function (node) {
-      node.removeAttribute(ROW_HIDDEN_ATTR);
-      node.removeAttribute(APPLIED_ATTR);
-    });
-  }
-
   function update() {
+    renderTimer = 0;
+    if (!document.body || !/\/stake(?:\/|$|\?)/i.test(window.location.pathname + window.location.search)) return;
     installStyles();
-    if (!isStakeRoute()) {
-      cleanupInactiveRoute();
-      return;
-    }
-
+    ensureDirectDoRows();
+    var rows = stakeRows();
+    if (!rows.length) return;
     var card = findStakeCard();
     if (!card) return;
-
-    var row = findChipRow(card);
-    if (!row) return;
-
-    var options = collectChipOptions(row);
-    if (options.length < 2) return;
-
-    row.setAttribute(ROW_HIDDEN_ATTR, "1");
-    row.setAttribute(APPLIED_ATTR, "1");
-    renderDropdown(row, options);
+    render(card, rows);
+    try {
+      window.__doWalletStakeOverviewDebug = {
+        version: VERSION,
+        rows: rows.length,
+        directDoRows: directDoRows.length,
+        selectedChain: selectedChain,
+        updatedAt: new Date().toISOString()
+      };
+    } catch (error) {}
   }
 
-  function schedule() {
-    window.clearTimeout(updateTimer);
-    updateTimer = window.setTimeout(update, UPDATE_DELAY_MS);
+  function schedule(delay) {
+    window.clearTimeout(renderTimer);
+    renderTimer = window.setTimeout(update, delay == null ? RENDER_DELAY_MS : delay);
   }
 
-  var lastURL = window.location.href;
-  function watchURL() {
-    if (window.location.href !== lastURL) {
-      lastURL = window.location.href;
-      schedule();
-    }
-    window.setTimeout(watchURL, 500);
-  }
-
-  document.addEventListener("DOMContentLoaded", schedule);
-  window.addEventListener("load", schedule);
-  window.addEventListener("popstate", schedule);
-  window.addEventListener("hashchange", schedule);
-  document.addEventListener("click", function () {
-    window.setTimeout(schedule, 80);
-  }, true);
-
+  document.addEventListener("DOMContentLoaded", function () { schedule(0); });
+  window.addEventListener("load", function () { schedule(0); });
+  window.addEventListener("focus", function () { schedule(0); });
+  window.addEventListener("popstate", function () { schedule(0); });
+  window.addEventListener("hashchange", function () { schedule(0); });
+  window.addEventListener("do_wallet_portfolio_snapshot", function () { schedule(0); });
+  window.addEventListener("storage", function (event) {
+    if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY) schedule(0);
+  });
   if (window.MutationObserver) {
-    new MutationObserver(schedule).observe(document.documentElement, {
+    new MutationObserver(function () { schedule(); }).observe(document.documentElement, {
       childList: true,
       subtree: true
     });
   }
-
-  schedule();
-  watchURL();
+  schedule(0);
+  window.setTimeout(schedule, 600);
+  window.setTimeout(schedule, 1800);
 })();
