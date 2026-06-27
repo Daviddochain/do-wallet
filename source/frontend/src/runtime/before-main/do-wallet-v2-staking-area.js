@@ -4,7 +4,7 @@
   if (window.__doWalletStakingArea20260627Rewrite) return;
   window.__doWalletStakingArea20260627Rewrite = true;
 
-  var VERSION = "20260627-staking-area-rewrite-1";
+  var VERSION = "20260627-staking-area-stable-1";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-staking-area-style";
@@ -19,6 +19,8 @@
   var directRows = [];
   var directFetchKey = "";
   var directFetching = false;
+  var directFetchTimer = 0;
+  var renderedMain = null;
 
   var CHAIN_META = {
     "Do-Chain": { name: "Do Chain", symbol: "DO", denom: "udo", decimals: 6, prefix: "do", icon: "/do-logo.jpg", price: 1.273e-9 },
@@ -254,6 +256,15 @@
     if (isStakeOverviewRoute()) document.documentElement.setAttribute(ROUTE_ATTR, "overview");
     else if (routeLooksLikeStakeAction()) document.documentElement.setAttribute(ROUTE_ATTR, "action");
     else document.documentElement.removeAttribute(ROUTE_ATTR);
+  }
+
+  function removeOverviewRoot() {
+    var roots = Array.prototype.slice.call(document.querySelectorAll("[" + ROOT_ATTR + "]"));
+    roots.forEach(function (root) {
+      if (root && root.parentNode) root.parentNode.removeChild(root);
+    });
+    if (renderedMain) renderedMain.removeAttribute("data-do-wallet-staking-owned-main");
+    renderedMain = null;
   }
 
   function serviceChains() {
@@ -779,22 +790,40 @@
     });
   }
 
+  function directRowsSignature(rows) {
+    return uniqueRows(rows).sort(function (a, b) {
+      return rowKey(a).localeCompare(rowKey(b));
+    }).map(function (row) {
+      return rowKey(row) + ":" + row.amountText + ":" + row.valueText;
+    }).join("||");
+  }
+
   function ensureDirectRows() {
+    if (!isStakeOverviewRoute()) return;
     var queries = collectStakeQueries();
     var key = queries.map(function (query) { return query.chainID + ":" + lower(query.address); }).join("|");
     if (!key || key === directFetchKey || directFetching) return;
     directFetchKey = key;
     directFetching = true;
-    runLimited(queries, 5, fetchStakeRows).then(function (sets) {
+    runLimited(queries, 3, fetchStakeRows).then(function (sets) {
       var rows = [];
       sets.forEach(function (set) { rows = rows.concat(set || []); });
-      directRows = uniqueRows(rows);
+      var nextRows = uniqueRows(rows);
+      var changed = directRowsSignature(nextRows) !== directRowsSignature(directRows);
+      directRows = nextRows;
       directFetching = false;
-      scheduleRender(0);
+      if (changed && isStakeOverviewRoute()) scheduleRender(80);
     }, function () {
       directFetching = false;
-      scheduleRender(0);
     });
+  }
+
+  function queueDirectRows(delay) {
+    window.clearTimeout(directFetchTimer);
+    directFetchTimer = window.setTimeout(function () {
+      directFetchTimer = 0;
+      ensureDirectRows();
+    }, delay == null ? 300 : delay);
   }
 
   function stakeRows() {
@@ -963,18 +992,24 @@
 
   function renderOverview() {
     if (!isStakeOverviewRoute()) return;
-    requestPortfolioRefresh();
-    ensureDirectRows();
     var main = findMain();
-    if (!main) return;
+    if (!main) {
+      scheduleRender(160);
+      return;
+    }
     var rows = stakeRows();
-    var signature = VERSION + ":" + selectedChain() + ":" + directFetching + ":" + rows.map(function (row) {
+    var signature = VERSION + ":" + selectedChain() + ":" + rows.map(function (row) {
       return rowKey(row) + ":" + row.amountText + ":" + row.valueText;
     }).join("||");
     var root = main.querySelector("[" + ROOT_ATTR + "]");
-    if (root && root.getAttribute(SIGNATURE_ATTR) === signature) return;
+    if (root && root.getAttribute(SIGNATURE_ATTR) === signature) {
+      queueDirectRows();
+      return;
+    }
     main.setAttribute("data-do-wallet-staking-owned-main", VERSION);
-    main.innerHTML = overviewHTML(rows);
+    renderedMain = main;
+    if (root) root.outerHTML = overviewHTML(rows);
+    else main.insertAdjacentHTML("afterbegin", overviewHTML(rows));
     root = main.querySelector("[" + ROOT_ATTR + "]");
     if (root) root.setAttribute(SIGNATURE_ATTR, signature);
     var select = main.querySelector("#do-wallet-staking-chain");
@@ -992,10 +1027,11 @@
         directRows = [];
         refreshRequested = false;
         requestPortfolioRefresh();
-        ensureDirectRows();
-        scheduleRender(0);
+        queueDirectRows(0);
+        scheduleRender(100);
       });
     }
+    queueDirectRows();
     try {
       window.__doWalletStakingAreaDebug = {
         version: VERSION,
@@ -1004,6 +1040,7 @@
         directRows: directRows.length,
         directFetching: directFetching,
         selectedChain: selectedChain(),
+        renderMode: "single-root",
         updatedAt: new Date().toISOString()
       };
     } catch (error) {}
@@ -1225,7 +1262,6 @@
     balanceTimer = 0;
     updateRouteAttribute();
     if (!routeLooksLikeStakeAction()) return;
-    requestPortfolioRefresh();
     stakeForms().forEach(patchStakeForm);
   }
 
@@ -1254,17 +1290,17 @@
       ".do-wallet-staking-filter span{display:inline-flex;min-width:270px;position:relative;}",
       ".do-wallet-staking-filter span:after{border-bottom:2px solid #c7b9ef;border-right:2px solid #c7b9ef;content:'';height:8px;pointer-events:none;position:absolute;right:16px;top:50%;transform:translateY(-65%) rotate(45deg);width:8px;}",
       ".do-wallet-staking-filter select{appearance:none;-webkit-appearance:none;background:#251b39;border:1px solid rgba(159,70,255,.52);border-radius:999px;color:#fff;cursor:pointer;font:inherit;font-size:13px;font-weight:var(--bold,500);min-height:38px;outline:none;padding:0 42px 0 16px;width:100%;}",
-      ".do-wallet-staking-body{align-items:center;display:grid;gap:24px;grid-template-columns:minmax(220px,1fr) minmax(260px,430px);padding:22px 30px;}",
-      ".do-wallet-staking-chart-wrap{display:grid;gap:14px;min-height:210px;place-items:center;}",
-      ".do-wallet-staking-chart{aspect-ratio:1;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);position:relative;width:min(176px,38vw);}",
+      ".do-wallet-staking-body{align-items:center;display:grid;gap:22px;grid-template-columns:minmax(180px,1fr) minmax(260px,390px);padding:18px 30px;}",
+      ".do-wallet-staking-chart-wrap{display:grid;gap:12px;min-height:170px;place-items:center;}",
+      ".do-wallet-staking-chart{aspect-ratio:1;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);position:relative;width:min(136px,30vw);}",
       ".do-wallet-staking-chart:after{background:#181125;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,.03);content:'';inset:28%;position:absolute;}",
       ".do-wallet-staking-legend{color:#c9bbef;display:flex;flex-wrap:wrap;font-size:13px;font-weight:var(--bold,500);gap:10px 18px;justify-content:center;}",
       ".do-wallet-staking-legend span{align-items:center;display:inline-flex;gap:7px;}",
       ".do-wallet-staking-legend i{border-radius:50%;display:inline-block;height:10px;width:10px;}",
       ".do-wallet-staking-summaries{display:grid;gap:14px;}",
-      ".do-wallet-staking-summary-card{background:#171023;border:1px solid rgba(159,70,255,.42);border-radius:7px;min-height:104px;padding:18px 20px;}",
-      ".do-wallet-staking-summary-card span{display:block;font-size:15px;font-weight:var(--bold,500);margin-bottom:12px;}",
-      ".do-wallet-staking-summary-card strong{display:block;font-size:28px;font-weight:var(--bold,500);line-height:1;margin-bottom:8px;}",
+      ".do-wallet-staking-summary-card{background:#171023;border:1px solid rgba(159,70,255,.42);border-radius:7px;min-height:84px;padding:14px 18px;}",
+      ".do-wallet-staking-summary-card span{display:block;font-size:14px;font-weight:var(--bold,500);margin-bottom:10px;}",
+      ".do-wallet-staking-summary-card strong{display:block;font-size:24px;font-weight:var(--bold,500);line-height:1;margin-bottom:7px;}",
       ".do-wallet-staking-summary-card small{color:#c9bbef;display:block;font-size:12px;font-weight:var(--bold,500);}",
       ".do-wallet-staking-positions-head{align-items:center;border-top:1px solid rgba(159,70,255,.28);display:flex;gap:16px;justify-content:space-between;padding:20px 30px;}",
       ".do-wallet-staking-positions-head strong{font-size:16px;font-weight:var(--bold,500);}",
@@ -1284,8 +1320,8 @@
       ".do-wallet-staking-actions{align-items:center;display:flex;gap:20px;justify-content:space-between;padding:22px 30px;}",
       "[data-do-wallet-staking-balance-hidden='1']{display:none!important;}",
       "[" + BALANCE_ATTR + "] button[disabled]{pointer-events:auto;}",
-      "@media(max-width:900px){.do-wallet-staking-body{grid-template-columns:1fr}.do-wallet-staking-summaries{grid-template-columns:repeat(3,minmax(0,1fr))}.do-wallet-staking-chart-wrap{min-height:170px}.do-wallet-staking-chart{width:min(150px,44vw)}}",
-      "@media(max-width:640px){.do-wallet-staking-page{gap:16px;padding-bottom:20px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-body,.do-wallet-staking-positions-head,.do-wallet-staking-position,.do-wallet-staking-actions{padding-left:18px;padding-right:18px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-actions{align-items:stretch;flex-direction:column}.do-wallet-staking-page-head h1{font-size:32px}.do-wallet-staking-filter span{min-width:0;width:100%}.do-wallet-staking-body{gap:18px;padding-bottom:18px;padding-top:18px}.do-wallet-staking-chart-wrap{min-height:145px}.do-wallet-staking-chart{width:124px}.do-wallet-staking-summaries{grid-template-columns:1fr}.do-wallet-staking-position{gap:10px}.do-wallet-staking-position-value{min-width:118px}.do-wallet-staking-position-main strong,.do-wallet-staking-position-value strong{font-size:14px}.do-wallet-staking-withdraw,.do-wallet-staking-actions a{width:100%;}}"
+      "@media(max-width:900px){.do-wallet-staking-body{grid-template-columns:1fr}.do-wallet-staking-summaries{grid-template-columns:repeat(3,minmax(0,1fr))}.do-wallet-staking-chart-wrap{min-height:140px}.do-wallet-staking-chart{width:min(124px,38vw)}}",
+      "@media(max-width:640px){.do-wallet-staking-page{gap:16px;padding-bottom:20px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-body,.do-wallet-staking-positions-head,.do-wallet-staking-position,.do-wallet-staking-actions{padding-left:18px;padding-right:18px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-actions{align-items:stretch;flex-direction:column}.do-wallet-staking-page-head h1{font-size:32px}.do-wallet-staking-filter span{min-width:0;width:100%}.do-wallet-staking-body{gap:16px;padding-bottom:16px;padding-top:16px}.do-wallet-staking-chart-wrap{min-height:116px}.do-wallet-staking-chart{width:96px}.do-wallet-staking-summaries{grid-template-columns:1fr}.do-wallet-staking-position{gap:10px}.do-wallet-staking-position-value{min-width:118px}.do-wallet-staking-position-main strong,.do-wallet-staking-position-value strong{font-size:14px}.do-wallet-staking-withdraw,.do-wallet-staking-actions a{width:100%;}}"
     ].join("\n");
     (document.head || document.documentElement).appendChild(style);
   }
@@ -1297,6 +1333,7 @@
       updateRouteAttribute();
       installStyles();
       if (isStakeOverviewRoute()) renderOverview();
+      else removeOverviewRoot();
       applyStakeBalances();
     }, delay == null ? 80 : delay);
   }
@@ -1320,35 +1357,33 @@
     });
   }
 
-  function startObserver() {
-    if (!window.MutationObserver || window.__doWalletStakingObserver20260627) return;
-    window.__doWalletStakingObserver20260627 = true;
-    new MutationObserver(function () {
-      if (isStakeOverviewRoute()) scheduleRender();
-      else if (routeLooksLikeStakeAction()) scheduleBalance();
-    }).observe(document.documentElement, { childList: true, subtree: true });
+  function startRoutePoll() {
+    if (window.__doWalletStakingRoutePoll20260627) return;
+    window.__doWalletStakingRoutePoll20260627 = true;
+    var previousPath = routePath();
+    window.setInterval(function () {
+      var currentPath = routePath();
+      if (currentPath === previousPath) return;
+      previousPath = currentPath;
+      scheduleRender(0);
+    }, 500);
   }
 
   hookHistory();
-  installStyles();
   updateRouteAttribute();
+  installStyles();
   document.addEventListener("DOMContentLoaded", function () { scheduleRender(0); });
   window.addEventListener("load", function () { scheduleRender(0); });
-  window.addEventListener("focus", function () { scheduleRender(0); });
+  window.addEventListener("pageshow", function () { scheduleRender(0); });
   window.addEventListener("popstate", function () { scheduleRender(0); });
   window.addEventListener("hashchange", function () { scheduleRender(0); });
-  window.addEventListener("do_wallet_portfolio_snapshot", function () { scheduleRender(0); });
+  window.addEventListener("do_wallet_portfolio_snapshot", function () { scheduleRender(180); });
   window.addEventListener("storage", function (event) {
-    if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY || /wallet|user|keys/i.test(event.key || "")) scheduleRender(0);
+    if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY || /wallet|user|keys/i.test(event.key || "")) scheduleRender(180);
   });
   document.addEventListener("input", function () { scheduleBalance(0); }, true);
   document.addEventListener("change", function () { scheduleBalance(0); }, true);
-  document.addEventListener("click", function () {
-    scheduleRender(0);
-    window.setTimeout(scheduleRender, 120);
-  }, true);
-  startObserver();
+  startRoutePoll();
   scheduleRender(0);
   window.setTimeout(scheduleRender, 600);
-  window.setTimeout(scheduleRender, 1800);
 })();
