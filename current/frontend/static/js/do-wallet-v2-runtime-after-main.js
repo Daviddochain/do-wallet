@@ -6767,7 +6767,8 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
       ".do-mobile-connect-qr{display:flex;gap:16px;align-items:center;border:1px solid #4d2a6b;border-radius:8px;background:#080411;padding:14px}",
       ".do-mobile-connect-qr img{width:180px;height:180px;flex:0 0 auto;border-radius:8px;background:#fff;padding:8px;box-sizing:border-box}",
       ".do-mobile-connect-link{word-break:break-all;color:#cdbff0;font-size:12px;line-height:1.45}",
-      ".do-mobile-import-panel{position:fixed;left:16px;right:16px;bottom:16px;z-index:2147482500;margin:auto;max-width:560px;border:1px solid #66308b;border-radius:10px;background:#171020;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.5);padding:14px 16px}",
+      ".do-mobile-import-panel{position:fixed;left:16px;right:16px;bottom:16px;z-index:2147482500;margin:auto;max-width:560px;max-height:min(62vh,520px);overflow:auto;border:1px solid #66308b;border-radius:10px;background:#171020;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.5);padding:14px 16px}",
+      ".do-mobile-import-panel__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}",
       ".do-mobile-import-panel strong{display:block;margin-bottom:5px;font-size:15px}",
       ".do-mobile-import-panel p{margin:0 0 10px;color:#cdbff0;font-size:13px;line-height:1.45}",
       ".do-mobile-import-panel label{display:grid;gap:6px;margin:8px 0;color:#d9cff1;font-size:12px;font-weight:700}",
@@ -6775,7 +6776,11 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
       ".do-mobile-import-panel__actions{display:flex;gap:8px;flex-wrap:wrap}",
       ".do-mobile-import-panel button{appearance:none;border:1px solid #56307a;background:#241835;color:#fff;border-radius:8px;font:700 13px/1 Inter,system-ui,sans-serif;padding:10px 12px;cursor:pointer}",
       ".do-mobile-import-panel button.primary{background:#9d3cf5;border-color:#a340ff}",
-      "@media (max-width:760px){.do-mobile-connect-button{display:none}.do-mobile-connect-card{width:calc(100vw - 24px);max-height:calc(100vh - 24px)}.do-mobile-connect-head,.do-mobile-connect-body{padding:16px}.do-mobile-connect-qr{align-items:flex-start;flex-direction:column}.do-mobile-connect-qr img{width:164px;height:164px}.do-mobile-connect-actions{display:grid;grid-template-columns:1fr}.do-mobile-connect-primary,.do-mobile-connect-secondary{width:100%}}"
+      ".do-mobile-import-panel--compact{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;max-height:none;overflow:visible;padding:10px 12px}",
+      ".do-mobile-import-panel--compact strong{margin:0;font-size:13px}",
+      ".do-mobile-import-panel--compact p{margin:2px 0 0;font-size:12px;line-height:1.25}",
+      ".do-mobile-import-panel--compact button{padding:8px 10px}",
+      "@media (max-width:760px){.do-mobile-connect-button{display:none}.do-mobile-connect-card{width:calc(100vw - 24px);max-height:calc(100vh - 24px)}.do-mobile-connect-head,.do-mobile-connect-body{padding:16px}.do-mobile-connect-qr{align-items:flex-start;flex-direction:column}.do-mobile-connect-qr img{width:164px;height:164px}.do-mobile-connect-actions{display:grid;grid-template-columns:1fr}.do-mobile-connect-primary,.do-mobile-connect-secondary{width:100%}.do-mobile-import-panel{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-height:min(42vh,340px);padding:12px}.do-mobile-import-panel__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.do-mobile-import-panel button{min-width:0}.do-mobile-import-panel--compact{grid-template-columns:minmax(0,1fr) auto;max-height:none}.do-mobile-import-panel--compact [data-role='show']{display:none}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -7174,11 +7179,51 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
       window.sessionStorage.removeItem(PENDING_SEED_KEY);
       window.sessionStorage.removeItem(PENDING_PAYLOAD_KEY);
     } catch (error) {}
+    hideImportPanel();
+  }
+
+  function hideImportPanel() {
     var panel = document.querySelector(".do-mobile-import-panel");
     if (panel) panel.remove();
   }
 
-  function renderImportPanel(message) {
+  function renderCompactImportPanel(message, options) {
+    options = options || {};
+    ensureStyles();
+    var existing = document.querySelector(".do-mobile-import-panel");
+    if (existing) existing.remove();
+    var panel = document.createElement("div");
+    panel.className = "do-mobile-import-panel do-mobile-import-panel--compact";
+    panel.innerHTML = [
+      "<div>",
+      "<strong>Wallet details filled</strong>",
+      "<p>" + escapeHtml(message || "Continue in the import form.") + "</p>",
+      "</div>",
+      "<button type=\"button\" data-role=\"show\">Show</button>",
+      "<button type=\"button\" data-role=\"hide\">Hide</button>"
+    ].join("");
+    document.body.appendChild(panel);
+    var show = panel.querySelector("[data-role='show']");
+    var hide = panel.querySelector("[data-role='hide']");
+    if (show) {
+      show.addEventListener("click", function () {
+        renderImportPanel("Wallet details are still ready if you need to fill the form again.");
+      });
+    }
+    if (hide) hide.addEventListener("click", hideImportPanel);
+    if (options.autoHideMs) {
+      window.setTimeout(function () {
+        if (panel && panel.parentNode) panel.remove();
+      }, options.autoHideMs);
+    }
+  }
+
+  function renderImportPanel(message, options) {
+    options = options || {};
+    if (options.compact) {
+      renderCompactImportPanel(message, options);
+      return;
+    }
     ensureStyles();
     var payload = pendingPayload();
     if (!payload || !payload.mnemonic) return;
@@ -7187,7 +7232,10 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     var panel = document.createElement("div");
     panel.className = "do-mobile-import-panel";
     panel.innerHTML = [
+      "<div class=\"do-mobile-import-panel__head\">",
       "<strong>Mobile wallet seed ready</strong>",
+      "<button type=\"button\" data-role=\"hide\">Hide</button>",
+      "</div>",
       "<p>" + escapeHtml(message || "Open the seed import form, confirm the mobile wallet password, then import.") + "</p>",
       "<label>Wallet name<input data-role=\"wallet-name\" autocomplete=\"username\" value=\"" + escapeHtml(payload.walletName || "Do-Wallet") + "\"></label>",
       "<label>Mobile wallet password<input data-role=\"mobile-password\" type=\"password\" autocomplete=\"new-password\" placeholder=\"Password for this phone\"></label>",
@@ -7195,6 +7243,7 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
       "<button type=\"button\" class=\"primary\" data-role=\"fill\">Fill form</button>",
       "<button type=\"button\" class=\"primary\" data-role=\"import\">Fill and import</button>",
       "<button type=\"button\" data-role=\"copy\">Copy phrase</button>",
+      "<button type=\"button\" data-role=\"hide\">Hide</button>",
       "<button type=\"button\" data-role=\"clear\">Clear</button>",
       "</div>"
     ].join("");
@@ -7203,6 +7252,7 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     var importButton = panel.querySelector("[data-role='import']");
     var copy = panel.querySelector("[data-role='copy']");
     var clear = panel.querySelector("[data-role='clear']");
+    var hideButtons = Array.prototype.slice.call(panel.querySelectorAll("[data-role='hide']"));
     var walletName = panel.querySelector("[data-role='wallet-name']");
     var mobilePassword = panel.querySelector("[data-role='mobile-password']");
     function latestPayload() {
@@ -7218,7 +7268,11 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
           return;
         }
         var ok = fillImportForm(latestPayload(), { password: mobilePassword && mobilePassword.value });
-        setText(panel.querySelector("p"), ok ? "Seed phrase and wallet name filled. Check the password, then submit." : "The seed is ready, but the import fields are not visible yet.");
+        if (ok) {
+          renderImportPanel("Seed phrase and wallet name filled. Continue in the import form.", { compact: true, autoHideMs: 2600 });
+        } else {
+          setText(panel.querySelector("p"), "The seed is ready, but the import fields are not visible yet.");
+        }
       });
     }
     if (importButton) {
@@ -7234,7 +7288,11 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
           return;
         }
         var ok = fillImportForm(latestPayload(), { password: pass, submit: true });
-        setText(panel.querySelector("p"), ok ? "Wallet details sent to the import form." : "The seed is ready, but the import fields are not visible yet.");
+        if (ok) {
+          renderImportPanel("Wallet details sent to the import form.", { compact: true, autoHideMs: 2200 });
+        } else {
+          setText(panel.querySelector("p"), "The seed is ready, but the import fields are not visible yet.");
+        }
       });
     }
     if (copy) {
@@ -7245,6 +7303,9 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
         } catch (error) {}
       });
     }
+    hideButtons.forEach(function (button) {
+      button.addEventListener("click", hideImportPanel);
+    });
     if (clear) clear.addEventListener("click", clearPendingSeed);
   }
 
@@ -7254,7 +7315,7 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     var phrase = fresh || (payload && payload.mnemonic);
     if (!phrase || !payload) return;
     if (window.location.pathname.indexOf("/auth/recover") === -1) {
-      renderImportPanel("Seed and wallet name received. Continue to the import page on this phone.");
+      renderImportPanel("Seed and wallet name received. Opening import form.", { compact: true, autoHideMs: 1800 });
       window.setTimeout(function () {
         if (pendingPayload()) window.location.href = "/auth/recover";
       }, 650);
@@ -7265,10 +7326,10 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     var tryFill = function () {
       attempts += 1;
       if (fillImportForm(payload)) {
-        renderImportPanel("Seed phrase and wallet name filled. Enter the mobile password, then import.");
+        renderImportPanel("Seed phrase and wallet name filled. Continue in the import form.", { compact: true, autoHideMs: 2600 });
         return true;
       }
-      if (attempts === 1) renderImportPanel("Waiting for the import fields to appear.");
+      if (attempts === 1) renderImportPanel("Waiting for the import fields to appear.", { compact: true });
       return false;
     };
     if (tryFill()) return;
