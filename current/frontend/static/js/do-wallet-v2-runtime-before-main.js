@@ -169,24 +169,35 @@ runModule("do-wallet-v2-branding.js", function(){
   function setMeta(name, value) {
     var selector = 'meta[name="' + name + '"],meta[property="' + name + '"]';
     var node = document.querySelector(selector);
+    var changed = false;
     if (!node) {
       node = document.createElement("meta");
       node.setAttribute(name.indexOf("og:") === 0 ? "property" : "name", name);
       document.head.appendChild(node);
+      changed = true;
     }
-    node.setAttribute("content", value);
+    if (node.getAttribute("content") !== value) {
+      node.setAttribute("content", value);
+      changed = true;
+    }
+    return changed;
   }
 
   function rewriteVisibleBrand() {
-    document.title = cleanBrandText(document.title) || RELEASE_NAME;
-    if (document.title !== RELEASE_NAME) document.title = RELEASE_NAME;
-    setMeta("application-name", RELEASE_NAME);
-    setMeta("apple-mobile-web-app-title", RELEASE_NAME);
-    setMeta("twitter:title", RELEASE_NAME);
-    setMeta("og:title", RELEASE_NAME);
+    var changed = false;
+    var nextTitle = cleanBrandText(document.title) || RELEASE_NAME;
+    if (nextTitle !== RELEASE_NAME) nextTitle = RELEASE_NAME;
+    if (document.title !== nextTitle) {
+      document.title = nextTitle;
+      changed = true;
+    }
+    changed = setMeta("application-name", RELEASE_NAME) || changed;
+    changed = setMeta("apple-mobile-web-app-title", RELEASE_NAME) || changed;
+    changed = setMeta("twitter:title", RELEASE_NAME) || changed;
+    changed = setMeta("og:title", RELEASE_NAME) || changed;
 
     var root = document.body || document.documentElement;
-    if (!root) return;
+    if (!root) return changed;
 
     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: function (node) {
@@ -200,17 +211,25 @@ runModule("do-wallet-v2-branding.js", function(){
     while (walker.nextNode()) nodes.push(walker.currentNode);
     nodes.forEach(function (node) {
       node.nodeValue = cleanBrandText(node.nodeValue);
+      changed = true;
     });
 
     Array.prototype.forEach.call(root.querySelectorAll("[title],[aria-label],[alt]"), function (node) {
       ["title", "aria-label", "alt"].forEach(function (attr) {
         var value = node.getAttribute(attr);
-        if (/\bDo-Wallet\s+v2\b/i.test(value || "")) node.setAttribute(attr, cleanBrandText(value));
+        if (/\bDo-Wallet\s+v2\b/i.test(value || "")) {
+          node.setAttribute(attr, cleanBrandText(value));
+          changed = true;
+        }
       });
     });
 
-    replaceHeaderLogo();
-    document.documentElement.setAttribute("data-do-wallet-branding-ready", "true");
+    changed = replaceHeaderLogo() || changed;
+    if (document.documentElement.getAttribute("data-do-wallet-branding-ready") !== "true") {
+      document.documentElement.setAttribute("data-do-wallet-branding-ready", "true");
+      changed = true;
+    }
+    return changed;
   }
 
   function createLogoVideo(img) {
@@ -257,10 +276,57 @@ runModule("do-wallet-v2-branding.js", function(){
   }
 
   function replaceHeaderLogo() {
+    var changed = false;
     Array.prototype.forEach.call(document.querySelectorAll("img"), function (img) {
       if (!isHeaderLogo(img)) return;
       img.replaceWith(createLogoVideo(img));
+      changed = true;
     });
+    return changed;
+  }
+
+  function isPotentialLogoImage(node) {
+    if (!node || node.nodeType !== 1 || !/^IMG$/i.test(node.tagName || "")) return false;
+    var src = String(node.currentSrc || node.src || node.getAttribute("src") || "");
+    var label = String(node.getAttribute("alt") || node.getAttribute("title") || node.className || "");
+    return /(do-logo|dologo|DoLogo|broadcasting-transmission)/i.test(src + " " + label);
+  }
+
+  function nodeNeedsRewrite(node) {
+    if (!node) return false;
+    if (node.nodeType === 3) return /\bDo-Wallet\s+v2\b/i.test(node.nodeValue || "");
+    if (node.nodeType !== 1) return false;
+    if (isPotentialLogoImage(node)) return true;
+    var label = "";
+    try {
+      label = [
+        node.getAttribute && node.getAttribute("title"),
+        node.getAttribute && node.getAttribute("aria-label"),
+        node.getAttribute && node.getAttribute("alt"),
+        node.textContent
+      ].join(" ");
+    } catch (error) {}
+    if (/\bDo-Wallet\s+v2\b/i.test(label || "")) return true;
+    try {
+      return Boolean(node.querySelector && node.querySelector('img[src*="do-logo"],img[src*="dologo"],img[src*="DoLogo"],img[src*="broadcasting-transmission"]'));
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function mutationsNeedRewrite(mutations) {
+    if (!Array.isArray(mutations)) return true;
+    for (var index = 0; index < mutations.length; index += 1) {
+      var mutation = mutations[index];
+      if (mutation.type === "characterData" && nodeNeedsRewrite(mutation.target)) return true;
+      if (mutation.type === "attributes" && /^(title|aria-label|alt|src)$/i.test(mutation.attributeName || "") && nodeNeedsRewrite(mutation.target)) return true;
+      if (mutation.type === "childList") {
+        for (var childIndex = 0; childIndex < mutation.addedNodes.length; childIndex += 1) {
+          if (nodeNeedsRewrite(mutation.addedNodes[childIndex])) return true;
+        }
+      }
+    }
+    return false;
   }
 
   var scheduled = false;
@@ -282,23 +348,27 @@ runModule("do-wallet-v2-branding.js", function(){
   }
 
   try {
-    var observer = new MutationObserver(scheduleRewrite);
+    var observer = new MutationObserver(function (mutations) {
+      if (mutationsNeedRewrite(Array.prototype.slice.call(mutations || []))) scheduleRewrite();
+    });
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true,
-      characterData: true
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["title", "aria-label", "alt", "src"]
     });
     window.setTimeout(function () {
       observer.disconnect();
-    }, 60 * 1000);
+    }, 12 * 1000);
   } catch (error) {}
 
   var ticks = 0;
   var timer = window.setInterval(function () {
     scheduleRewrite();
     ticks += 1;
-    if (ticks >= 30) window.clearInterval(timer);
-  }, 1000);
+    if (ticks >= 6) window.clearInterval(timer);
+  }, 1500);
 })();
 });
 
@@ -7896,13 +7966,11 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     TRUSTED_PUBLIC_STORAGE_KEYS[key] = true;
     TRUSTED_PUBLIC_STORAGE_KEYS[String(key).toLowerCase()] = true;
   });
-  var REMOVED_NETWORKS = ["dochain-1", "ares-1", "pisco-1", "localterra", "sentinelhub-2"];
-  var DISABLED_BROWSER_LCD_CHAINS = {
-    "kava_2222-10": true
-  };
+  var REMOVED_NETWORKS = ["dochain-1", "ares-1", "pisco-1", "localterra"];
+  var DISABLED_BROWSER_LCD_CHAINS = {};
   var REMOVED_ADDRESS_ALIASES = REMOVED_NETWORKS.slice();
   var STALE_NETWORK_ALIASES = ["dochain-1", "do-main-1", "dochain", "do", "888", "terra", "330", "lunc", "luna", "terra-classic"];
-  var DISPLAY_ALIAS_KEYS = ["address", "0", "60", "118", "144", "195", "330", "501", "529", "888", "1815", "terra", "lunc", "luna", "terra-classic", "do", "dochain", "cosmos", "osmo", "eth", "evm", "ethereum", "eip155:1", "btc", "bitcoin", "bip122:000000000019d6689c085ae165831e93", "sol", "solana", "secret", "dungeon", "ada", "cardano", "trx", "tron", "xrp"];
+  var DISPLAY_ALIAS_KEYS = ["address", "0", "60", "118", "144", "195", "330", "459", "501", "529", "888", "1815", "terra", "lunc", "luna", "terra-classic", "do", "dochain", "cosmos", "osmo", "eth", "evm", "ethereum", "eip155:1", "btc", "bitcoin", "bip122:000000000019d6689c085ae165831e93", "sol", "solana", "secret", "dungeon", "kava", "sent", "dvpn", "ada", "cardano", "trx", "tron", "xrp"];
   var PRIORITY_NETWORKS = [
     "Do-Chain",
     "columbus-5",
@@ -13293,7 +13361,9 @@ runModule("do-wallet-v2-staking-area.js", function(){
     "dungeon-1": { name: "Dungeon Chain", symbol: "DGN", denom: "udgn", decimals: 6, prefix: "dungeon", icon: "/img/chains/Dungeon.png" },
     "chihuahua-1": { name: "Chihuahua", symbol: "HUAHUA", denom: "uhuahua", decimals: 6, prefix: "chihuahua", icon: "/img/chains/Huahua.png" },
     "stargaze-1": { name: "Stargaze", symbol: "STARS", denom: "ustars", decimals: 6, prefix: "stars", icon: "/img/chains/Stargaze.png" },
-    "injective-1": { name: "Injective", symbol: "INJ", denom: "inj", decimals: 18, prefix: "inj", icon: "/img/chains/Injective.svg" }
+    "injective-1": { name: "Injective", symbol: "INJ", denom: "inj", decimals: 18, prefix: "inj", icon: "/img/chains/Injective.svg" },
+    "kava_2222-10": { name: "Kava", symbol: "KAVA", denom: "ukava", decimals: 6, prefix: "kava", icon: "/img/coins/unknown.svg" },
+    "sentinelhub-2": { name: "DVPN", symbol: "DVPN", denom: "udvpn", decimals: 6, prefix: "sent", icon: "/img/coins/unknown.svg" }
   };
 
   var CHAIN_ALIASES = {
@@ -13338,7 +13408,14 @@ runModule("do-wallet-v2-staking-area.js", function(){
     "stargaze-1": "stargaze-1",
     "inj": "injective-1",
     "injective": "injective-1",
-    "injective-1": "injective-1"
+    "injective-1": "injective-1",
+    "kava": "kava_2222-10",
+    "kava-2222-10": "kava_2222-10",
+    "kava_2222-10": "kava_2222-10",
+    "dvpn": "sentinelhub-2",
+    "sent": "sentinelhub-2",
+    "sentinel": "sentinelhub-2",
+    "sentinelhub-2": "sentinelhub-2"
   };
 
   var DENOM_SYMBOLS = {
@@ -13359,7 +13436,9 @@ runModule("do-wallet-v2-staking-area.js", function(){
     udgn: "DGN",
     uhuahua: "HUAHUA",
     ustars: "STARS",
-    inj: "INJ"
+    inj: "INJ",
+    ukava: "KAVA",
+    udvpn: "DVPN"
   };
 
   var CATEGORY_LABELS = {

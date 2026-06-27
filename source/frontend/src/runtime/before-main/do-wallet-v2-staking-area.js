@@ -32,7 +32,9 @@
     "dungeon-1": { name: "Dungeon Chain", symbol: "DGN", denom: "udgn", decimals: 6, prefix: "dungeon", icon: "/img/chains/Dungeon.png" },
     "chihuahua-1": { name: "Chihuahua", symbol: "HUAHUA", denom: "uhuahua", decimals: 6, prefix: "chihuahua", icon: "/img/chains/Huahua.png" },
     "stargaze-1": { name: "Stargaze", symbol: "STARS", denom: "ustars", decimals: 6, prefix: "stars", icon: "/img/chains/Stargaze.png" },
-    "injective-1": { name: "Injective", symbol: "INJ", denom: "inj", decimals: 18, prefix: "inj", icon: "/img/chains/Injective.svg" }
+    "injective-1": { name: "Injective", symbol: "INJ", denom: "inj", decimals: 18, prefix: "inj", icon: "/img/chains/Injective.svg" },
+    "kava_2222-10": { name: "Kava", symbol: "KAVA", denom: "ukava", decimals: 6, prefix: "kava", icon: "/img/coins/unknown.svg" },
+    "sentinelhub-2": { name: "DVPN", symbol: "DVPN", denom: "udvpn", decimals: 6, prefix: "sent", icon: "/img/coins/unknown.svg" }
   };
 
   var CHAIN_ALIASES = {
@@ -77,7 +79,14 @@
     "stargaze-1": "stargaze-1",
     "inj": "injective-1",
     "injective": "injective-1",
-    "injective-1": "injective-1"
+    "injective-1": "injective-1",
+    "kava": "kava_2222-10",
+    "kava-2222-10": "kava_2222-10",
+    "kava_2222-10": "kava_2222-10",
+    "dvpn": "sentinelhub-2",
+    "sent": "sentinelhub-2",
+    "sentinel": "sentinelhub-2",
+    "sentinelhub-2": "sentinelhub-2"
   };
 
   var DENOM_SYMBOLS = {
@@ -98,7 +107,9 @@
     udgn: "DGN",
     uhuahua: "HUAHUA",
     ustars: "STARS",
-    inj: "INJ"
+    inj: "INJ",
+    ukava: "KAVA",
+    udvpn: "DVPN"
   };
 
   var CATEGORY_LABELS = {

@@ -262,6 +262,11 @@ const LCD_FALLBACKS = {
     'https://injective-api.polkachu.com',
     'https://rest.lavenderfive.com:443/injective',
   ],
+  'kava_2222-10': [
+    'https://lcd-kava.tfl.foundation',
+    'https://kava-rest.publicnode.com',
+    'https://api.data.kava.io',
+  ],
   'migaloo-1': [
     'https://migaloo-rest.publicnode.com',
     'https://migaloo-api.kleomedes.network:443',
@@ -288,6 +293,10 @@ const LCD_FALLBACKS = {
   'stafihub-1': [
     'https://public-rest-rpc1.stafihub.io',
     'https://api.stafihub.nodestake.org',
+  ],
+  'sentinelhub-2': [
+    'https://lcd-sentinel.tfl.foundation',
+    'https://sentinel-rest.publicnode.com',
   ],
   'stargaze-1': [
     'https://rest.stargaze-apis.com',
