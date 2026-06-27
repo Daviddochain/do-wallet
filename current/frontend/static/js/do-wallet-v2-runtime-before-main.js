@@ -13351,11 +13351,12 @@ runModule("do-wallet-v2-staking-area.js", function(){
   if (window.__doWalletStakingArea20260627Rewrite) return;
   window.__doWalletStakingArea20260627Rewrite = true;
 
-  var VERSION = "20260627-staking-area-stable-1";
+  var VERSION = "20260627-staking-area-stable-2";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-staking-area-style";
   var ROOT_ATTR = "data-do-wallet-staking-root";
+  var NATIVE_STAKE_ATTR = "data-do-wallet-native-stake-hidden";
   var SIGNATURE_ATTR = "data-do-wallet-staking-signature";
   var ROUTE_ATTR = "data-do-wallet-staking-route";
   var BALANCE_ATTR = "data-do-wallet-staking-balance";
@@ -13609,6 +13610,9 @@ runModule("do-wallet-v2-staking-area.js", function(){
     var roots = Array.prototype.slice.call(document.querySelectorAll("[" + ROOT_ATTR + "]"));
     roots.forEach(function (root) {
       if (root && root.parentNode) root.parentNode.removeChild(root);
+    });
+    Array.prototype.slice.call(document.querySelectorAll("[" + NATIVE_STAKE_ATTR + "]")).forEach(function (node) {
+      node.removeAttribute(NATIVE_STAKE_ATTR);
     });
     if (renderedMain) renderedMain.removeAttribute("data-do-wallet-staking-owned-main");
     renderedMain = null;
@@ -14337,6 +14341,40 @@ runModule("do-wallet-v2-staking-area.js", function(){
     return document.querySelector('[class*="Page_main__"],[class*="Layout_main__"]');
   }
 
+  function elementText(node) {
+    return clean(node && (node.innerText || node.textContent));
+  }
+
+  function looksLikeWalletPanel(node) {
+    var text = elementText(node);
+    return /\bPortfolio value\b/i.test(text) && /\bAssets\b/i.test(text) && /\bReceive\b/i.test(text);
+  }
+
+  function looksLikeNativeStakeContent(node) {
+    if (!node || node.nodeType !== 1 || node.hasAttribute(ROOT_ATTR) || looksLikeWalletPanel(node)) return false;
+    var text = elementText(node);
+    if (!/\bStake\b/i.test(text)) return false;
+    return /\b(Staked funds|Withdraw all rewards|Quick Stake|Manual Stake|Delegations|Undelegations|Staking rewards)\b/i.test(text);
+  }
+
+  function findNativeStakeHost(main) {
+    var queue = Array.prototype.slice.call((main && main.children) || []);
+    var fallback = null;
+    for (var depth = 0; queue.length && depth < 120; depth += 1) {
+      var node = queue.shift();
+      if (!node || node.nodeType !== 1 || node.hasAttribute(ROOT_ATTR)) continue;
+      if (looksLikeNativeStakeContent(node)) {
+        fallback = node;
+        var children = Array.prototype.slice.call(node.children || []).filter(looksLikeNativeStakeContent);
+        if (!children.length) return node;
+        queue = children.concat(queue);
+      } else if (!looksLikeWalletPanel(node)) {
+        queue = queue.concat(Array.prototype.slice.call(node.children || []));
+      }
+    }
+    return fallback;
+  }
+
   function renderOverview() {
     if (!isStakeOverviewRoute()) return;
     var main = findMain();
@@ -14348,16 +14386,21 @@ runModule("do-wallet-v2-staking-area.js", function(){
     var signature = VERSION + ":" + selectedChain() + ":" + rows.map(function (row) {
       return rowKey(row) + ":" + row.amountText + ":" + row.valueText;
     }).join("||");
-    var root = main.querySelector("[" + ROOT_ATTR + "]");
+    var host = findNativeStakeHost(main);
+    var parent = host && host.parentNode ? host.parentNode : main;
+    var root = parent.querySelector("[" + ROOT_ATTR + "]");
     if (root && root.getAttribute(SIGNATURE_ATTR) === signature) {
+      if (host) host.setAttribute(NATIVE_STAKE_ATTR, "1");
       queueDirectRows();
       return;
     }
     main.setAttribute("data-do-wallet-staking-owned-main", VERSION);
     renderedMain = main;
     if (root) root.outerHTML = overviewHTML(rows);
+    else if (host) host.insertAdjacentHTML("beforebegin", overviewHTML(rows));
     else main.insertAdjacentHTML("afterbegin", overviewHTML(rows));
-    root = main.querySelector("[" + ROOT_ATTR + "]");
+    if (host) host.setAttribute(NATIVE_STAKE_ATTR, "1");
+    root = parent.querySelector("[" + ROOT_ATTR + "]") || main.querySelector("[" + ROOT_ATTR + "]");
     if (root) root.setAttribute(SIGNATURE_ATTR, signature);
     var select = main.querySelector("#do-wallet-staking-chain");
     if (select) {
@@ -14617,9 +14660,9 @@ runModule("do-wallet-v2-staking-area.js", function(){
     var style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = [
-      "html[" + ROUTE_ATTR + "='overview'] main> :not([" + ROOT_ATTR + "]){display:none!important;}",
       "html[" + ROUTE_ATTR + "='overview'],html[" + ROUTE_ATTR + "='overview'] body{overflow:auto!important;}",
       "html[" + ROUTE_ATTR + "='overview'] main,html[" + ROUTE_ATTR + "='overview'] [role='main']{overflow:visible!important;}",
+      "[" + NATIVE_STAKE_ATTR + "='1']{display:none!important;}",
       "[" + ROOT_ATTR + "]{box-sizing:border-box;color:#fff;padding:0 0 44px;}",
       "[" + ROOT_ATTR + "] *{box-sizing:border-box;}",
       ".do-wallet-staking-page{display:grid;gap:24px;width:100%;}",
@@ -14716,9 +14759,32 @@ runModule("do-wallet-v2-staking-area.js", function(){
     }, 500);
   }
 
+  function installNavigationCleanup() {
+    if (window.__doWalletStakingNavigationCleanup20260627) return;
+    window.__doWalletStakingNavigationCleanup20260627 = true;
+    document.addEventListener("click", function (event) {
+      var target = event && event.target;
+      var link = target && target.closest ? target.closest("a[href]") : null;
+      if (!link) return;
+      var href = clean(link.getAttribute("href"));
+      if (!href || /^#|^javascript:/i.test(href)) return;
+      var url;
+      try {
+        url = new URL(href, window.location.href);
+      } catch (error) {
+        return;
+      }
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname.replace(/\/+$/, "") === "/stake") return;
+      removeOverviewRoot();
+      document.documentElement.removeAttribute(ROUTE_ATTR);
+    }, true);
+  }
+
   hookHistory();
   updateRouteAttribute();
   installStyles();
+  installNavigationCleanup();
   document.addEventListener("DOMContentLoaded", function () { scheduleRender(0); });
   window.addEventListener("load", function () { scheduleRender(0); });
   window.addEventListener("pageshow", function () { scheduleRender(0); });
