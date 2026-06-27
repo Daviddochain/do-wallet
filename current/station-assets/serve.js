@@ -252,6 +252,11 @@ const LCD_FALLBACKS = {
     'https://api.chihuahua.wtf',
     'https://rest.lavenderfive.com:443/chihuahua',
   ],
+  'dydx-mainnet-1': [
+    'https://lcd-dydx.tfl.foundation',
+    'https://dydx-rest.publicnode.com',
+    'https://dydx-api.polkachu.com',
+  ],
   'injective-1': [
     'https://injective-rest.publicnode.com',
     'https://injective-api.polkachu.com',
