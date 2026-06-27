@@ -4208,6 +4208,25 @@ const portfolioCollectFromWalletObject = (pairs, seen, chains, wallet, source) =
   })
 }
 
+const portfolioDoAddressFromCandidate = (address) => {
+  const raw = portfolioPublicAddress(address)
+  if (!raw) return ''
+  const recoded = recodeDoChainBech32Address(raw)
+  return /^do1[ac-hj-np-z02-9]{20,110}$/i.test(recoded) ? recoded : ''
+}
+
+const portfolioCollectDoChainAliasPairs = (pairs, seen, chains) => {
+  if (!chains?.['Do-Chain']) return
+  const candidates = pairs
+    .map((pair) => pair?.address)
+    .filter(Boolean)
+  candidates.forEach((address) => {
+    const doAddress = portfolioDoAddressFromCandidate(address)
+    if (!doAddress) return
+    portfolioAddPair(pairs, seen, chains, 'Do-Chain', doAddress, 'do-chain-address-alias')
+  })
+}
+
 const portfolioCollectPairs = (body, chains) => {
   const pairs = []
   const seen = new Set()
@@ -4216,6 +4235,7 @@ const portfolioCollectPairs = (body, chains) => {
   ;(Array.isArray(body?.wallets) ? body.wallets : []).forEach((wallet, index) => {
     portfolioCollectFromWalletObject(pairs, seen, chains, wallet, `wallet-${index}`)
   })
+  portfolioCollectDoChainAliasPairs(pairs, seen, chains)
   return pairs
 }
 
