@@ -63,24 +63,52 @@
     }
   }
 
+  function mergeAddressMaps(left, right) {
+    var merged = {};
+    copyValidAddresses(merged, left);
+    copyValidAddresses(merged, right);
+    return merged;
+  }
+
+  function walletNameForDedupe(wallet) {
+    return text(wallet && (wallet.name || wallet.walletName)).replace(/\s+\(\d+\)$/g, "").toLowerCase();
+  }
+
+  function walletDedupeKey(wallet) {
+    if (!isObject(wallet)) return "";
+    var name = walletNameForDedupe(wallet);
+    var address = text(wallet.address || firstAddress(wallet.addresses || wallet.addressMap)).toLowerCase();
+    if (address && name) return "wallet|" + name + "|" + address;
+    if (address) return "address|" + address;
+    return name ? "name|" + name : "";
+  }
+
+  function mergeWalletSummary(existing, incoming) {
+    if (!existing) return incoming;
+    if (!incoming) return existing;
+    var merged = Object.assign({}, existing, incoming);
+    var addresses = mergeAddressMaps(existing.addresses || existing.addressMap, incoming.addresses || incoming.addressMap);
+    if (Object.keys(addresses).length) {
+      merged.addresses = addresses;
+      merged.addressMap = addresses;
+    }
+    merged.name = text(existing.name || existing.walletName || incoming.name || incoming.walletName) || "Do-Wallet";
+    merged.walletName = merged.name;
+    merged.address = text(existing.address || incoming.address || firstAddress(addresses));
+    merged.validatorWallet = Boolean(existing.validatorWallet || incoming.validatorWallet);
+    merged.adminWallet = Boolean(existing.adminWallet || incoming.adminWallet);
+    merged.walletPriority = Math.max(Number(existing.walletPriority || 0), Number(incoming.walletPriority || 0));
+    return merged;
+  }
+
   function walletSignature(wallet) {
     if (!isObject(wallet)) return "";
     return [
-      text(wallet.name || wallet.walletName),
-      text(wallet.address),
-      text(firstAddress(wallet.addresses)),
-      addressSignature(wallet.addresses || wallet.addressMap),
+      walletDedupeKey(wallet),
       wallet.validatorWallet ? "v" : "",
-      wallet.adminWallet ? "a" : ""
+      wallet.adminWallet ? "a" : "",
+      Number(wallet.walletPriority || 0)
     ].join("|").toLowerCase();
-  }
-
-  function addressSignature(addresses) {
-    if (!isObject(addresses)) return "";
-    return Object.keys(addresses).sort().map(function (key) {
-      var value = text(addresses[key]);
-      return looksLikeAddress(value) ? text(key).toLowerCase() + "=" + value.toLowerCase() : "";
-    }).filter(Boolean).join(",");
   }
 
   function normalizeWallet(wallet, source) {
@@ -148,9 +176,12 @@
     list.forEach(function (wallet) {
       var normalized = normalizeWallet(wallet, "do-wallet-recovered-wallets-cleanup");
       if (!normalized) return;
-      var fingerprint = walletSignature(normalized) || (text(normalized.name) + "|" + text(normalized.address)).toLowerCase();
-      if (seen[fingerprint]) return;
-      seen[fingerprint] = true;
+      var fingerprint = walletDedupeKey(normalized) || walletSignature(normalized);
+      if (seen[fingerprint] !== undefined) {
+        cleanedList[seen[fingerprint]] = mergeWalletSummary(cleanedList[seen[fingerprint]], normalized);
+        return;
+      }
+      seen[fingerprint] = cleanedList.length;
       cleanedList.push(normalized);
     });
     if (payload && Array.isArray(payload.wallets)) {
@@ -217,9 +248,12 @@
     function add(value, addresses, source) {
       var cleaned = cleanWallet(value, addresses, source);
       if (!cleaned) return;
-      var fingerprint = walletSignature(cleaned) || (text(cleaned.name) + "|" + text(cleaned.address || firstAddress(cleaned.addresses))).toLowerCase();
-      if (seen[fingerprint]) return;
-      seen[fingerprint] = true;
+      var fingerprint = walletDedupeKey(cleaned) || walletSignature(cleaned);
+      if (seen[fingerprint] !== undefined) {
+        found[seen[fingerprint]] = mergeWalletSummary(found[seen[fingerprint]], cleaned);
+        return;
+      }
+      seen[fingerprint] = found.length;
       found.push(cleaned);
     }
 

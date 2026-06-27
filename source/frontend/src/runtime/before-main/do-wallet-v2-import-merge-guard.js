@@ -1430,8 +1430,16 @@
     ].join("|");
   }
 
+  function seedRevealNameForDedupe(wallet) {
+    return lower(walletName(wallet).replace(/\s+\(\d+\)$/g, ""));
+  }
+
   function seedRevealDedupeKey(wallet) {
-    return signableToken(wallet) || (lower(walletName(wallet)) + ":" + lower(primaryAddress(wallet)));
+    var address = lower(primaryAddress(wallet));
+    var name = seedRevealNameForDedupe(wallet);
+    if (address && name) return name + ":" + address;
+    if (address) return "address:" + address;
+    return signableToken(wallet) || (name + ":" + text(wallet && wallet.encryptedSeed).slice(0, 80));
   }
 
   function seedWalletCandidates() {
@@ -1494,7 +1502,7 @@
     var wallets = seedWalletCandidates();
     var seen = {};
     return wallets.filter(function (wallet) {
-      var key = text(wallet.__seedRevealToken) || lower(wallet.name) + ":" + text(wallet.encryptedSeed).slice(0, 80);
+      var key = seedRevealDedupeKey(wallet) || text(wallet.__seedRevealToken) || lower(wallet.name) + ":" + text(wallet.encryptedSeed).slice(0, 80);
       if (!key || seen[key]) return false;
       seen[key] = true;
       return true;
