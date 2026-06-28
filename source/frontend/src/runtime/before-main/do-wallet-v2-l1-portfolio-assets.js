@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsRewrite20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260628L1PortfolioRewrite5";
+  var VERSION = "20260628L1PortfolioRewrite6";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -1114,6 +1114,18 @@
     return /^\.\d+$/.test(clean(value));
   }
 
+  function portfolioAmountHost(node, pane) {
+    var element = node && node.parentElement;
+    var best = null;
+    for (var depth = 0; element && element !== pane && depth < 5; depth += 1) {
+      var text = clean(element.textContent);
+      if (/\b(Portfolio value|Send|Receive|Buy|Burn|Assets|Manage)\b/i.test(text)) break;
+      if (/^\$\s?-?(?:[\d,]+(?:\.\d+)?|\-)?(?:\s*\.\d+)?$/.test(text)) best = element;
+      element = element.parentElement;
+    }
+    return best;
+  }
+
   function updatePortfolioValueAmount(groups) {
     var pane = findRightWalletPane();
     if (!pane || !groups || !groups.length) return;
@@ -1132,8 +1144,16 @@
     if (labelIndex < 0) return;
     for (var next = labelIndex + 1; next < Math.min(nodes.length, labelIndex + 12); next += 1) {
       if (!isMoneyText(nodes[next].nodeValue)) continue;
+      var host = portfolioAmountHost(nodes[next], pane);
+      if (host) {
+        host.textContent = amount;
+        return;
+      }
       nodes[next].nodeValue = amount;
-      if (nodes[next + 1] && isDecimalTail(nodes[next + 1].nodeValue)) nodes[next + 1].nodeValue = "";
+      for (var clear = next + 1; clear < Math.min(nodes.length, next + 5); clear += 1) {
+        if (/^(Send|Receive|Buy|Burn|Assets|Manage)\b/i.test(clean(nodes[clear].nodeValue))) break;
+        if (isDecimalTail(nodes[clear].nodeValue)) nodes[clear].nodeValue = "";
+      }
       return;
     }
   }
