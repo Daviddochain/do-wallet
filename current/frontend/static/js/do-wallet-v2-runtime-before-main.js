@@ -11800,7 +11800,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   window.__doWalletL1PortfolioAssetsRewrite20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260628L1PortfolioRewrite6";
+  var VERSION = "20260628L1PortfolioRewrite7";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -11815,6 +11815,8 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
   var LIST_SELECTOR = "[class*='AssetList_assetlist__list']";
   var HOST_ATTR = "data-do-wallet-l1-assets-host";
   var PANE_ATTR = "data-do-wallet-l1-assets-pane";
+  var OWNED_PANE_ATTR = "data-do-wallet-l1-owned-pane";
+  var OWNED_PANE_ACTIVE_ATTR = "data-do-wallet-l1-owned-pane-active";
   var NATIVE_HIDDEN_ATTR = "data-do-wallet-l1-native-hidden";
   var TARGET_ATTR = "data-do-wallet-l1-assets-target";
   var SIGNATURE_ATTR = "data-do-wallet-l1-assets-signature";
@@ -13072,6 +13074,13 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
 
   function updateAssetHostScrollBounds(host) {
     if (!host || !host.getBoundingClientRect) return;
+    if (host.closest && host.closest("[" + OWNED_PANE_ATTR + "='1']")) {
+      host.style.setProperty("--do-wallet-l1-assets-max-height", "none");
+      host.style.maxHeight = "none";
+      host.style.overflow = "hidden";
+      host.style.minHeight = "0";
+      return;
+    }
     try {
       var rect = host.getBoundingClientRect();
       var viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
@@ -13084,12 +13093,77 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     } catch (error) {}
   }
 
+  function isStakeRoute() {
+    var path = clean(window.location && window.location.pathname || "");
+    return /^\/stake(?:\/|$)/i.test(path) || !!document.querySelector("[data-do-wallet-staking-area]");
+  }
+
+  function shouldCreateOwnedPane() {
+    var viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+    return isStakeRoute() && viewportWidth >= 1180;
+  }
+
+  function removeOwnedWalletPane() {
+    var removed = 0;
+    Array.prototype.slice.call(document.querySelectorAll("[" + OWNED_PANE_ATTR + "='1']")).forEach(function (pane) {
+      if (pane && pane.parentElement) {
+        pane.parentElement.removeChild(pane);
+        removed += 1;
+      }
+    });
+    document.documentElement.removeAttribute(OWNED_PANE_ACTIVE_ATTR);
+    return removed;
+  }
+
+  function actionIcon(name) {
+    if (name === "send") {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3 10 14"></path><path d="m21 3-7 18-4-7-7-4 18-7z"></path></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>';
+  }
+
+  function sharedOwnedPaneHTML() {
+    return [
+      '<div class="do-wallet-l1-owned-top">',
+      '  <div class="do-wallet-l1-owned-value-label">Portfolio value</div>',
+      '  <div class="do-wallet-l1-owned-value">$0.00</div>',
+      '  <nav class="do-wallet-l1-owned-actions" aria-label="Wallet actions">',
+      '    <a class="do-wallet-l1-owned-action do-wallet-l1-owned-action-primary" href="/send" aria-label="Send">' + actionIcon("send") + "<span>Send</span></a>",
+      '    <a class="do-wallet-l1-owned-action" href="/receive" aria-label="Receive">' + actionIcon("receive") + "<span>Receive</span></a>",
+      "  </nav>",
+      "</div>",
+      '<section class="do-wallet-l1-owned-assets" aria-label="Assets">',
+      '  <div class="do-wallet-l1-owned-assets-head"><h2>Assets</h2><a href="/wallet">Manage</a></div>',
+      "</section>"
+    ].join("");
+  }
+
+  function ensureOwnedWalletPane() {
+    if (!shouldCreateOwnedPane()) {
+      removeOwnedWalletPane();
+      return null;
+    }
+    var pane = document.querySelector("[" + OWNED_PANE_ATTR + "='1']");
+    if (!pane || !document.documentElement.contains(pane)) {
+      pane = document.createElement("aside");
+      pane.className = "do-wallet-l1-owned-pane";
+      pane.setAttribute(OWNED_PANE_ATTR, "1");
+      pane.setAttribute(PANE_ATTR, "1");
+      pane.innerHTML = sharedOwnedPaneHTML();
+      document.body.appendChild(pane);
+    }
+    pane.setAttribute(PANE_ATTR, "1");
+    document.documentElement.setAttribute(OWNED_PANE_ACTIVE_ATTR, "1");
+    return pane;
+  }
+
   function findRightWalletPane() {
     var viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
     var nodes = Array.prototype.slice.call(document.querySelectorAll("aside,section,article,div"));
     var best = null;
     nodes.forEach(function (node) {
       if (!node || node.hasAttribute && node.hasAttribute(HOST_ATTR)) return;
+      if (node.hasAttribute && node.hasAttribute(OWNED_PANE_ATTR)) return;
       var rect = visibleRect(node);
       if (!rect || rect.width < 260 || rect.height < 360) return;
       if (viewportWidth && rect.left < viewportWidth * 0.45 && rect.width < viewportWidth * 0.72) return;
@@ -13100,8 +13174,12 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       var score = rect.left * 100000 + Math.min(rect.width * rect.height, 500000);
       if (!best || score > best.score) best = { node: node, score: score };
     });
-    if (best && best.node) best.node.setAttribute(PANE_ATTR, "1");
-    return best && best.node || null;
+    if (best && best.node) {
+      removeOwnedWalletPane();
+      best.node.setAttribute(PANE_ATTR, "1");
+      return best.node;
+    }
+    return ensureOwnedWalletPane();
   }
 
   function isAssetsHeaderNode(node) {
@@ -13213,6 +13291,26 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     style.textContent = [
       "html{--do-wallet-l1-font-weight:var(--bold,500);}",
       "[" + NATIVE_HIDDEN_ATTR + "='1']{display:none!important;}",
+      "html[" + OWNED_PANE_ACTIVE_ATTR + "='1']{--do-wallet-l1-owned-pane-width:420px;}",
+      "html[" + OWNED_PANE_ACTIVE_ATTR + "='1'] [data-do-wallet-staking-area]{box-sizing:border-box;padding-right:calc(var(--do-wallet-l1-owned-pane-width) + 28px)!important;}",
+      "html[" + OWNED_PANE_ACTIVE_ATTR + "='1'] [data-do-wallet-staking-owned-main]{max-width:none!important;}",
+      "[" + OWNED_PANE_ATTR + "='1']{box-sizing:border-box;position:fixed;top:76px;right:0;bottom:0;width:var(--do-wallet-l1-owned-pane-width);z-index:20;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#201832;border-left:1px solid rgba(156,67,220,.35);color:#fff;font-family:inherit;}",
+      ".do-wallet-l1-owned-top{box-sizing:border-box;padding:32px 18px 28px;border-bottom:1px solid rgba(156,67,220,.32);text-align:center;background:#171224;}",
+      ".do-wallet-l1-owned-value-label{font-size:13px;line-height:1.2;font-weight:var(--do-wallet-l1-font-weight);color:#c7baf0;}",
+      ".do-wallet-l1-owned-value{margin-top:8px;font-size:34px;line-height:1.05;font-weight:var(--do-wallet-l1-font-weight);letter-spacing:0;color:#fff;}",
+      ".do-wallet-l1-owned-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:30px;}",
+      ".do-wallet-l1-owned-action{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;min-width:0;color:#fff;text-decoration:none;font:inherit;font-weight:var(--do-wallet-l1-font-weight);}",
+      ".do-wallet-l1-owned-action svg{box-sizing:border-box;width:58px;height:58px;padding:16px;border-radius:999px;background:#2d263d;border:1px solid rgba(255,255,255,.04);box-shadow:0 10px 24px rgba(0,0,0,.18);stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;fill:none;}",
+      ".do-wallet-l1-owned-action-primary svg{background:#9b3df3;box-shadow:0 14px 34px rgba(155,61,243,.3);}",
+      ".do-wallet-l1-owned-action span{display:block;max-width:80px;min-height:28px;font-size:13px;line-height:1.08;color:#fff;}",
+      ".do-wallet-l1-owned-assets{box-sizing:border-box;display:flex;flex:1 1 auto;flex-direction:column;min-height:0;overflow:hidden;background:#211832;}",
+      ".do-wallet-l1-owned-assets-head{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:22px 18px 12px;}",
+      ".do-wallet-l1-owned-assets-head h2{margin:0;font:inherit;font-size:14px;line-height:1.2;font-weight:var(--do-wallet-l1-font-weight);color:#fff;}",
+      ".do-wallet-l1-owned-assets-head a{font:inherit;font-size:13px;line-height:1.2;font-weight:var(--do-wallet-l1-font-weight);color:#a43cff;text-decoration:none;}",
+      "[" + OWNED_PANE_ATTR + "='1'] [" + HOST_ATTR + "='1']{flex:1 1 auto;max-height:none!important;min-height:0;padding:0 10px 12px;}",
+      "[" + OWNED_PANE_ATTR + "='1'] .do-wallet-l1-portfolio-shell,[" + OWNED_PANE_ATTR + "='1'] .do-wallet-l1-portfolio-detail{max-height:none!important;min-height:0;}",
+      "[" + OWNED_PANE_ATTR + "='1'] .do-wallet-l1-portfolio-shell{height:100%;}",
+      "[" + OWNED_PANE_ATTR + "='1'] .do-wallet-l1-portfolio-detail{height:100%;}",
       "[" + PANE_ATTR + "='1'] [class*='Asset_asset__'] img,[" + PANE_ATTR + "='1'] [class*='AssetList_assetlist__list'] img{display:block!important;width:34px!important;height:34px!important;min-width:34px!important;max-width:34px!important;min-height:34px!important;max-height:34px!important;border-radius:50%!important;object-fit:cover!important;overflow:hidden!important;}",
       "[" + TARGET_ATTR + "='1']>article{display:none!important;}",
       "[" + HOST_ATTR + "='1'],.do-wallet-l1-portfolio-owned-host{box-sizing:border-box;width:100%;max-height:var(--do-wallet-l1-assets-max-height,calc(100vh - 320px));min-height:0;overflow:hidden!important;}",
@@ -13249,6 +13347,8 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
       ".do-wallet-l1-portfolio-coins-title{padding:18px 10px 8px;font-size:14px;font-weight:var(--do-wallet-l1-font-weight);}",
       ".do-wallet-l1-portfolio-coins{min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:8px;}",
       ".do-wallet-l1-portfolio-coin{min-height:58px;}",
+      "@media(max-width:1320px){html[" + OWNED_PANE_ACTIVE_ATTR + "='1']{--do-wallet-l1-owned-pane-width:380px}.do-wallet-l1-owned-actions{gap:10px}.do-wallet-l1-owned-action svg{width:52px;height:52px;padding:14px}}",
+      "@media(max-width:1179px){[" + OWNED_PANE_ATTR + "='1']{display:none!important}html[" + OWNED_PANE_ACTIVE_ATTR + "='1'] [data-do-wallet-staking-area]{padding-right:14px!important}}",
       "@media(max-width:760px){.do-wallet-l1-portfolio-row,.do-wallet-l1-portfolio-coin,.do-wallet-l1-portfolio-chain-head{padding-left:8px;padding-right:8px}.do-wallet-l1-portfolio-right{min-width:76px}.do-wallet-l1-portfolio-meta strong{font-size:14px}.do-wallet-l1-portfolio-right strong{font-size:13px}}"
     ].join("\n");
     head.appendChild(style);
