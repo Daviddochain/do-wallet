@@ -275,25 +275,43 @@
   }
 
   function copyAddresses(target, source) {
+    if (Array.isArray(source)) {
+      source.forEach(function (entry) {
+        if (typeof entry === "string") addNormalizedAddress(target, "", entry);
+        else if (isObject(entry)) addNormalizedAddress(target, entry.chainID || entry.chainId || entry.network || entry.chain || "", entry.address || entry.walletAddress || entry.publicAddress);
+      });
+      return;
+    }
     if (!isObject(source)) return;
     Object.keys(source).forEach(function (key) {
-      var value = text(source[key]);
-      if (looksLikeAddress(value)) addNormalizedAddress(target, key, value);
+      var value = source[key];
+      if (Array.isArray(value)) {
+        value.forEach(function (entry) {
+          addNormalizedAddress(target, key, isObject(entry) ? entry.address || entry.walletAddress || entry.publicAddress : entry);
+        });
+      } else if (isObject(value)) {
+        addNormalizedAddress(target, value.chainID || value.chainId || value.network || key, value.address || value.walletAddress || value.publicAddress);
+      } else if (looksLikeAddress(text(value))) {
+        addNormalizedAddress(target, key, value);
+      }
     });
+  }
+
+  function addressMapFromSource(source) {
+    var addresses = {};
+    copyAddresses(addresses, source);
+    return Object.keys(addresses).length ? addresses : undefined;
   }
 
   function snapshotAddressMap(snapshot) {
     if (!isObject(snapshot)) return undefined;
-    return isObject(snapshot.allAddresses)
-      ? snapshot.allAddresses
-      : isObject(snapshot.addressMap)
-        ? snapshot.addressMap
-        : isObject(snapshot.addresses)
-          ? snapshot.addresses
-          : undefined;
+    return addressMapFromSource(snapshot.allAddresses) ||
+      addressMapFromSource(snapshot.addressMap) ||
+      addressMapFromSource(snapshot.addresses);
   }
 
   function firstAddress(addresses) {
+    addresses = addressMapFromSource(addresses) || addresses;
     if (!isObject(addresses)) return "";
     var priority = [
       "Do-Chain",
@@ -314,6 +332,7 @@
   }
 
   function addressSignature(addresses) {
+    addresses = addressMapFromSource(addresses) || addresses;
     if (!isObject(addresses)) return "";
     return Object.keys(addresses).sort().map(function (key) {
       var value = text(addresses[key]);
@@ -334,6 +353,10 @@
     var addresses = {};
     copyAddresses(addresses, wallet.addresses);
     copyAddresses(addresses, wallet.addressMap);
+    copyAddresses(addresses, wallet.activeAddresses);
+    copyAddresses(addresses, wallet.allAddresses);
+    copyAddresses(addresses, wallet.publicAddresses);
+    copyAddresses(addresses, wallet.addressesByChain);
     copyAddresses(addresses, extraAddresses);
     if (looksLikeAddress(wallet.address)) addNormalizedAddress(addresses, "", wallet.address);
 
@@ -384,7 +407,14 @@
     var addresses = {};
     copyAddresses(addresses, wallet.addresses);
     copyAddresses(addresses, wallet.addressMap);
+    copyAddresses(addresses, wallet.activeAddresses);
+    copyAddresses(addresses, wallet.allAddresses);
+    copyAddresses(addresses, wallet.publicAddresses);
+    copyAddresses(addresses, wallet.addressesByChain);
     copyAddresses(addresses, payload.addresses);
+    copyAddresses(addresses, payload.allAddresses);
+    copyAddresses(addresses, payload.publicAddresses);
+    copyAddresses(addresses, payload.addressesByChain);
     if (looksLikeAddress(wallet.address)) addNormalizedAddress(addresses, "", wallet.address);
     if (!Object.keys(addresses).length) return false;
     var before = JSON.stringify({
@@ -526,9 +556,13 @@
 
   function walletScanAddresses(value) {
     if (!isObject(value)) return undefined;
-    if (isObject(value.allAddresses)) return value.allAddresses;
-    if (isObject(value.addressMap)) return value.addressMap;
-    if (isObject(value.addresses)) return value.addresses;
+    var addresses =
+      addressMapFromSource(value.allAddresses) ||
+      addressMapFromSource(value.publicAddresses) ||
+      addressMapFromSource(value.addressesByChain) ||
+      addressMapFromSource(value.addressMap) ||
+      addressMapFromSource(value.addresses);
+    if (addresses) return addresses;
     if (isObject(value.wallet)) return walletScanAddresses(value.wallet);
     return undefined;
   }

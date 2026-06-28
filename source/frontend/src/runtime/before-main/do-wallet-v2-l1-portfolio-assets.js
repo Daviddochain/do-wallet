@@ -308,6 +308,34 @@
     return isObject(wallet) ? clean(wallet.name || wallet.walletName || wallet.label || wallet.accountName || wallet.id) : "";
   }
 
+  function forEachAddressIdentity(container, callback) {
+    function emit(chainID, address) {
+      address = clean(address);
+      if (!address || address === "[object Object]") return;
+      callback(canonicalAddressHint(chainID), address);
+    }
+    function scan(node, hint, depth) {
+      if (depth > 5 || node === null || node === undefined) return;
+      if (typeof node === "string") {
+        emit(hint, node);
+        return;
+      }
+      if (Array.isArray(node)) {
+        node.slice(0, 150).forEach(function (item) { scan(item, hint, depth + 1); });
+        return;
+      }
+      if (!isObject(node)) return;
+      if (typeof node.address === "string" || typeof node.walletAddress === "string" || typeof node.publicAddress === "string") {
+        emit(node.chainID || node.chainId || node.network || node.chain || hint, node.address || node.walletAddress || node.publicAddress);
+      }
+      Object.keys(node).slice(0, 150).forEach(function (key) {
+        if (/mnemonic|seed|private|password|secret|cipher|encrypted/i.test(key)) return;
+        scan(node[key], key, depth + 1);
+      });
+    }
+    scan(container, "", 0);
+  }
+
   function walletIdentityKeys(wallet) {
     wallet = walletFromPayload(wallet) || wallet;
     var keys = [];
@@ -322,11 +350,17 @@
     add(wallet.label);
     add(wallet.accountName);
     add(wallet.address);
-    [wallet.addresses, wallet.addressMap, wallet.activeAddresses, wallet.allAddresses].forEach(function (map) {
-      if (!isObject(map)) return;
-      Object.keys(map).forEach(function (key) {
-        add(key + ":" + map[key]);
-        add(map[key]);
+    [
+      wallet.addresses,
+      wallet.addressMap,
+      wallet.activeAddresses,
+      wallet.allAddresses,
+      wallet.publicAddresses,
+      wallet.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressIdentity(container, function (chainID, address) {
+        add(address);
+        if (chainID) add(chainID + ":" + address);
       });
     });
     return keys;
@@ -682,21 +716,33 @@
     if (!isObject(snapshot)) return;
     var current = readJSON(SNAPSHOT_KEY, null);
     var wallet = isObject(snapshot.wallet) ? Object.assign({}, snapshot.wallet) : {};
+    var allAddresses = addressMapEntries(addressMap);
+    var addressesByChain = {};
+    allAddresses.forEach(function (entry) {
+      if (!addressesByChain[entry.chainID]) addressesByChain[entry.chainID] = [];
+      if (addressesByChain[entry.chainID].indexOf(entry.address) < 0) addressesByChain[entry.chainID].push(entry.address);
+    });
     wallet.addresses = Object.assign({}, addressMap);
     wallet.addressMap = Object.assign({}, addressMap);
+    wallet.allAddresses = allAddresses;
+    wallet.publicAddresses = allAddresses;
+    wallet.addressesByChain = addressesByChain;
     var stored = Object.assign({}, snapshot, {
       schemaVersion: PORTFOLIO_SCHEMA_VERSION,
       source: "do-wallet-l1-portfolio-rewrite",
       wallet: wallet,
       addresses: Object.assign({}, addressMap),
       activeAddresses: Object.assign({}, addressMap),
+      addressesByChain: addressesByChain,
+      allAddresses: allAddresses,
+      publicAddresses: allAddresses,
       updatedAt: Date.now()
     });
     if (snapshotMatchesActiveWallet(current, snapshotKeys(stored)) && backendRowCount(current) > backendRowCount(stored)) return;
     writeJSON(SNAPSHOT_KEY, stored);
     var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
     if (!isObject(byWallet)) byWallet = {};
-    walletIdentityKeys(wallet).concat(Object.keys(addressMap).map(function (key) { return addressMap[key]; })).forEach(function (key) {
+    walletIdentityKeys(wallet).concat(allAddresses.map(function (entry) { return entry.address; })).forEach(function (key) {
       key = clean(key).toLowerCase();
       if (key) byWallet[key] = stored;
     });
@@ -1034,9 +1080,22 @@
     add(wallet.label);
     add(wallet.accountName);
     add(wallet.address);
-    [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses, wallet.addresses, wallet.addressMap].forEach(function (map) {
-      if (!isObject(map)) return;
-      Object.keys(map).forEach(function (key) { add(key + ":" + map[key]); add(map[key]); });
+    [
+      snapshot.addresses,
+      snapshot.activeAddresses,
+      snapshot.allAddresses,
+      snapshot.publicAddresses,
+      snapshot.addressesByChain,
+      wallet.addresses,
+      wallet.addressMap,
+      wallet.allAddresses,
+      wallet.publicAddresses,
+      wallet.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressIdentity(container, function (chainID, address) {
+        add(address);
+        if (chainID) add(chainID + ":" + address);
+      });
     });
     return keys;
   }

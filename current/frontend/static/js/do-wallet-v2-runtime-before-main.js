@@ -3009,25 +3009,43 @@ runModule("do-wallet-v2-session-restore.js", function(){
   }
 
   function copyAddresses(target, source) {
+    if (Array.isArray(source)) {
+      source.forEach(function (entry) {
+        if (typeof entry === "string") addNormalizedAddress(target, "", entry);
+        else if (isObject(entry)) addNormalizedAddress(target, entry.chainID || entry.chainId || entry.network || entry.chain || "", entry.address || entry.walletAddress || entry.publicAddress);
+      });
+      return;
+    }
     if (!isObject(source)) return;
     Object.keys(source).forEach(function (key) {
-      var value = text(source[key]);
-      if (looksLikeAddress(value)) addNormalizedAddress(target, key, value);
+      var value = source[key];
+      if (Array.isArray(value)) {
+        value.forEach(function (entry) {
+          addNormalizedAddress(target, key, isObject(entry) ? entry.address || entry.walletAddress || entry.publicAddress : entry);
+        });
+      } else if (isObject(value)) {
+        addNormalizedAddress(target, value.chainID || value.chainId || value.network || key, value.address || value.walletAddress || value.publicAddress);
+      } else if (looksLikeAddress(text(value))) {
+        addNormalizedAddress(target, key, value);
+      }
     });
+  }
+
+  function addressMapFromSource(source) {
+    var addresses = {};
+    copyAddresses(addresses, source);
+    return Object.keys(addresses).length ? addresses : undefined;
   }
 
   function snapshotAddressMap(snapshot) {
     if (!isObject(snapshot)) return undefined;
-    return isObject(snapshot.allAddresses)
-      ? snapshot.allAddresses
-      : isObject(snapshot.addressMap)
-        ? snapshot.addressMap
-        : isObject(snapshot.addresses)
-          ? snapshot.addresses
-          : undefined;
+    return addressMapFromSource(snapshot.allAddresses) ||
+      addressMapFromSource(snapshot.addressMap) ||
+      addressMapFromSource(snapshot.addresses);
   }
 
   function firstAddress(addresses) {
+    addresses = addressMapFromSource(addresses) || addresses;
     if (!isObject(addresses)) return "";
     var priority = [
       "Do-Chain",
@@ -3048,6 +3066,7 @@ runModule("do-wallet-v2-session-restore.js", function(){
   }
 
   function addressSignature(addresses) {
+    addresses = addressMapFromSource(addresses) || addresses;
     if (!isObject(addresses)) return "";
     return Object.keys(addresses).sort().map(function (key) {
       var value = text(addresses[key]);
@@ -3068,6 +3087,10 @@ runModule("do-wallet-v2-session-restore.js", function(){
     var addresses = {};
     copyAddresses(addresses, wallet.addresses);
     copyAddresses(addresses, wallet.addressMap);
+    copyAddresses(addresses, wallet.activeAddresses);
+    copyAddresses(addresses, wallet.allAddresses);
+    copyAddresses(addresses, wallet.publicAddresses);
+    copyAddresses(addresses, wallet.addressesByChain);
     copyAddresses(addresses, extraAddresses);
     if (looksLikeAddress(wallet.address)) addNormalizedAddress(addresses, "", wallet.address);
 
@@ -3118,7 +3141,14 @@ runModule("do-wallet-v2-session-restore.js", function(){
     var addresses = {};
     copyAddresses(addresses, wallet.addresses);
     copyAddresses(addresses, wallet.addressMap);
+    copyAddresses(addresses, wallet.activeAddresses);
+    copyAddresses(addresses, wallet.allAddresses);
+    copyAddresses(addresses, wallet.publicAddresses);
+    copyAddresses(addresses, wallet.addressesByChain);
     copyAddresses(addresses, payload.addresses);
+    copyAddresses(addresses, payload.allAddresses);
+    copyAddresses(addresses, payload.publicAddresses);
+    copyAddresses(addresses, payload.addressesByChain);
     if (looksLikeAddress(wallet.address)) addNormalizedAddress(addresses, "", wallet.address);
     if (!Object.keys(addresses).length) return false;
     var before = JSON.stringify({
@@ -3260,9 +3290,13 @@ runModule("do-wallet-v2-session-restore.js", function(){
 
   function walletScanAddresses(value) {
     if (!isObject(value)) return undefined;
-    if (isObject(value.allAddresses)) return value.allAddresses;
-    if (isObject(value.addressMap)) return value.addressMap;
-    if (isObject(value.addresses)) return value.addresses;
+    var addresses =
+      addressMapFromSource(value.allAddresses) ||
+      addressMapFromSource(value.publicAddresses) ||
+      addressMapFromSource(value.addressesByChain) ||
+      addressMapFromSource(value.addressMap) ||
+      addressMapFromSource(value.addresses);
+    if (addresses) return addresses;
     if (isObject(value.wallet)) return walletScanAddresses(value.wallet);
     return undefined;
   }
@@ -9042,6 +9076,43 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     return address;
   }
 
+  function normalizedAddressesForChain(chainID, value) {
+    chainID = canonicalNetwork(chainID);
+    var out = [];
+    var seen = {};
+    function add(address) {
+      address = normalizeAddressForChain(chainID, address);
+      if (!isPublicAddress(address)) return;
+      var key = address.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(address);
+    }
+    function scan(node, depth) {
+      if (depth > 5 || node === null || node === undefined) return;
+      if (typeof node === "string") {
+        add(node);
+        return;
+      }
+      if (Array.isArray(node)) {
+        node.slice(0, 120).forEach(function (item) { scan(item, depth + 1); });
+        return;
+      }
+      if (!isObject(node)) return;
+      add(node.address || node.walletAddress || node.publicAddress);
+      Object.keys(node).slice(0, 120).forEach(function (key) {
+        if (/word|mnemonic|seed|private|encrypted|cipher|password/i.test(key)) return;
+        scan(node[key], depth + 1);
+      });
+    }
+    scan(value, 0);
+    return out;
+  }
+
+  function firstNormalizedAddressForChain(chainID, value) {
+    return normalizedAddressesForChain(chainID, value)[0] || "";
+  }
+
   function collectRawAddresses(value) {
     var out = [];
     var seen = {};
@@ -9073,14 +9144,62 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     return out;
   }
 
+  function forEachAddressEntryValue(container, callback) {
+    function emit(chainID, address, source) {
+      var canonical = canonicalNetwork(chainID);
+      address = canonical ? normalizeAddressForChain(canonical, address) : clean(address);
+      if (!isPublicAddress(address)) return;
+      callback(canonical, address, source || "address-container");
+    }
+    function scan(node, hint, source, depth) {
+      if (depth > 5 || node === null || node === undefined) return;
+      if (typeof node === "string") {
+        emit(hint, node, source);
+        return;
+      }
+      if (Array.isArray(node)) {
+        node.slice(0, 150).forEach(function (item) { scan(item, hint, source, depth + 1); });
+        return;
+      }
+      if (!isObject(node)) return;
+      if (typeof node.address === "string" || typeof node.walletAddress === "string" || typeof node.publicAddress === "string") {
+        emit(node.chainID || node.chainId || node.network || node.chain || hint, node.address || node.walletAddress || node.publicAddress, node.source || source);
+      }
+      Object.keys(node).slice(0, 150).forEach(function (key) {
+        if (/word|mnemonic|seed|private|encrypted|cipher|password/i.test(key)) return;
+        scan(node[key], key, source, depth + 1);
+      });
+    }
+    scan(container, "", "address-container", 0);
+  }
+
   function walletIdentityKeys(wallet) {
     if (!isObject(wallet)) return [];
-    var addresses = isObject(wallet.addresses) ? wallet.addresses : {};
-    var keys = [wallet.address, wallet.name, wallet.walletName, wallet.label]
-      .concat(Object.keys(addresses).map(function (key) { return addresses[key]; }))
-      .map(function (value) { return clean(value).toLowerCase(); })
-      .filter(Boolean);
-    return keys.filter(function (key, index) { return keys.indexOf(key) === index; });
+    var keys = [];
+    function add(value) {
+      value = clean(value).toLowerCase();
+      if (value && keys.indexOf(value) < 0) keys.push(value);
+    }
+    add(wallet.address);
+    add(wallet.name);
+    add(wallet.walletName);
+    add(wallet.label);
+    add(wallet.accountName);
+    add(wallet.id);
+    [
+      wallet.addresses,
+      wallet.addressMap,
+      wallet.activeAddresses,
+      wallet.allAddresses,
+      wallet.publicAddresses,
+      wallet.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressEntryValue(container, function (chainID, address) {
+        add(address);
+        if (chainID) add(chainID + ":" + address);
+      });
+    });
+    return keys;
   }
 
   function chainSupportsCosmosQueries(chain) {
@@ -9310,6 +9429,10 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       Object.keys(container).forEach(function (key) {
         var value = container[key];
         if (typeof value === "string") addSnapshotAddress(out, key, value);
+        else if (Array.isArray(value)) value.forEach(function (item) {
+          if (typeof item === "string") addSnapshotAddress(out, key, item);
+          else if (isObject(item)) addSnapshotAddress(out, item.chainID || item.chainId || item.network || key, item.address || item.walletAddress);
+        });
         else if (isObject(value)) addSnapshotAddress(out, key, value.address || value.walletAddress);
       });
     }
@@ -9352,12 +9475,16 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
         return;
       }
       if (isObject(container)) {
-        Object.keys(container).forEach(function (key) {
-          var value = container[key];
-          if (typeof value === "string") remember(key, value);
-          else if (isObject(value)) remember(key, value.address || value.walletAddress);
+      Object.keys(container).forEach(function (key) {
+        var value = container[key];
+        if (typeof value === "string") remember(key, value);
+        else if (Array.isArray(value)) value.forEach(function (item) {
+          if (typeof item === "string") remember(key, item);
+          else if (isObject(item)) remember(item.chainID || item.chainId || item.network || key, item.address || item.walletAddress);
         });
-      }
+        else if (isObject(value)) remember(key, value.address || value.walletAddress);
+      });
+    }
     }
     function rememberRows(rows) {
       if (!Array.isArray(rows)) return;
@@ -9442,9 +9569,29 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       if (derived) add(derived, true);
     }
     if (isObject(addressMap)) {
-      add(addressMap["Do-Chain"], true);
-      Object.keys(addressMap).forEach(function (key) { addLegacy(addressMap[key]); });
+      normalizedAddressesForChain("Do-Chain", addressMap["Do-Chain"]).forEach(function (address) {
+        add(address, true);
+      });
+      Object.keys(addressMap).forEach(function (key) {
+        normalizedAddressesForChain(key, addressMap[key]).forEach(function (address) {
+          add(address, key === "Do-Chain");
+          addLegacy(address);
+        });
+      });
     }
+    [
+      wallet && wallet.addresses,
+      wallet && wallet.addressMap,
+      wallet && wallet.activeAddresses,
+      wallet && wallet.allAddresses,
+      wallet && wallet.publicAddresses,
+      wallet && wallet.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressEntryValue(container, function (chainID, address) {
+        add(address, chainID === "Do-Chain");
+        addLegacy(address);
+      });
+    });
     collectRawAddresses(wallet).forEach(function (address) {
       add(address);
       addLegacy(address);
@@ -10491,6 +10638,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     }
     function score(snapshot) {
       var addressScore = 0;
+      if (Array.isArray(snapshot && snapshot.allAddresses)) addressScore += snapshot.allAddresses.length * 2;
       if (isObject(snapshot && snapshot.allAddresses)) addressScore += Object.keys(snapshot.allAddresses).length * 2;
       if (isObject(snapshot && snapshot.addresses)) addressScore += Object.keys(snapshot.addresses).length;
       return snapshotDisplayRowCount(snapshot) + addressScore + (snapshot && snapshot.schemaVersion === SNAPSHOT_SCHEMA_VERSION ? 1 : 0);
@@ -10655,7 +10803,10 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     (Array.isArray(rows) ? rows : []).forEach(function (asset) {
       if (!assetHasBalance(asset)) return;
       var chainID = assetChainID(asset);
-      if (chainID && addressMap[chainID]) active[chainID] = addressMap[chainID];
+      var addresses = normalizedAddressesForChain(chainID, addressMap[chainID]);
+      var rowAddress = normalizeAddressForChain(chainID, asset && (asset.walletAddress || asset.address));
+      if (rowAddress && addresses.indexOf(rowAddress) >= 0) active[chainID] = rowAddress;
+      else if (addresses.length) active[chainID] = addresses[0];
     });
     return active;
   }
@@ -10666,7 +10817,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     addressMap = isObject(addressMap) ? addressMap : {};
     Object.keys(addressMap).forEach(function (key) {
       var chainID = canonicalNetwork(key);
-      var address = normalizeAddressForChain(chainID, addressMap[key]);
+      var address = firstNormalizedAddressForChain(chainID, addressMap[key]);
       if (!chainID || !chains[chainID] || isRemovedNetwork(chainID) || !isPublicAddress(address)) return;
       out[chainID] = address;
     });
@@ -10691,7 +10842,21 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       });
     }
     Object.keys(addressMap || {}).forEach(function (chainID) {
-      add(chainID, addressMap[chainID], "address-map");
+      normalizedAddressesForChain(chainID, addressMap[chainID]).forEach(function (address) {
+        add(chainID, address, "address-map");
+      });
+    });
+    [
+      wallet && wallet.addresses,
+      wallet && wallet.addressMap,
+      wallet && wallet.activeAddresses,
+      wallet && wallet.allAddresses,
+      wallet && wallet.publicAddresses,
+      wallet && wallet.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressEntryValue(container, function (chainID, address, source) {
+        add(chainID, address, source || "wallet-address-entry");
+      });
     });
     collectDoChainAddresses(wallet, addressMap).forEach(function (address) {
       add("Do-Chain", address, "do-chain-derived-address");
@@ -10705,6 +10870,88 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       if (!entry || !entry.chainID || !entry.address) return;
       if (!out[entry.chainID]) out[entry.chainID] = [];
       if (out[entry.chainID].indexOf(entry.address) < 0) out[entry.chainID].push(entry.address);
+    });
+    return out;
+  }
+
+  function addAddressEntry(out, seen, chainID, address, source) {
+    chainID = canonicalNetwork(chainID);
+    address = normalizeAddressForChain(chainID, address);
+    if (!chainID || !allChains()[chainID] || !isPublicAddress(address)) return;
+    var key = chainID + ":" + address.toLowerCase();
+    if (seen[key]) return;
+    seen[key] = true;
+    out.push({
+      chainID: chainID,
+      address: address,
+      source: source || "wallet"
+    });
+  }
+
+  function appendAddressEntries(out, seen, entries, source) {
+    if (!Array.isArray(entries)) return;
+    entries.forEach(function (entry) {
+      if (!isObject(entry)) return;
+      addAddressEntry(
+        out,
+        seen,
+        entry.chainID || entry.chainId || entry.network || entry.chain,
+        entry.address || entry.walletAddress,
+        entry.source || source
+      );
+    });
+  }
+
+  function addressEntriesFromMap(addressMap, source) {
+    var out = [];
+    var seen = {};
+    addressMap = isObject(addressMap) ? addressMap : {};
+    Object.keys(addressMap).forEach(function (chainID) {
+      normalizedAddressesForChain(chainID, addressMap[chainID]).forEach(function (address) {
+        addAddressEntry(out, seen, chainID, address, source || "address-map");
+      });
+    });
+    return out;
+  }
+
+  function addressEntriesFromRows(rows, source) {
+    var out = [];
+    var seen = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (asset) {
+      var chainID = assetChainID(asset);
+      var address = asset && (asset.walletAddress || asset.address);
+      addAddressEntry(out, seen, chainID, address, source || "asset-row");
+    });
+    return out;
+  }
+
+  function activeAddressEntries(entries, rows) {
+    var rowChains = {};
+    var rowKeys = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (asset) {
+      if (!assetHasBalance(asset)) return;
+      var chainID = assetChainID(asset);
+      var address = normalizeAddressForChain(chainID, asset && (asset.walletAddress || asset.address));
+      if (!chainID) return;
+      rowChains[chainID] = true;
+      if (address) rowKeys[chainID + ":" + address.toLowerCase()] = true;
+    });
+    return (Array.isArray(entries) ? entries : []).filter(function (entry) {
+      if (!entry || !rowChains[entry.chainID]) return false;
+      var key = entry.chainID + ":" + clean(entry.address).toLowerCase();
+      return rowKeys[key] || !Object.keys(rowKeys).some(function (candidate) {
+        return candidate.indexOf(entry.chainID + ":") === 0;
+      });
+    });
+  }
+
+  function flatAddressMapFromEntries(entries, fallback) {
+    var out = Object.assign({}, isObject(fallback) ? fallback : {});
+    (Array.isArray(entries) ? entries : []).forEach(function (entry) {
+      if (!isObject(entry)) return;
+      var chainID = canonicalNetwork(entry.chainID || entry.chainId || entry.network || entry.chain);
+      var address = normalizeAddressForChain(chainID, entry.address || entry.walletAddress);
+      if (chainID && isPublicAddress(address) && !out[chainID]) out[chainID] = address;
     });
     return out;
   }
@@ -10931,17 +11178,18 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
         : [];
     var staking = Array.isArray(snapshot.staking) ? snapshot.staking : [];
     var mergedAddressMap = Object.assign({}, addressMap || {});
+    var backendAddressEntryList = Array.isArray(snapshot.allAddresses) ? snapshot.allAddresses.slice() : [];
     if (isObject(snapshot.addresses)) mergedAddressMap = Object.assign(mergedAddressMap, snapshot.addresses);
     if (isObject(snapshot.activeAddresses)) mergedAddressMap = Object.assign(mergedAddressMap, snapshot.activeAddresses);
-    if (Array.isArray(snapshot.allAddresses)) {
-      snapshot.allAddresses.forEach(function (entry) {
+    if (backendAddressEntryList.length) {
+      backendAddressEntryList.forEach(function (entry) {
         if (!isObject(entry)) return;
         var chainID = canonicalNetwork(entry.chainID || entry.chainId || entry.network);
         var address = normalizeAddressForChain(chainID, entry.address || entry.walletAddress);
         if (chainID && isPublicAddress(address) && !mergedAddressMap[chainID]) mergedAddressMap[chainID] = address;
       });
     }
-    writePortfolioSnapshot(wallet, mergedAddressMap, spendable, staking, snapshot.errors || (response && response.errors) || []);
+    writePortfolioSnapshot(wallet, mergedAddressMap, spendable, staking, snapshot.errors || (response && response.errors) || [], backendAddressEntryList);
     markStatus("portfolio-backend-loaded", {
       balanceAssets: displayableAssets(spendable).length,
       stakingAssets: displayableAssets(staking).length,
@@ -10989,7 +11237,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     return false;
   }
 
-  function writePortfolioSnapshot(wallet, addressMap, assets, staking, errors) {
+  function writePortfolioSnapshot(wallet, addressMap, assets, staking, errors, addressEntries) {
     addressMap = cleanAddressMapForSnapshot(addressMap);
     var spendableAssets = uniqueAssets(displayableAssets(assets));
     var stakingAssets = uniqueAssets(displayableAssets(staking));
@@ -11043,12 +11291,22 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       return;
     }
     var fullAddressMap = Object.assign({}, addressMap || {});
+    var fullAddressEntries = [];
+    var fullAddressSeen = {};
+    appendAddressEntries(fullAddressEntries, fullAddressSeen, addressEntries, "backend-snapshot");
+    appendAddressEntries(fullAddressEntries, fullAddressSeen, backendAddressEntries(wallet, addressMap), "wallet");
+    appendAddressEntries(fullAddressEntries, fullAddressSeen, addressEntriesFromMap(fullAddressMap, "address-map"), "address-map");
+    appendAddressEntries(fullAddressEntries, fullAddressSeen, addressEntriesFromRows(rawPortfolioAssets, "asset-row"), "asset-row");
     rawPortfolioAssets.forEach(function (asset) {
       var chainID = assetChainID(asset);
       var address = normalizeAddressForChain(chainID, asset && (asset.walletAddress || asset.address));
       if (chainID && isPublicAddress(address) && !fullAddressMap[chainID]) fullAddressMap[chainID] = address;
     });
-    var visibleAddresses = activeAddressMap(fullAddressMap, rawPortfolioAssets);
+    fullAddressEntries = fullAddressEntries.length ? fullAddressEntries : addressEntriesFromMap(fullAddressMap, "address-map");
+    var visibleAddressEntries = activeAddressEntries(fullAddressEntries, rawPortfolioAssets);
+    var visibleAddresses = flatAddressMapFromEntries(visibleAddressEntries, activeAddressMap(fullAddressMap, rawPortfolioAssets));
+    var visibleAddressesByChain = backendAddressesByChain(visibleAddressEntries.length ? visibleAddressEntries : fullAddressEntries);
+    var allAddressesByChain = backendAddressesByChain(fullAddressEntries);
     var totalValue = displayPortfolioAssets.reduce(function (sum, asset) {
       return sum + (Number(asset && (asset.valueUsd || asset.value || asset.usd)) || 0);
     }, 0);
@@ -11060,7 +11318,11 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       walletKey: walletIdentityKeys(wallet)[0] || "",
       addresses: visibleAddresses,
       activeAddresses: visibleAddresses,
-      allAddresses: fullAddressMap,
+      addressMap: fullAddressMap,
+      addressesByChain: visibleAddressesByChain,
+      allAddressesByChain: allAddressesByChain,
+      allAddresses: fullAddressEntries,
+      publicAddresses: fullAddressEntries,
       totalValue: totalValue,
       totalStakedValue: stakingAssets.filter(function (asset) { return asset.category === "staking"; }).reduce(function (sum, asset) { return sum + (Number(asset.valueUsd || 0) || 0); }, 0),
       totalRewardsValue: stakingAssets.filter(function (asset) { return asset.category === "reward"; }).reduce(function (sum, asset) { return sum + (Number(asset.valueUsd || 0) || 0); }, 0),
@@ -12081,6 +12343,34 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     return isObject(wallet) ? clean(wallet.name || wallet.walletName || wallet.label || wallet.accountName || wallet.id) : "";
   }
 
+  function forEachAddressIdentity(container, callback) {
+    function emit(chainID, address) {
+      address = clean(address);
+      if (!address || address === "[object Object]") return;
+      callback(canonicalAddressHint(chainID), address);
+    }
+    function scan(node, hint, depth) {
+      if (depth > 5 || node === null || node === undefined) return;
+      if (typeof node === "string") {
+        emit(hint, node);
+        return;
+      }
+      if (Array.isArray(node)) {
+        node.slice(0, 150).forEach(function (item) { scan(item, hint, depth + 1); });
+        return;
+      }
+      if (!isObject(node)) return;
+      if (typeof node.address === "string" || typeof node.walletAddress === "string" || typeof node.publicAddress === "string") {
+        emit(node.chainID || node.chainId || node.network || node.chain || hint, node.address || node.walletAddress || node.publicAddress);
+      }
+      Object.keys(node).slice(0, 150).forEach(function (key) {
+        if (/mnemonic|seed|private|password|secret|cipher|encrypted/i.test(key)) return;
+        scan(node[key], key, depth + 1);
+      });
+    }
+    scan(container, "", 0);
+  }
+
   function walletIdentityKeys(wallet) {
     wallet = walletFromPayload(wallet) || wallet;
     var keys = [];
@@ -12095,11 +12385,17 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     add(wallet.label);
     add(wallet.accountName);
     add(wallet.address);
-    [wallet.addresses, wallet.addressMap, wallet.activeAddresses, wallet.allAddresses].forEach(function (map) {
-      if (!isObject(map)) return;
-      Object.keys(map).forEach(function (key) {
-        add(key + ":" + map[key]);
-        add(map[key]);
+    [
+      wallet.addresses,
+      wallet.addressMap,
+      wallet.activeAddresses,
+      wallet.allAddresses,
+      wallet.publicAddresses,
+      wallet.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressIdentity(container, function (chainID, address) {
+        add(address);
+        if (chainID) add(chainID + ":" + address);
       });
     });
     return keys;
@@ -12455,21 +12751,33 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     if (!isObject(snapshot)) return;
     var current = readJSON(SNAPSHOT_KEY, null);
     var wallet = isObject(snapshot.wallet) ? Object.assign({}, snapshot.wallet) : {};
+    var allAddresses = addressMapEntries(addressMap);
+    var addressesByChain = {};
+    allAddresses.forEach(function (entry) {
+      if (!addressesByChain[entry.chainID]) addressesByChain[entry.chainID] = [];
+      if (addressesByChain[entry.chainID].indexOf(entry.address) < 0) addressesByChain[entry.chainID].push(entry.address);
+    });
     wallet.addresses = Object.assign({}, addressMap);
     wallet.addressMap = Object.assign({}, addressMap);
+    wallet.allAddresses = allAddresses;
+    wallet.publicAddresses = allAddresses;
+    wallet.addressesByChain = addressesByChain;
     var stored = Object.assign({}, snapshot, {
       schemaVersion: PORTFOLIO_SCHEMA_VERSION,
       source: "do-wallet-l1-portfolio-rewrite",
       wallet: wallet,
       addresses: Object.assign({}, addressMap),
       activeAddresses: Object.assign({}, addressMap),
+      addressesByChain: addressesByChain,
+      allAddresses: allAddresses,
+      publicAddresses: allAddresses,
       updatedAt: Date.now()
     });
     if (snapshotMatchesActiveWallet(current, snapshotKeys(stored)) && backendRowCount(current) > backendRowCount(stored)) return;
     writeJSON(SNAPSHOT_KEY, stored);
     var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
     if (!isObject(byWallet)) byWallet = {};
-    walletIdentityKeys(wallet).concat(Object.keys(addressMap).map(function (key) { return addressMap[key]; })).forEach(function (key) {
+    walletIdentityKeys(wallet).concat(allAddresses.map(function (entry) { return entry.address; })).forEach(function (key) {
       key = clean(key).toLowerCase();
       if (key) byWallet[key] = stored;
     });
@@ -12807,9 +13115,22 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     add(wallet.label);
     add(wallet.accountName);
     add(wallet.address);
-    [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses, wallet.addresses, wallet.addressMap].forEach(function (map) {
-      if (!isObject(map)) return;
-      Object.keys(map).forEach(function (key) { add(key + ":" + map[key]); add(map[key]); });
+    [
+      snapshot.addresses,
+      snapshot.activeAddresses,
+      snapshot.allAddresses,
+      snapshot.publicAddresses,
+      snapshot.addressesByChain,
+      wallet.addresses,
+      wallet.addressMap,
+      wallet.allAddresses,
+      wallet.publicAddresses,
+      wallet.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressIdentity(container, function (chainID, address) {
+        add(address);
+        if (chainID) add(chainID + ":" + address);
+      });
     });
     return keys;
   }
@@ -13604,6 +13925,34 @@ runModule("do-wallet-v2-history-owned.js", function(){
     return isObject(wallet) ? clean(wallet.name || wallet.walletName || wallet.label || wallet.accountName || wallet.id) : "";
   }
 
+  function forEachAddressIdentity(container, callback) {
+    function emit(chainID, address) {
+      address = clean(address);
+      if (!address || address === "[object Object]") return;
+      callback(clean(chainID), address);
+    }
+    function scan(node, hint, depth) {
+      if (depth > 5 || node === null || node === undefined) return;
+      if (typeof node === "string") {
+        emit(hint, node);
+        return;
+      }
+      if (Array.isArray(node)) {
+        node.slice(0, 150).forEach(function (item) { scan(item, hint, depth + 1); });
+        return;
+      }
+      if (!isObject(node)) return;
+      if (typeof node.address === "string" || typeof node.walletAddress === "string" || typeof node.publicAddress === "string") {
+        emit(node.chainID || node.chainId || node.network || node.chain || hint, node.address || node.walletAddress || node.publicAddress);
+      }
+      Object.keys(node).slice(0, 150).forEach(function (key) {
+        if (/mnemonic|seed|private|password|secret|cipher|encrypted/i.test(key)) return;
+        scan(node[key], key, depth + 1);
+      });
+    }
+    scan(container, "", 0);
+  }
+
   function walletIdentityKeys(wallet) {
     wallet = walletFromPayload(wallet) || wallet;
     if (!isObject(wallet)) return [];
@@ -13618,11 +13967,17 @@ runModule("do-wallet-v2-history-owned.js", function(){
     add(wallet.label);
     add(wallet.accountName);
     add(wallet.address);
-    [wallet.addresses, wallet.addressMap, wallet.activeAddresses, wallet.allAddresses].forEach(function (map) {
-      if (!isObject(map)) return;
-      Object.keys(map).forEach(function (key) {
-        add(key + ":" + map[key]);
-        add(map[key]);
+    [
+      wallet.addresses,
+      wallet.addressMap,
+      wallet.activeAddresses,
+      wallet.allAddresses,
+      wallet.publicAddresses,
+      wallet.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressIdentity(container, function (chainID, address) {
+        add(address);
+        if (chainID) add(chainID + ":" + address);
       });
     });
     return keys;
@@ -13649,11 +14004,16 @@ runModule("do-wallet-v2-history-owned.js", function(){
     if (!isObject(snapshot)) return [];
     var keys = walletIdentityKeys(snapshot.wallet || snapshot);
     if (snapshot.walletKey) keys.push(lower(snapshot.walletKey));
-    [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses].forEach(function (map) {
-      if (!isObject(map)) return;
-      Object.keys(map).forEach(function (key) {
-        keys.push(lower(key + ":" + map[key]));
-        keys.push(lower(map[key]));
+    [
+      snapshot.addresses,
+      snapshot.activeAddresses,
+      snapshot.allAddresses,
+      snapshot.publicAddresses,
+      snapshot.addressesByChain
+    ].forEach(function (container) {
+      forEachAddressIdentity(container, function (chainID, address) {
+        if (chainID) keys.push(lower(chainID + ":" + address));
+        keys.push(lower(address));
       });
     });
     return keys.filter(Boolean).filter(function (key, index, list) {
@@ -13715,9 +14075,23 @@ runModule("do-wallet-v2-history-owned.js", function(){
   }
 
   function collectAddressMap(map, source, score, out) {
+    if (Array.isArray(map)) {
+      map.forEach(function (entry) {
+        if (typeof entry === "string") addAddress(entry, "", source, score, out);
+        else if (isObject(entry)) addAddress(entry.address || entry.walletAddress || entry.publicAddress, entry.chainID || entry.chainId || entry.network || entry.chain, source, score, out);
+      });
+      return;
+    }
     if (!isObject(map)) return;
     Object.keys(map).forEach(function (key) {
-      addAddress(map[key], key, source, score, out);
+      var value = map[key];
+      if (Array.isArray(value)) {
+        value.forEach(function (item) { addAddress(isObject(item) ? item.address || item.walletAddress : item, key, source, score, out); });
+      } else if (isObject(value)) {
+        addAddress(value.address || value.walletAddress || value.publicAddress, value.chainID || value.chainId || value.network || key, source, score, out);
+      } else {
+        addAddress(value, key, source, score, out);
+      }
     });
   }
 

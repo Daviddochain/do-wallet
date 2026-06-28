@@ -2,7 +2,7 @@
   "name": "Do-Wallet",
   "version": "2.0.0",
   "date": "2026-06-28",
-  "build": "20260628SourceRuntime94",
+  "build": "20260628SourceRuntime95",
   "storagePolicy": "preserve-client-local-storage",
   "activeTree": "source/frontend",
   "styles": [
