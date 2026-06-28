@@ -2817,6 +2817,42 @@
     return out;
   }
 
+  function backendAddressEntries(wallet, addressMap) {
+    var out = [];
+    var seen = {};
+    addressMap = cleanAddressMapForSnapshot(addressMap);
+    function add(chainID, address, source) {
+      chainID = canonicalNetwork(chainID);
+      address = normalizeAddressForChain(chainID, address);
+      if (!chainID || !allChains()[chainID] || !isPublicAddress(address)) return;
+      var key = chainID + ":" + address.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push({
+        chainID: chainID,
+        address: address,
+        source: source || "wallet"
+      });
+    }
+    Object.keys(addressMap || {}).forEach(function (chainID) {
+      add(chainID, addressMap[chainID], "address-map");
+    });
+    collectDoChainAddresses(wallet, addressMap).forEach(function (address) {
+      add("Do-Chain", address, "do-chain-derived-address");
+    });
+    return out;
+  }
+
+  function backendAddressesByChain(entries) {
+    var out = {};
+    (Array.isArray(entries) ? entries : []).forEach(function (entry) {
+      if (!entry || !entry.chainID || !entry.address) return;
+      if (!out[entry.chainID]) out[entry.chainID] = [];
+      if (out[entry.chainID].indexOf(entry.address) < 0) out[entry.chainID].push(entry.address);
+    });
+    return out;
+  }
+
   function assetStableKey(asset) {
     var chainID = assetChainID(asset);
     var token = clean(asset && (asset.contract || asset.token || asset.denom || asset.symbol || asset.name)).toLowerCase();
@@ -2947,6 +2983,8 @@
       : buildWalletAddressMap(wallet));
     var map = cleanAddressMapForSnapshot(sourceMap);
     if (!Object.keys(map).length) return null;
+    var addressEntries = backendAddressEntries(wallet, map);
+    var addressesByChain = backendAddressesByChain(addressEntries);
     return {
       name: walletName(wallet) || "Do-Wallet",
       walletName: walletName(wallet) || "Do-Wallet",
@@ -2955,6 +2993,9 @@
       address: clean(wallet.address || Object.keys(map).map(function (key) { return map[key]; }).find(Boolean)),
       addresses: map,
       addressMap: map,
+      addressesByChain: addressesByChain,
+      allAddresses: addressEntries,
+      publicAddresses: addressEntries,
       validatorWallet: wallet.validatorWallet === true,
       adminWallet: wallet.adminWallet === true,
     };
@@ -3019,6 +3060,8 @@
       wallet: active,
       wallets: candidates,
       addressMap: activeMap,
+      addressesByChain: active ? (active.addressesByChain || {}) : {},
+      allAddresses: active ? (active.allAddresses || []) : [],
     };
   }
 

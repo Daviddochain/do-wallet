@@ -819,7 +819,7 @@
     var den = lower(denom);
     var terraClassicContext = id === "columbus-5" || id === "terra-classic" || id === "lunc" || id === "330" || name.indexOf("terra classic") >= 0 || TERRA_CLASSIC_DENOMS[den] || den.indexOf("terra1") === 0 || (TERRA_CLASSIC_SYMBOLS[sym] && id !== "phoenix-1" && id !== "osmosis-1");
     if (terraClassicContext) return "columbus-5";
-    if (id === "do-chain" || id === "dochain-1" || id === "do" || id === "888" || id.indexOf("dochain") >= 0 || name.indexOf("do chain") >= 0 || den === "udo" || sym === "DO") return "Do-Chain";
+    if (id === "do-chain" || id === "dochain-1" || id === "do" || id === "888" || id.indexOf("dochain") >= 0 || id.indexOf("do-chain-legacy") >= 0 || id.indexOf("do-legacy") >= 0 || id === "do-118" || id === "do-330" || id === "do-chain-118" || id === "do-chain-330" || name.indexOf("do chain") >= 0 || den === "udo" || sym === "DO") return "Do-Chain";
     if (id === "phoenix-1" || (sym === "LUNA" && name.indexOf("terra classic") < 0) || name.indexOf("terra (luna)") >= 0) return "phoenix-1";
     if (id === "osmosis-1" || id === "osmosis" || id === "osmo" || sym === "OSMO" || name.indexOf("osmosis") >= 0) return "osmosis-1";
     if (id.indexOf("bitcoin") >= 0 || id === "btc" || sym === "BTC") return "bitcoin-mainnet";

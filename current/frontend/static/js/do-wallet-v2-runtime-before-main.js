@@ -1314,6 +1314,40 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     return map;
   }
 
+  function publicAddressEntriesFromMap(addresses, existing) {
+    var out = [];
+    var seen = {};
+    function add(chainID, address, source) {
+      chainID = text(chainID);
+      address = text(address);
+      if (!chainID || !looksLikeAddress(address)) return;
+      var effectiveChainID = chainID;
+      if (/^(Do-Chain-legacy-118|Do-Chain-legacy-330|Do-Chain-118|Do-Chain-330|do-118|do-330|dochain-118|dochain-330|do-legacy-118|do-legacy-330)$/i.test(chainID)) {
+        effectiveChainID = "Do-Chain";
+      }
+      var key = lower(effectiveChainID) + ":" + lower(address);
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push({
+        chainID: effectiveChainID,
+        address: address,
+        source: source || chainID
+      });
+    }
+    if (Array.isArray(existing)) {
+      existing.forEach(function (entry) {
+        if (typeof entry === "string") add("", entry, "existing-public-address");
+        else if (isObject(entry)) add(entry.chainID || entry.chainId || entry.network || entry.chain, entry.address || entry.walletAddress || entry.value, entry.source || "existing-public-address");
+      });
+    }
+    if (isObject(addresses)) {
+      Object.keys(addresses).forEach(function (chainID) {
+        add(chainID, addresses[chainID], chainID);
+      });
+    }
+    return out;
+  }
+
   function seedPhraseRecoverability(wallet) {
     if (!wallet || !wallet.encryptedSeed) return undefined;
     return {
@@ -1568,6 +1602,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
       next.addresses = addresses;
       next.addressMap = addresses;
       next.allAddresses = addresses;
+      next.publicAddresses = publicAddressEntriesFromMap(addresses, next.publicAddresses);
       next.address = addresses["Do-Chain"] || addresses["dochain-1"] || addresses.do || addresses.dochain || text(next.address) || primaryAddress(next);
     }
     if (next.encryptedSeed) {
@@ -10638,6 +10673,42 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     return out;
   }
 
+  function backendAddressEntries(wallet, addressMap) {
+    var out = [];
+    var seen = {};
+    addressMap = cleanAddressMapForSnapshot(addressMap);
+    function add(chainID, address, source) {
+      chainID = canonicalNetwork(chainID);
+      address = normalizeAddressForChain(chainID, address);
+      if (!chainID || !allChains()[chainID] || !isPublicAddress(address)) return;
+      var key = chainID + ":" + address.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push({
+        chainID: chainID,
+        address: address,
+        source: source || "wallet"
+      });
+    }
+    Object.keys(addressMap || {}).forEach(function (chainID) {
+      add(chainID, addressMap[chainID], "address-map");
+    });
+    collectDoChainAddresses(wallet, addressMap).forEach(function (address) {
+      add("Do-Chain", address, "do-chain-derived-address");
+    });
+    return out;
+  }
+
+  function backendAddressesByChain(entries) {
+    var out = {};
+    (Array.isArray(entries) ? entries : []).forEach(function (entry) {
+      if (!entry || !entry.chainID || !entry.address) return;
+      if (!out[entry.chainID]) out[entry.chainID] = [];
+      if (out[entry.chainID].indexOf(entry.address) < 0) out[entry.chainID].push(entry.address);
+    });
+    return out;
+  }
+
   function assetStableKey(asset) {
     var chainID = assetChainID(asset);
     var token = clean(asset && (asset.contract || asset.token || asset.denom || asset.symbol || asset.name)).toLowerCase();
@@ -10768,6 +10839,8 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       : buildWalletAddressMap(wallet));
     var map = cleanAddressMapForSnapshot(sourceMap);
     if (!Object.keys(map).length) return null;
+    var addressEntries = backendAddressEntries(wallet, map);
+    var addressesByChain = backendAddressesByChain(addressEntries);
     return {
       name: walletName(wallet) || "Do-Wallet",
       walletName: walletName(wallet) || "Do-Wallet",
@@ -10776,6 +10849,9 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       address: clean(wallet.address || Object.keys(map).map(function (key) { return map[key]; }).find(Boolean)),
       addresses: map,
       addressMap: map,
+      addressesByChain: addressesByChain,
+      allAddresses: addressEntries,
+      publicAddresses: addressEntries,
       validatorWallet: wallet.validatorWallet === true,
       adminWallet: wallet.adminWallet === true,
     };
@@ -10840,6 +10916,8 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       wallet: active,
       wallets: candidates,
       addressMap: activeMap,
+      addressesByChain: active ? (active.addressesByChain || {}) : {},
+      allAddresses: active ? (active.allAddresses || []) : [],
     };
   }
 
@@ -12514,7 +12592,7 @@ runModule("do-wallet-v2-l1-portfolio-assets.js", function(){
     var den = lower(denom);
     var terraClassicContext = id === "columbus-5" || id === "terra-classic" || id === "lunc" || id === "330" || name.indexOf("terra classic") >= 0 || TERRA_CLASSIC_DENOMS[den] || den.indexOf("terra1") === 0 || (TERRA_CLASSIC_SYMBOLS[sym] && id !== "phoenix-1" && id !== "osmosis-1");
     if (terraClassicContext) return "columbus-5";
-    if (id === "do-chain" || id === "dochain-1" || id === "do" || id === "888" || id.indexOf("dochain") >= 0 || name.indexOf("do chain") >= 0 || den === "udo" || sym === "DO") return "Do-Chain";
+    if (id === "do-chain" || id === "dochain-1" || id === "do" || id === "888" || id.indexOf("dochain") >= 0 || id.indexOf("do-chain-legacy") >= 0 || id.indexOf("do-legacy") >= 0 || id === "do-118" || id === "do-330" || id === "do-chain-118" || id === "do-chain-330" || name.indexOf("do chain") >= 0 || den === "udo" || sym === "DO") return "Do-Chain";
     if (id === "phoenix-1" || (sym === "LUNA" && name.indexOf("terra classic") < 0) || name.indexOf("terra (luna)") >= 0) return "phoenix-1";
     if (id === "osmosis-1" || id === "osmosis" || id === "osmo" || sym === "OSMO" || name.indexOf("osmosis") >= 0) return "osmosis-1";
     if (id.indexOf("bitcoin") >= 0 || id === "btc" || sym === "BTC") return "bitcoin-mainnet";

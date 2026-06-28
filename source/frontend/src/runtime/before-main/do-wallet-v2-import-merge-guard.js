@@ -415,6 +415,40 @@
     return map;
   }
 
+  function publicAddressEntriesFromMap(addresses, existing) {
+    var out = [];
+    var seen = {};
+    function add(chainID, address, source) {
+      chainID = text(chainID);
+      address = text(address);
+      if (!chainID || !looksLikeAddress(address)) return;
+      var effectiveChainID = chainID;
+      if (/^(Do-Chain-legacy-118|Do-Chain-legacy-330|Do-Chain-118|Do-Chain-330|do-118|do-330|dochain-118|dochain-330|do-legacy-118|do-legacy-330)$/i.test(chainID)) {
+        effectiveChainID = "Do-Chain";
+      }
+      var key = lower(effectiveChainID) + ":" + lower(address);
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push({
+        chainID: effectiveChainID,
+        address: address,
+        source: source || chainID
+      });
+    }
+    if (Array.isArray(existing)) {
+      existing.forEach(function (entry) {
+        if (typeof entry === "string") add("", entry, "existing-public-address");
+        else if (isObject(entry)) add(entry.chainID || entry.chainId || entry.network || entry.chain, entry.address || entry.walletAddress || entry.value, entry.source || "existing-public-address");
+      });
+    }
+    if (isObject(addresses)) {
+      Object.keys(addresses).forEach(function (chainID) {
+        add(chainID, addresses[chainID], chainID);
+      });
+    }
+    return out;
+  }
+
   function seedPhraseRecoverability(wallet) {
     if (!wallet || !wallet.encryptedSeed) return undefined;
     return {
@@ -669,6 +703,7 @@
       next.addresses = addresses;
       next.addressMap = addresses;
       next.allAddresses = addresses;
+      next.publicAddresses = publicAddressEntriesFromMap(addresses, next.publicAddresses);
       next.address = addresses["Do-Chain"] || addresses["dochain-1"] || addresses.do || addresses.dochain || text(next.address) || primaryAddress(next);
     }
     if (next.encryptedSeed) {
