@@ -916,6 +916,8 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
 
   var DERIVED_CHAIN_EXPORTS = [
     { chainID: "Do-Chain", label: "Do Chain", coinType: "888", prefix: "do", path: "m/44'/888'/0'/0/0", export: "Do private key" },
+    { chainID: "Do-Chain-legacy-118", label: "Do Chain (legacy 118)", coinType: "118", prefix: "do", path: "m/44'/118'/0'/0/0", export: "Do legacy 118 private key", skipCoinTypeLabel: true },
+    { chainID: "Do-Chain-legacy-330", label: "Do Chain (legacy 330)", coinType: "330", prefix: "do", path: "m/44'/330'/0'/0/0", export: "Do legacy 330 private key", skipCoinTypeLabel: true },
     { chainID: "columbus-5", label: "Terra Classic (LUNC)", coinType: "330", prefix: "terra", path: "m/44'/330'/0'/0/0", export: "LUNC private key" },
     { chainID: "phoenix-1", label: "Terra (LUNA)", coinType: "330", prefix: "terra", path: "m/44'/330'/0'/0/0", export: "LUNA private key" },
     { chainID: "secret-4", label: "Secret Network", coinType: "529", prefix: "secret", path: "m/44'/529'/0'/0/0", export: "SCRT private key" },
@@ -965,7 +967,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
 
   var CHAIN_LABELS = DERIVED_CHAIN_EXPORTS.reduce(function (labels, chain) {
     labels[chain.chainID] = chain.label;
-    if (!labels[chain.coinType]) labels[chain.coinType] = chain.label;
+    if (!chain.skipCoinTypeLabel && !labels[chain.coinType]) labels[chain.coinType] = chain.label;
     return labels;
   }, {
     do: "Do Chain",
@@ -974,6 +976,10 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     "Do-Chain-imported": "Do Chain (imported)",
     "Do-Chain-preserved": "Do Chain (preserved)",
     "Do-Chain-legacy": "Do Chain (legacy)",
+    "Do-Chain-118": "Do Chain (legacy 118)",
+    "Do-Chain-330": "Do Chain (legacy 330)",
+    "do-118": "Do Chain (legacy 118)",
+    "do-330": "Do Chain (legacy 330)",
     lunc: "Terra Classic (LUNC)",
     terra: "Terra Classic (LUNC)",
     dungeon: "Dungeon Chain",
@@ -1002,6 +1008,8 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
 
   var EXTRA_CHAIN_ALIASES = {
     "Do-Chain": ["do", "dochain"],
+    "Do-Chain-legacy-118": ["Do-Chain-118", "do-118", "dochain-118", "do-legacy-118"],
+    "Do-Chain-legacy-330": ["Do-Chain-330", "do-330", "dochain-330", "do-legacy-330"],
     "columbus-5": ["lunc", "terra", "terra-classic"],
     "phoenix-1": ["luna", "terra-luna", "phoenix"],
     "dungeon-1": ["dungeon", "dgn"],
@@ -1314,7 +1322,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
       chainCount: DERIVED_CHAIN_EXPORTS.length,
       canRevealMasterSeedPhrase: Boolean(wallet.encryptedMnemonic),
       note: wallet.encryptedMnemonic
-        ? "One encrypted master seed phrase derives every listed chain by its derivation path."
+        ? "One encrypted master seed phrase derives every listed chain by its derivation path, including legacy Do 118 and 330 recovery paths."
         : "This wallet has an encrypted master seed, but the original mnemonic was not stored by older builds. Re-import the phrase once to enable reveal."
     };
   }
@@ -2025,11 +2033,21 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
       "Do-Chain": "primary",
       "Do-Chain-preserved": "preserved",
       "Do-Chain-legacy": "legacy",
+      "Do-Chain-legacy-118": "legacy-118",
+      "Do-Chain-legacy-330": "legacy-330",
+      "Do-Chain-118": "legacy-118-alias",
+      "Do-Chain-330": "legacy-330-alias",
       "Do-Chain-native": "native",
       "Do-Chain-imported": "imported",
       "888": "coin-type-888",
       do: "do-alias",
-      dochain: "dochain-alias"
+      dochain: "dochain-alias",
+      "do-118": "do-118-alias",
+      "do-330": "do-330-alias",
+      "dochain-118": "dochain-118-alias",
+      "dochain-330": "dochain-330-alias",
+      "do-legacy-118": "do-legacy-118-alias",
+      "do-legacy-330": "do-legacy-330-alias"
     };
     var seen = {};
     return Object.keys(labels).map(function (key) {
@@ -2329,8 +2347,16 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     ].join("|");
   }
 
+  function seedRevealNameForDedupe(wallet) {
+    return lower(walletName(wallet).replace(/\s+\(\d+\)$/g, ""));
+  }
+
   function seedRevealDedupeKey(wallet) {
-    return signableToken(wallet) || (lower(walletName(wallet)) + ":" + lower(primaryAddress(wallet)));
+    var address = lower(primaryAddress(wallet));
+    var name = seedRevealNameForDedupe(wallet);
+    if (address && name) return name + ":" + address;
+    if (address) return "address:" + address;
+    return signableToken(wallet) || (name + ":" + text(wallet && wallet.encryptedSeed).slice(0, 80));
   }
 
   function seedWalletCandidates() {
@@ -2393,7 +2419,7 @@ runModule("do-wallet-v2-import-merge-guard.js", function(){
     var wallets = seedWalletCandidates();
     var seen = {};
     return wallets.filter(function (wallet) {
-      var key = text(wallet.__seedRevealToken) || lower(wallet.name) + ":" + text(wallet.encryptedSeed).slice(0, 80);
+      var key = seedRevealDedupeKey(wallet) || text(wallet.__seedRevealToken) || lower(wallet.name) + ":" + text(wallet.encryptedSeed).slice(0, 80);
       if (!key || seen[key]) return false;
       seen[key] = true;
       return true;
@@ -7855,6 +7881,11 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     TRUSTED_PUBLIC_STORAGE_KEYS[String(key).toLowerCase()] = true;
   });
   var REMOVED_NETWORKS = ["dochain-1", "ares-1", "pisco-1", "localterra", "sentinelhub-2"];
+  var DISABLED_BROWSER_LCD_CHAINS = {
+    "dydx-mainnet-1": true,
+    "kava_2222-10": true,
+    "sentinelhub-2": true
+  };
   var REMOVED_ADDRESS_ALIASES = REMOVED_NETWORKS.slice();
   var STALE_NETWORK_ALIASES = ["dochain-1", "do-main-1", "dochain", "do", "888", "terra", "330", "lunc", "luna", "terra-classic"];
   var DISPLAY_ALIAS_KEYS = ["address", "0", "60", "118", "144", "195", "330", "501", "529", "888", "1815", "terra", "lunc", "luna", "terra-classic", "do", "dochain", "cosmos", "osmo", "eth", "evm", "ethereum", "eip155:1", "btc", "bitcoin", "bip122:000000000019d6689c085ae165831e93", "sol", "solana", "secret", "dungeon", "ada", "cardano", "trx", "tron", "xrp"];
@@ -8411,7 +8442,10 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
         host.endsWith(".do-wallet.com") ||
         host === "do-chain.com" ||
         host === "www.do-chain.com" ||
-        host.endsWith(".do-chain.com")
+        host.endsWith(".do-chain.com") ||
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host === "::1"
       );
     } catch (error) {
       return false;
@@ -9016,6 +9050,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
 
   function chainSupportsCosmosQueries(chain) {
     if (!isObject(chain)) return false;
+    if (DISABLED_BROWSER_LCD_CHAINS[String(chain.chainID || "")]) return false;
     if (chain.evm || chain.chainNamespace === "eip155" || chain.chainNamespace === "bip122" || chain.chainNamespace === "solana") return false;
     return Boolean(chain.prefix && (chain.lcd || chain.api || chain.rpc || chain.chainID === "Do-Chain"));
   }

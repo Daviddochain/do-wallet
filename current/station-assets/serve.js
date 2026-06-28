@@ -109,12 +109,21 @@ const EXTERNAL_ASSET_ROUTE_PREFIXES = [
 ]
 
 const externalAssetDisabledResponse = (req) => {
+  if (req.path.includes('/validators')) {
+    return { validators: [] }
+  }
+
+  if (req.path.includes('/proposals')) {
+    return { proposals: [] }
+  }
+
+  if (req.path.includes('/amendments')) {
+    return { amendments: [] }
+  }
+
   if (
     req.path.startsWith('/api/cw20') ||
     req.path.startsWith('/api/nfts') ||
-    req.path.includes('/validators') ||
-    req.path.includes('/proposals') ||
-    req.path.includes('/amendments') ||
     req.path.includes('/utxo') ||
     req.path.includes('/txs')
   ) {
@@ -252,10 +261,20 @@ const LCD_FALLBACKS = {
     'https://api.chihuahua.wtf',
     'https://rest.lavenderfive.com:443/chihuahua',
   ],
+  'dydx-mainnet-1': [
+    'https://lcd-dydx.tfl.foundation',
+    'https://dydx-rest.publicnode.com',
+    'https://dydx-api.polkachu.com',
+  ],
   'injective-1': [
     'https://injective-rest.publicnode.com',
     'https://injective-api.polkachu.com',
     'https://rest.lavenderfive.com:443/injective',
+  ],
+  'kava_2222-10': [
+    'https://lcd-kava.tfl.foundation',
+    'https://kava-rest.publicnode.com',
+    'https://api.data.kava.io',
   ],
   'migaloo-1': [
     'https://migaloo-rest.publicnode.com',
@@ -283,6 +302,10 @@ const LCD_FALLBACKS = {
   'stafihub-1': [
     'https://public-rest-rpc1.stafihub.io',
     'https://api.stafihub.nodestake.org',
+  ],
+  'sentinelhub-2': [
+    'https://lcd-sentinel.tfl.foundation',
+    'https://sentinel-rest.publicnode.com',
   ],
   'stargaze-1': [
     'https://rest.stargaze-apis.com',
@@ -2149,6 +2172,14 @@ function doWalletEmptyLcdPayload(path) {
   if (/cosmos\/bank\/v1beta1\/balances/.test(path)) return { balances: [], pagination: { next_key: null, total: '0' } };
   if (/cosmos\/distribution\/v1beta1\/delegators\/.+\/rewards/.test(path)) return { rewards: [], total: [] };
   if (/cosmos\/staking\/v1beta1\/delegations/.test(path)) return { delegation_responses: [], pagination: { next_key: null, total: '0' } };
+  if (/cosmos\/tx\/v1beta1\/txs/.test(path)) {
+    return {
+      txs: [],
+      tx_responses: [],
+      pagination: { next_key: null, total: '0' },
+      total: '0',
+    }
+  }
   if (/cosmos\/staking\/v1beta1\/params/.test(path)) {
     return {
       params: {
@@ -2233,6 +2264,26 @@ function stripNumericOnlyQueryParams(value) {
     })
     if (!hasSearch || !numericOnly) return raw
     return url.pathname + url.hash
+  } catch (_) {
+    return raw
+  }
+}
+
+function normalizeCosmosTxQueryPath(value) {
+  const raw = String(value || '')
+  if (!raw.includes('/cosmos/tx/v1beta1/txs') || !raw.includes('events=')) return raw
+  try {
+    const url = new URL(raw, 'https://do-wallet.local')
+    if (!/\/cosmos\/tx\/v1beta1\/txs$/i.test(url.pathname)) return raw
+    if (url.searchParams.get('query')) return raw
+    const events = url.searchParams
+      .getAll('events')
+      .map((event) => String(event || '').trim())
+      .filter(Boolean)
+    if (!events.length) return raw
+    url.searchParams.delete('events')
+    url.searchParams.set('query', events.join(' AND '))
+    return `${url.pathname}?${url.searchParams.toString()}${url.hash || ''}`
   } catch (_) {
     return raw
   }
@@ -2333,6 +2384,7 @@ function jsonProxyBody(payload) {
 async function proxyRequest(req, res, prefix, targetBase, options = {}) {
   const proxyChainID = options.chainID || ''
   let upstreamPath = stripNumericOnlyQueryParams(req.originalUrl.slice(prefix.length) || '/')
+  upstreamPath = normalizeCosmosTxQueryPath(upstreamPath)
   upstreamPath = normalizeDoChainLcdPath(upstreamPath, proxyChainID)
   const targetBases = uniqueProxyBases(targetBase)
   const emptyLcdPayload =
@@ -4208,6 +4260,25 @@ const portfolioCollectFromWalletObject = (pairs, seen, chains, wallet, source) =
   })
 }
 
+const portfolioDoAddressFromCandidate = (address) => {
+  const raw = portfolioPublicAddress(address)
+  if (!raw) return ''
+  const recoded = recodeDoChainBech32Address(raw)
+  return /^do1[ac-hj-np-z02-9]{20,110}$/i.test(recoded) ? recoded : ''
+}
+
+const portfolioCollectDoChainAliasPairs = (pairs, seen, chains) => {
+  if (!chains?.['Do-Chain']) return
+  const candidates = pairs
+    .map((pair) => pair?.address)
+    .filter(Boolean)
+  candidates.forEach((address) => {
+    const doAddress = portfolioDoAddressFromCandidate(address)
+    if (!doAddress) return
+    portfolioAddPair(pairs, seen, chains, 'Do-Chain', doAddress, 'do-chain-address-alias')
+  })
+}
+
 const portfolioCollectPairs = (body, chains) => {
   const pairs = []
   const seen = new Set()
@@ -4216,6 +4287,7 @@ const portfolioCollectPairs = (body, chains) => {
   ;(Array.isArray(body?.wallets) ? body.wallets : []).forEach((wallet, index) => {
     portfolioCollectFromWalletObject(pairs, seen, chains, wallet, `wallet-${index}`)
   })
+  portfolioCollectDoChainAliasPairs(pairs, seen, chains)
   return pairs
 }
 
@@ -5882,7 +5954,11 @@ app.get('/api/cardano/validators', async (_req, res) => {
     })
   } catch (err) {
     console.error('ADA validators fetch failed:', err.message)
-    res.status(500).json({ error: 'Failed to fetch Cardano validators' })
+    res.json({
+      chainID: 'cardano-mainnet',
+      validators: [],
+      error: 'Cardano validator provider unavailable',
+    })
   }
 })
 
@@ -6013,7 +6089,11 @@ app.get('/api/cardano/proposals', async (_req, res) => {
     })
   } catch (err) {
     console.error('ADA proposals fetch failed:', err.message)
-    res.status(500).json({ error: 'Failed to fetch Cardano proposals' })
+    res.json({
+      chainID: 'cardano-mainnet',
+      proposals: [],
+      error: 'Cardano proposal provider unavailable',
+    })
   }
 })
 
