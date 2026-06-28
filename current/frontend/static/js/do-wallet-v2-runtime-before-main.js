@@ -9068,20 +9068,28 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     return isTerra(derived) ? derived : "";
   }
 
+  function isDoAliasKey(chainID) {
+    var lower = clean(chainID).toLowerCase();
+    return /^(do-chain-legacy-(118|330)|do-chain-(118|330)|do-legacy-(118|330)|do-(118|330)|dochain-(118|330))$/.test(lower);
+  }
+
   function normalizeAddressForChain(chainID, value) {
     var address = clean(value);
     if (!address) return "";
+    if (isDoAliasKey(chainID)) return isDo(address) ? address : "";
     if (chainID === "Do-Chain") return isDo(address) ? address : "";
     if (chainID === "columbus-5" || chainID === "phoenix-1") return isTerra(address) ? address : deriveTerraAddressFromDo(address);
     return address;
   }
 
   function normalizedAddressesForChain(chainID, value) {
-    chainID = canonicalNetwork(chainID);
+    var requestedChainID = clean(chainID);
+    var aliasChainID = isDoAliasKey(requestedChainID) ? requestedChainID : "";
+    chainID = aliasChainID || canonicalNetwork(requestedChainID);
     var out = [];
     var seen = {};
     function add(address) {
-      address = normalizeAddressForChain(chainID, address);
+      address = normalizeAddressForChain(aliasChainID || chainID, address);
       if (!isPublicAddress(address)) return;
       var key = address.toLowerCase();
       if (seen[key]) return;
@@ -9146,8 +9154,12 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
 
   function forEachAddressEntryValue(container, callback) {
     function emit(chainID, address, source) {
-      var canonical = canonicalNetwork(chainID);
-      address = canonical ? normalizeAddressForChain(canonical, address) : clean(address);
+      var rawChainID = clean(chainID);
+      var aliasChainID = isDoAliasKey(rawChainID) ? rawChainID : "";
+      var canonical = aliasChainID ? "Do-Chain" : canonicalNetwork(rawChainID);
+      address = aliasChainID
+        ? normalizeAddressForChain(aliasChainID, address)
+        : (canonical ? normalizeAddressForChain(canonical, address) : clean(address));
       if (!isPublicAddress(address)) return;
       callback(canonical, address, source || "address-container");
     }
@@ -9240,6 +9252,11 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     var stored = isObject(wallet.addresses) ? wallet.addresses : {};
     var raw = collectRawAddresses(wallet);
     Object.keys(stored).forEach(function (key) {
+      if (isDoAliasKey(key)) {
+        var aliasAddress = normalizeAddressForChain(key, stored[key]);
+        if (aliasAddress) map[key] = aliasAddress;
+        return;
+      }
       var chainID = canonicalNetwork(key);
       var address = normalizeAddressForChain(chainID, stored[key]);
       if (chainID && chains[chainID] && isPublicAddress(address)) map[chainID] = address;
@@ -9254,9 +9271,13 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
         }
       }
       else if (isTerra(address)) {
+        var legacy330Do = deriveDoAddressFromLegacyTerra(address);
         map["columbus-5"] = map["columbus-5"] || address;
         map["phoenix-1"] = map["phoenix-1"] || address;
-        map["Do-Chain"] = map["Do-Chain"] || deriveDoAddressFromLegacyTerra(address);
+        if (legacy330Do) {
+          map["Do-Chain-legacy-330"] = map["Do-Chain-legacy-330"] || legacy330Do;
+          map["Do-Chain"] = map["Do-Chain"] || legacy330Do;
+        }
       } else if (isSecret(address)) map["secret-4"] = map["secret-4"] || address;
       else if (isDungeon(address)) map["dungeon-1"] = map["dungeon-1"] || address;
       else if (isCosmos(address)) map["cosmoshub-4"] = map["cosmoshub-4"] || address;
@@ -9339,6 +9360,13 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
         if (chain && clean(chain.prefix).toLowerCase() === prefix) rememberBech32Source(chainID, decodedValue);
       });
     });
+    function addDoAliasFromBech32(aliasKey, decodedValue) {
+      if (!decodedValue || !Array.isArray(decodedValue.words)) return;
+      var address = bech32Encode("do", decodedValue.words);
+      if (isDo(address)) map[aliasKey] = map[aliasKey] || address;
+    }
+    addDoAliasFromBech32("Do-Chain-legacy-330", sourceByCoinType["330"] || sourceByPrefix.terra);
+    addDoAliasFromBech32("Do-Chain-legacy-118", sourceByCoinType["118"]);
     var genericBech32Source = decoded.map(function (entry) {
       return entry.decoded;
     }).find(function (decodedValue) {
@@ -9606,9 +9634,13 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       var wallet = walletFromPayload(payload);
       if (!isObject(wallet)) return;
       patchWallet(wallet);
+      var sourceMap = wallet.publicAddressMapOnly === true
+        ? (wallet.addressMap || wallet.addresses || {})
+        : buildWalletAddressMap(wallet);
       var addressMap = wallet.publicAddressMapOnly === true
         ? cleanAddressMapForSnapshot(wallet.addressMap || wallet.addresses || {})
-        : buildWalletAddressMap(wallet);
+        : sourceMap;
+      if (wallet.publicAddressMapOnly === true) addCleanAddressMap(addressMap, sourceMap, false);
       if (!Object.keys(addressMap).length && !collectRawAddresses(wallet).length) return;
       wallet.addresses = Object.assign({}, isObject(wallet.addresses) ? wallet.addresses : {}, addressMap);
       wallet.addressMap = Object.assign({}, isObject(wallet.addressMap) ? wallet.addressMap : {}, addressMap);
@@ -10827,7 +10859,8 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   function backendAddressEntries(wallet, addressMap) {
     var out = [];
     var seen = {};
-    addressMap = cleanAddressMapForSnapshot(addressMap);
+    var sourceAddressMap = isObject(addressMap) ? addressMap : {};
+    addressMap = cleanAddressMapForSnapshot(sourceAddressMap);
     function add(chainID, address, source) {
       chainID = canonicalNetwork(chainID);
       address = normalizeAddressForChain(chainID, address);
@@ -10857,6 +10890,9 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       forEachAddressEntryValue(container, function (chainID, address, source) {
         add(chainID, address, source || "wallet-address-entry");
       });
+    });
+    collectDoChainAddresses(wallet, sourceAddressMap).forEach(function (address) {
+      add("Do-Chain", address, "do-chain-derived-address");
     });
     collectDoChainAddresses(wallet, addressMap).forEach(function (address) {
       add("Do-Chain", address, "do-chain-derived-address");
@@ -11086,7 +11122,7 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
       : buildWalletAddressMap(wallet));
     var map = cleanAddressMapForSnapshot(sourceMap);
     if (!Object.keys(map).length) return null;
-    var addressEntries = backendAddressEntries(wallet, map);
+    var addressEntries = backendAddressEntries(wallet, sourceMap);
     var addressesByChain = backendAddressesByChain(addressEntries);
     return {
       name: walletName(wallet) || "Do-Wallet",
@@ -11110,13 +11146,21 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
     Object.keys(cleanMap).forEach(function (chainID) {
       if (replaceExisting || !target[chainID]) target[chainID] = cleanMap[chainID];
     });
+    if (isObject(source)) {
+      Object.keys(source).forEach(function (key) {
+        if (!isDoAliasKey(key)) return;
+        normalizedAddressesForChain(key, source[key]).forEach(function (address) {
+          if (replaceExisting || !target[key]) target[key] = address;
+        });
+      });
+    }
     return target;
   }
 
   function addressMapForPortfolioCandidate(candidate) {
     if (!isObject(candidate)) return {};
     if (candidate.publicAddressMapOnly === true) {
-      return cleanAddressMapForSnapshot(candidate.addressMap || candidate.addresses || {});
+      return candidate.addressMap || candidate.addresses || {};
     }
     return buildWalletAddressMap(candidate);
   }
@@ -11155,9 +11199,10 @@ runModule("do-wallet-v2-multichain-assets.js", function(){
   }
 
   function backendPortfolioPayload(wallet, addressMap, candidateWallets) {
-    var activeMap = cleanAddressMapForSnapshot(addressMap);
-    var candidates = backendPortfolioWallets(wallet, activeMap, candidateWallets);
-    var active = publicWalletForBackend(wallet, activeMap) || candidates[0] || null;
+    var sourceMap = isObject(addressMap) ? addressMap : {};
+    var activeMap = cleanAddressMapForSnapshot(sourceMap);
+    var candidates = backendPortfolioWallets(wallet, sourceMap, candidateWallets);
+    var active = publicWalletForBackend(wallet, sourceMap) || candidates[0] || null;
     return {
       version: SNAPSHOT_SCHEMA_VERSION,
       wallet: active,
