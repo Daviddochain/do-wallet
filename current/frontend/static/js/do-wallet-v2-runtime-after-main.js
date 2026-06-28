@@ -1375,10 +1375,11 @@ runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
   if (window.__doWalletStakeOverview20260627) return;
   window.__doWalletStakeOverview20260627 = true;
 
-  var VERSION = "20260627-stake-overview-2";
+  var VERSION = "20260628-stake-overview-3";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-stake-overview-style";
+  var PAGE_ATTR = "data-do-wallet-stake-overview-page";
   var CARD_ATTR = "data-do-wallet-stake-overview";
   var SIGNATURE_ATTR = "data-do-wallet-stake-overview-signature";
   var RENDER_DELAY_MS = 140;
@@ -1568,7 +1569,7 @@ runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
 
   function formatUSD(value) {
     value = Number(value);
-    if (!Number.isFinite(value) || value <= 0) return "$-";
+    if (!Number.isFinite(value) || value <= 0) return "$0.00";
     if (value < 0.01) return "< $0.01";
     var digits = value >= 100 ? 2 : value >= 1 ? 4 : 8;
     return "$" + value.toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -2293,10 +2294,85 @@ runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
     }
   }
 
-  function findStakeCard() {
-    if (!/\/stake(?:\/|$|\?)/i.test(window.location.pathname + window.location.search)) return null;
+  function isStakeOverviewRoute() {
+    var path = clean(window.location && window.location.pathname || "");
+    return /^\/stake\/?$/i.test(path);
+  }
+
+  function findExistingStakePage() {
+    var existing = document.querySelector("[" + PAGE_ATTR + "]");
+    return existing && document.body.contains(existing) ? existing : null;
+  }
+
+  function looksLikeAppSidebar(text) {
+    return /\bDashboard\b/.test(text) &&
+      /\bQuarantine\b/.test(text) &&
+      /\bSwap\b/.test(text) &&
+      /\bGovernance\b/.test(text) &&
+      /\bNETWORKS\b/.test(text);
+  }
+
+  function findStakePageRoot() {
+    if (!isStakeOverviewRoute()) return null;
+    var existing = findExistingStakePage();
+    if (existing) return existing;
+
+    var headings = Array.prototype.slice.call(document.querySelectorAll("h1,h2,[role='heading']"));
+    var candidates = [];
+    headings.forEach(function (heading) {
+      if (clean(heading.textContent) !== "Stake") return;
+      var node = heading.parentElement;
+      var depth = 0;
+      while (node && node !== document.body && depth < 8) {
+        if (visible(node)) {
+          var text = clean(node.innerText || node.textContent);
+          var rect = node.getBoundingClientRect();
+          var hasStakeBody = /\bQuick Stake\b|\bManual Stake\b|\bStaking rewards\b|\bWithdraw all rewards\b|\bStaked funds\b/i.test(text);
+          var isWrongChrome = /\bPortfolio value\b/i.test(text) || looksLikeAppSidebar(text);
+          if (rect.width >= 520 && rect.height >= 220 && hasStakeBody && !isWrongChrome) {
+            candidates.push({ node: node, area: rect.width * rect.height, height: rect.height });
+          }
+        }
+        node = node.parentElement;
+        depth += 1;
+      }
+    });
+
+    if (!candidates.length) return null;
+    candidates.sort(function (a, b) {
+      return b.area - a.area || b.height - a.height;
+    });
+    candidates[0].node.setAttribute(PAGE_ATTR, VERSION);
+    candidates[0].node.setAttribute("data-do-wallet-stake-overview-mode", "page");
+    return candidates[0].node;
+  }
+
+  function findStakeActionRoot() {
+    if (!isStakeOverviewRoute()) return null;
     var nodes = Array.prototype.slice.call(document.querySelectorAll("main section,main article,main div,section,article,div"));
-    return nodes.filter(function (node) {
+    var matches = nodes.filter(function (node) {
+      if (!visible(node)) return false;
+      var text = clean(node.innerText || node.textContent);
+      if (!/\bQuick Stake\b/i.test(text) || !/\bManual Stake\b/i.test(text)) return false;
+      if (!/\bSelect staking asset\b/i.test(text) && !/\bStaking asset\b/i.test(text)) return false;
+      if (/\bPortfolio value\b/i.test(text) || looksLikeAppSidebar(text)) return false;
+      var rect = node.getBoundingClientRect();
+      return rect.width >= 320 && rect.height >= 180;
+    }).sort(function (a, b) {
+      var ar = a.getBoundingClientRect();
+      var br = b.getBoundingClientRect();
+      return (br.width * br.height) - (ar.width * ar.height);
+    });
+    if (!matches.length) return null;
+    matches[0].setAttribute(PAGE_ATTR, VERSION);
+    matches[0].setAttribute("data-do-wallet-stake-overview-mode", "card");
+    return matches[0];
+  }
+
+  function findStakeCard() {
+    if (!isStakeOverviewRoute()) return null;
+    var nodes = Array.prototype.slice.call(document.querySelectorAll("main section,main article,main div,section,article,div"));
+    var matches = nodes.filter(function (node) {
       if (!visible(node)) return false;
       var text = clean(node.innerText || node.textContent);
       if (!/\bStaked funds\b/i.test(text)) return false;
@@ -2308,7 +2384,10 @@ runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
       var ar = a.getBoundingClientRect();
       var br = b.getBoundingClientRect();
       return (ar.width * ar.height) - (br.width * br.height);
-    })[0] || null;
+    });
+    if (!matches.length) return null;
+    matches[0].setAttribute("data-do-wallet-stake-overview-mode", "card");
+    return matches[0];
   }
 
   function installStyles() {
@@ -2316,7 +2395,14 @@ runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
     var style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = [
-      "[" + CARD_ATTR + "]{box-sizing:border-box!important;overflow:hidden!important;padding:0!important;color:#fff!important;}",
+      "[" + PAGE_ATTR + "]{display:block!important;width:100%!important;max-width:none!important;min-height:calc(100vh - 90px)!important;overflow:visible!important;padding:0!important;color:#fff!important;}",
+      "[" + PAGE_ATTR + "] *{box-sizing:border-box;}",
+      ".do-wallet-stake-overview-page-shell{width:100%;min-width:0;padding:34px 32px 42px;}",
+      ".do-wallet-stake-overview-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px;}",
+      ".do-wallet-stake-overview-page-title h1{margin:0 0 8px;font-size:34px;line-height:1.1;font-weight:var(--bold,500);letter-spacing:0;color:#fff;}",
+      ".do-wallet-stake-overview-page-title p{margin:0;color:#c9bbef;font-size:13px;line-height:1.4;font-weight:var(--bold,500);}",
+      ".do-wallet-stake-overview-refresh{border:0;border-radius:999px;background:#9d42ff;color:#fff;min-height:42px;padding:0 22px;font:inherit;font-size:13px;font-weight:var(--bold,500);cursor:pointer;white-space:nowrap;}",
+      "[" + CARD_ATTR + "]{box-sizing:border-box!important;overflow:hidden!important;padding:0!important;color:#fff!important;border:1px solid rgba(159,70,255,.42)!important;border-radius:7px!important;background:#171023!important;}",
       "[" + CARD_ATTR + "] *{box-sizing:border-box;}",
       ".do-wallet-stake-overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:26px 30px;border-bottom:1px solid rgba(159,70,255,.28);}",
       ".do-wallet-stake-overview-head h2{margin:0 0 6px;font-size:22px;line-height:1.12;font-weight:var(--bold,500);letter-spacing:0;color:#fff;}",
@@ -2354,28 +2440,26 @@ runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
       ".do-wallet-stake-overview-row-right small,.do-wallet-stake-overview-row-right em{color:#c9bbef;font-size:12px;line-height:1.1;font-style:normal;font-weight:var(--bold,500);}",
       ".do-wallet-stake-overview-icon,.do-wallet-stake-overview-icon-fallback{width:38px;height:38px;min-width:38px;border-radius:50%;object-fit:cover;background:#2c2140;}",
       ".do-wallet-stake-overview-icon-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
-      "@media(max-width:900px){.do-wallet-stake-overview-body{grid-template-columns:1fr}.do-wallet-stake-overview-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.do-wallet-stake-overview-chart-wrap{min-height:210px}}",
-      "@media(max-width:640px){.do-wallet-stake-overview-head,.do-wallet-stake-overview-filter,.do-wallet-stake-overview-body,.do-wallet-stake-overview-positions-head,.do-wallet-stake-overview-row{padding-left:18px;padding-right:18px}.do-wallet-stake-overview-head{flex-direction:column}.do-wallet-stake-overview-total{text-align:left}.do-wallet-stake-overview-filter{align-items:stretch;flex-direction:column}.do-wallet-stake-overview-select-wrap{min-width:0;width:100%}.do-wallet-stake-overview-summary{grid-template-columns:1fr}.do-wallet-stake-overview-row{gap:10px}.do-wallet-stake-overview-row-right{min-width:118px}.do-wallet-stake-overview-row-left strong,.do-wallet-stake-overview-row-right strong{font-size:14px}}"
+      ".do-wallet-stake-overview-empty{padding:26px 30px;border-top:1px solid rgba(159,70,255,.24);color:#c9bbef;font-size:14px;font-weight:var(--bold,500);}",
+      "@media(max-width:900px){.do-wallet-stake-overview-page-shell{padding:26px 20px 34px}.do-wallet-stake-overview-body{grid-template-columns:1fr}.do-wallet-stake-overview-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.do-wallet-stake-overview-chart-wrap{min-height:210px}}",
+      "@media(max-width:640px){.do-wallet-stake-overview-page-head{flex-direction:column}.do-wallet-stake-overview-page-title h1{font-size:30px}.do-wallet-stake-overview-refresh{width:100%}.do-wallet-stake-overview-head,.do-wallet-stake-overview-filter,.do-wallet-stake-overview-body,.do-wallet-stake-overview-positions-head,.do-wallet-stake-overview-row{padding-left:18px;padding-right:18px}.do-wallet-stake-overview-head{flex-direction:column}.do-wallet-stake-overview-total{text-align:left}.do-wallet-stake-overview-filter{align-items:stretch;flex-direction:column}.do-wallet-stake-overview-select-wrap{min-width:0;width:100%}.do-wallet-stake-overview-summary{grid-template-columns:1fr}.do-wallet-stake-overview-row{gap:10px}.do-wallet-stake-overview-row-right{min-width:118px}.do-wallet-stake-overview-row-left strong,.do-wallet-stake-overview-row-right strong{font-size:14px}}"
     ].join("\n");
     document.head.appendChild(style);
   }
 
-  function render(card, rows) {
+  function cardHTML(rows, loading) {
     var chains = chainsFromRows(rows);
     if (selectedChain !== "all" && !chains.some(function (chain) { return chain.chainID === selectedChain; })) selectedChain = "all";
     var scoped = rowsForSelection(rows);
     var total = totals(scoped);
     var totalValue = total.staking + total.reward + total.unbonding;
-    var signature = VERSION + ":" + selectedChain + ":" + rows.map(function (row) {
-      return rowKey(row) + ":" + row.amountText + ":" + row.valueText;
-    }).join("||");
-    if (card.getAttribute(SIGNATURE_ATTR) === signature) return true;
-    card.setAttribute(CARD_ATTR, VERSION);
-    card.setAttribute(SIGNATURE_ATTR, signature);
     var legend = chainsFromRows(scoped).map(function (chain, index) {
       return '<span><i class="do-wallet-stake-overview-dot" style="background:' + CHART_COLORS[index % CHART_COLORS.length] + '"></i>' + escapeHTML(chain.name) + '</span>';
     }).join("");
-    card.innerHTML = [
+    var listHTML = scoped.length
+      ? scoped.map(rowHTML).join("")
+      : '<div class="do-wallet-stake-overview-empty">' + escapeHTML(loading ? "Loading staking positions..." : "No staking positions found for this wallet.") + '</div>';
+    return [
       '<div class="do-wallet-stake-overview-head">',
         '<div><h2>Staked funds</h2><p>Delegations, unbonding, and rewards across wallet addresses</p></div>',
         '<div class="do-wallet-stake-overview-total">' + escapeHTML(formatUSD(totalValue)) + '</div>',
@@ -2396,14 +2480,44 @@ runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
       '</div>',
       '<div class="do-wallet-stake-overview-positions">',
         '<div class="do-wallet-stake-overview-positions-head"><strong>Positions</strong><small>' + escapeHTML(scoped.length + " " + (scoped.length === 1 ? "position" : "positions")) + '</small></div>',
-        '<div class="do-wallet-stake-overview-list">' + scoped.map(rowHTML).join("") + '</div>',
+        '<div class="do-wallet-stake-overview-list">' + listHTML + '</div>',
       '</div>'
     ].join("");
-    var select = card.querySelector(".do-wallet-stake-overview-select");
+  }
+
+  function pageHTML(rows, loading) {
+    return [
+      '<div class="do-wallet-stake-overview-page-shell">',
+        '<div class="do-wallet-stake-overview-page-head">',
+          '<div class="do-wallet-stake-overview-page-title"><h1>Stake</h1><p>Delegations, rewards, and unbonding across wallet addresses</p></div>',
+          '<button type="button" class="do-wallet-stake-overview-refresh" data-do-wallet-stake-refresh="1">' + escapeHTML(loading ? "Refreshing..." : "Refresh staking") + '</button>',
+        '</div>',
+        '<section ' + CARD_ATTR + '="' + escapeHTML(VERSION) + '">' + cardHTML(rows, loading) + '</section>',
+      '</div>'
+    ].join("");
+  }
+
+  function render(host, rows, loading) {
+    var mode = host.getAttribute("data-do-wallet-stake-overview-mode") || "page";
+    var signature = VERSION + ":" + mode + ":" + selectedChain + ":" + (loading ? "loading" : "ready") + ":" + rows.map(function (row) {
+      return rowKey(row) + ":" + row.amountText + ":" + row.valueText;
+    }).join("||");
+    if (host.getAttribute(SIGNATURE_ATTR) === signature) return true;
+    host.setAttribute(PAGE_ATTR, VERSION);
+    host.setAttribute(SIGNATURE_ATTR, signature);
+    host.innerHTML = mode === "card" ? cardHTML(rows, loading) : pageHTML(rows, loading);
+    var select = host.querySelector(".do-wallet-stake-overview-select");
     if (select) {
       select.value = selectedChain;
       select.addEventListener("change", function () {
         selectedChain = select.value || "all";
+        schedule(0);
+      });
+    }
+    var refresh = host.querySelector("[data-do-wallet-stake-refresh]");
+    if (refresh) {
+      refresh.addEventListener("click", function () {
+        directStakeFetchKey = "";
         schedule(0);
       });
     }
@@ -2412,14 +2526,13 @@ runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
 
   function update() {
     renderTimer = 0;
-    if (!document.body || !/\/stake(?:\/|$|\?)/i.test(window.location.pathname + window.location.search)) return;
+    if (!document.body || !isStakeOverviewRoute()) return;
     installStyles();
     ensureDirectStakeRows();
     var rows = stakeRows();
-    if (!rows.length) return;
-    var card = findStakeCard();
-    if (!card) return;
-    render(card, rows);
+    var host = findStakePageRoot() || findStakeActionRoot() || findStakeCard();
+    if (!host) return;
+    render(host, rows, directStakeFetching);
     try {
       window.__doWalletStakeOverviewDebug = {
         version: VERSION,
