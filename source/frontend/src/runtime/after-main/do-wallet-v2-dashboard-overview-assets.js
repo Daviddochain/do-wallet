@@ -1,12 +1,16 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletDashboardOverviewAssets20260626) return;
-  window.__doWalletDashboardOverviewAssets20260626 = true;
+  if (window.__doWalletDashboardOverviewAssets20260628) return;
+  window.__doWalletDashboardOverviewAssets20260628 = true;
 
-  var VERSION = "20260628DashboardOverviewAssets3";
+  var VERSION = "20260628DashboardOverviewAssets4";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
+  var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
+  var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
+  var BRIDGE_WALLET_KEY = "do-wallet-bridge-wallet";
+  var AUTH_WALLET_KEY = "do-wallet-extension-authority.v1";
   var STYLE_ID = "do-wallet-dashboard-overview-assets-style";
   var CARD_ATTR = "data-do-wallet-dashboard-overview-assets";
   var SIGNATURE_ATTR = "data-do-wallet-dashboard-overview-signature";
@@ -71,65 +75,133 @@
     return isObject(payload.wallet) ? payload.wallet : payload;
   }
 
-  function walletIdentityKeys(wallet) {
-    wallet = walletFromPayload(wallet) || wallet;
-    if (!isObject(wallet)) return [];
-    var keys = [wallet.address, wallet.name, wallet.walletName, wallet.label, wallet.id];
-    [wallet.addresses, wallet.addressMap].forEach(function (map) {
-      if (!isObject(map)) return;
-      Object.keys(map).forEach(function (key) {
-        keys.push(key + ":" + map[key]);
-        keys.push(map[key]);
+  function forEachAddressValue(source, callback, includeChainKey) {
+    if (!source) return;
+    if (typeof source === "string") {
+      callback(source);
+      return;
+    }
+    if (Array.isArray(source)) {
+      source.forEach(function (item) {
+        if (typeof item === "string") {
+          callback(item);
+          return;
+        }
+        if (!isObject(item)) return;
+        var chain = clean(item.chainID || item.chainId || item.chain || item.network || item.networkID || item.networkId || item.name || item.label);
+        var address = clean(item.address || item.walletAddress || item.value || item.publicAddress || item.accountAddress);
+        if (address) {
+          if (includeChainKey && chain) callback(chain + ":" + address);
+          callback(address);
+        }
+        forEachAddressValue(item.addresses, callback, includeChainKey);
+        forEachAddressValue(item.addressMap, callback, includeChainKey);
+        forEachAddressValue(item.activeAddresses, callback, includeChainKey);
+        forEachAddressValue(item.allAddresses, callback, includeChainKey);
       });
-    });
-    return keys.map(lower).filter(Boolean).filter(function (key, index, list) {
-      return list.indexOf(key) === index;
+      return;
+    }
+    if (!isObject(source)) return;
+    Object.keys(source).forEach(function (key) {
+      var value = source[key];
+      if (typeof value === "string") {
+        if (includeChainKey) callback(key + ":" + value);
+        callback(value);
+        return;
+      }
+      if (Array.isArray(value)) {
+        forEachAddressValue(value, callback, includeChainKey);
+        return;
+      }
+      if (!isObject(value)) return;
+      var address = clean(value.address || value.walletAddress || value.value || value.publicAddress || value.accountAddress);
+      if (address) {
+        if (includeChainKey) callback(key + ":" + address);
+        callback(address);
+      }
+      forEachAddressValue(value.addresses, callback, includeChainKey);
+      forEachAddressValue(value.addressMap, callback, includeChainKey);
+      forEachAddressValue(value.activeAddresses, callback, includeChainKey);
+      forEachAddressValue(value.allAddresses, callback, includeChainKey);
     });
   }
 
-  function activeWalletKeys() {
-    var payloads = [
-      readJSON("do-wallet-selected-recovered-wallet.v1", null),
-      readJSON("user", null),
-      readJSON("do-wallet-bridge-wallet", null),
-      readJSON("do-wallet-extension-authority.v1", null)
-    ];
-    for (var index = 0; index < payloads.length; index += 1) {
-      var keys = walletIdentityKeys(payloads[index]);
-      if (keys.length) return keys;
+  function pushUnique(keys, value) {
+    value = lower(value);
+    if (value && keys.indexOf(value) < 0) keys.push(value);
+  }
+
+  function walletName(wallet) {
+    wallet = walletFromPayload(wallet) || wallet;
+    return isObject(wallet) ? clean(wallet.name || wallet.walletName || wallet.label || wallet.accountName || wallet.id) : "";
+  }
+
+  function walletIdentityKeys(wallet) {
+    wallet = walletFromPayload(wallet) || wallet;
+    var keys = [];
+    if (!isObject(wallet)) return keys;
+    [wallet.id, wallet.name, wallet.walletName, wallet.label, wallet.accountName, wallet.address].forEach(function (value) {
+      pushUnique(keys, value);
+    });
+    [wallet.addresses, wallet.addressMap, wallet.activeAddresses, wallet.allAddresses, wallet.addressesByChain].forEach(function (map) {
+      forEachAddressValue(map, function (value) { pushUnique(keys, value); }, true);
+    });
+    return keys;
+  }
+
+  function activeWalletFromStorage() {
+    var selectedWallet = walletFromPayload(readJSON(SELECTED_WALLET_KEY, null));
+    if (selectedWallet) return selectedWallet;
+    var storedUser = walletFromPayload(readJSON("user", null));
+    if (storedUser) return storedUser;
+    var bridgeWallet = walletFromPayload(readJSON(BRIDGE_WALLET_KEY, null));
+    if (bridgeWallet) return bridgeWallet;
+    var authWallet = walletFromPayload(readJSON(AUTH_WALLET_KEY, null));
+    if (authWallet) return authWallet;
+    var recovered = readJSON(RECOVERED_WALLETS_KEY, []);
+    if (Array.isArray(recovered) && recovered.length) {
+      return recovered.map(walletFromPayload).filter(Boolean).sort(function (left, right) {
+        return Number(right.walletPriority || 0) - Number(left.walletPriority || 0);
+      })[0] || null;
     }
-    return [];
+    return null;
+  }
+
+  function activeWalletKeys() {
+    return walletIdentityKeys(activeWalletFromStorage());
   }
 
   function snapshotKeys(snapshot) {
     if (!isObject(snapshot)) return [];
     var keys = walletIdentityKeys(snapshot.wallet || snapshot);
-    if (snapshot.walletKey) keys.push(lower(snapshot.walletKey));
-    [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses].forEach(function (map) {
-      if (!isObject(map)) return;
-      Object.keys(map).forEach(function (key) {
-        keys.push(lower(key + ":" + map[key]));
-        keys.push(lower(map[key]));
-      });
+    pushUnique(keys, snapshot.walletKey);
+    [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses, snapshot.addressMap, snapshot.addressesByChain].forEach(function (map) {
+      forEachAddressValue(map, function (value) { pushUnique(keys, value); }, true);
     });
-    return keys.filter(Boolean).filter(function (key, index, list) {
-      return list.indexOf(key) === index;
-    });
+    return keys;
   }
 
-  function snapshotMatchesActiveWallet(snapshot, activeKeys) {
-    if (!activeKeys.length) return true;
+  function snapshotWalletName(snapshot) {
+    if (!isObject(snapshot)) return "";
+    return walletName(snapshot.wallet || snapshot);
+  }
+
+  function snapshotMatchesActiveWallet(snapshot, activeKeys, activeName) {
+    if (!activeKeys.length && !activeName) return true;
     var keys = snapshotKeys(snapshot);
-    if (!keys.length) return false;
-    return keys.some(function (key) { return activeKeys.indexOf(key) >= 0; });
+    if (keys.some(function (key) { return activeKeys.indexOf(key) >= 0; })) return true;
+    var name = lower(snapshotWalletName(snapshot));
+    return Boolean(activeName && name && activeName === name);
   }
 
   function collectSnapshots() {
     var snapshots = [];
     var seen = {};
-    var activeKeys = activeWalletKeys();
+    var activeWallet = activeWalletFromStorage();
+    var activeKeys = walletIdentityKeys(activeWallet);
+    var activeName = lower(walletName(activeWallet));
     function add(snapshot) {
-      if (!isObject(snapshot) || !snapshotMatchesActiveWallet(snapshot, activeKeys)) return;
+      if (!isObject(snapshot) || !snapshotMatchesActiveWallet(snapshot, activeKeys, activeName)) return;
       var key = clean(snapshot.schemaVersion || "") + ":" + clean(snapshot.updatedAt || "") + ":" + snapshotKeys(snapshot).join("|");
       if (seen[key]) return;
       seen[key] = true;
@@ -149,14 +221,25 @@
     return [];
   }
 
+  function arraysFromSource(source, keys) {
+    var arrays = [];
+    if (!isObject(source)) return arrays;
+    keys.forEach(function (key) {
+      if (Array.isArray(source[key])) arrays.push(source[key]);
+    });
+    return arrays;
+  }
+
   function rawRowsFromSnapshots(kind) {
     var keys = kind === "spendable"
       ? ["flatSpendableAssets", "unGroupedSpendableAssets", "rawSpendableAssets", "sourceSpendableAssets", "rawTokenSpendableAssets", "detailPortfolioAssets", "flatPortfolioAssets", "rawPortfolioAssets", "portfolioAssets", "assets"]
       : ["staking", "sourceStakingAssets", "flatPortfolioAssets", "rawPortfolioAssets", "detailPortfolioAssets", "portfolioAssets", "assets"];
     var rows = [];
     collectSnapshots().forEach(function (snapshot) {
-      firstArray(snapshot, keys).forEach(function (asset) {
-        flattenAsset(asset, rows);
+      arraysFromSource(snapshot, keys).forEach(function (array) {
+        array.forEach(function (asset) {
+          flattenAsset(asset, rows);
+        });
       });
     });
     return uniqueRows(rows.map(normalizeRow).filter(displayableRow));
@@ -347,11 +430,25 @@
   }
 
   function addAddressValues(source, out) {
-    if (!isObject(source)) return;
-    Object.keys(source).forEach(function (key) {
-      var value = clean(source[key]);
+    forEachAddressValue(source, function (value) {
+      value = clean(value);
       if (value) out[value.toLowerCase()] = true;
+    }, false);
+  }
+
+  function walletCountFromRows() {
+    var addresses = {};
+    ["spendable", "staking"].forEach(function (kind) {
+      rawRowsFromSnapshots(kind).forEach(function (row) {
+        addAddressValues(row.raw && row.raw.addresses, addresses);
+        addAddressValues(row.raw && row.raw.addressMap, addresses);
+        addAddressValues(row.raw && row.raw.activeAddresses, addresses);
+        addAddressValues(row.raw && row.raw.allAddresses, addresses);
+        var address = clean(row.raw && (row.raw.address || row.raw.walletAddress || row.raw.accountAddress));
+        if (address) addresses[address.toLowerCase()] = true;
+      });
     });
+    return Object.keys(addresses).length;
   }
 
   function walletCountFromSnapshots() {
@@ -365,7 +462,7 @@
       count = Math.max(count, Object.keys(addresses).length);
       count = Math.max(count, Number(snapshot.walletCount || snapshot.addressCount || 0) || 0);
     });
-    return count;
+    return Math.max(count, walletCountFromRows());
   }
 
   function existingWalletCount() {
