@@ -4237,6 +4237,20 @@ const portfolioAddPair = (pairs, seen, chains, chainID, address, source) => {
 
 const portfolioCollectFromWalletObject = (pairs, seen, chains, wallet, source) => {
   if (!wallet || typeof wallet !== 'object') return
+  const addKnownAddress = (chainID, value, fallbackSource) => {
+    if (typeof value === 'string') {
+      portfolioAddPair(pairs, seen, chains, chainID, value, fallbackSource || source)
+    } else if (value && typeof value === 'object') {
+      portfolioAddPair(
+        pairs,
+        seen,
+        chains,
+        value.chainID || value.chainId || value.network || value.chain || chainID,
+        value.address || value.walletAddress || value.value,
+        fallbackSource || value.source || source,
+      )
+    }
+  }
   const maps = [wallet.addressMap, wallet.addresses, wallet.networks, wallet.addressesByChain]
   maps.forEach((map) => {
     if (!map || typeof map !== 'object') return
@@ -4244,8 +4258,18 @@ const portfolioCollectFromWalletObject = (pairs, seen, chains, wallet, source) =
       const canonicalKey = portfolioCanonicalChainID(key, chains)
       if (portfolioSensitiveKey(key) && !chains[canonicalKey]) return
       const value = map[key]
-      if (typeof value === 'string') portfolioAddPair(pairs, seen, chains, canonicalKey || key, value, source)
-      else if (value && typeof value === 'object') portfolioAddPair(pairs, seen, chains, canonicalKey || key, value.address || value.walletAddress, source)
+      if (Array.isArray(value)) {
+        value.forEach((entry) => addKnownAddress(canonicalKey || key, entry, source))
+      } else {
+        addKnownAddress(canonicalKey || key, value, source)
+      }
+    })
+  })
+  ;[wallet.allAddresses, wallet.activeAddresses, wallet.publicAddresses].forEach((list, listIndex) => {
+    if (!Array.isArray(list)) return
+    list.forEach((entry) => {
+      if (typeof entry === 'string') portfolioAddPair(pairs, seen, chains, '', entry, `${source}-address-${listIndex}`)
+      else addKnownAddress('', entry, entry?.source || `${source}-address-${listIndex}`)
     })
   })
   Object.keys(wallet).forEach((key) => {
@@ -4267,15 +4291,32 @@ const portfolioDoAddressFromCandidate = (address) => {
   return /^do1[ac-hj-np-z02-9]{20,110}$/i.test(recoded) ? recoded : ''
 }
 
+const portfolioBech32AddressWithPrefix = (address, prefix) => {
+  const raw = portfolioPublicAddress(address)
+  if (!raw || !cosmjsFromBech32 || !cosmjsToBech32) return ''
+  try {
+    const decoded = cosmjsFromBech32(raw)
+    if (!decoded?.data) return ''
+    return cosmjsToBech32(prefix, decoded.data)
+  } catch {
+    return ''
+  }
+}
+
 const portfolioCollectDoChainAliasPairs = (pairs, seen, chains) => {
-  if (!chains?.['Do-Chain']) return
   const candidates = pairs
     .map((pair) => pair?.address)
     .filter(Boolean)
   candidates.forEach((address) => {
-    const doAddress = portfolioDoAddressFromCandidate(address)
-    if (!doAddress) return
-    portfolioAddPair(pairs, seen, chains, 'Do-Chain', doAddress, 'do-chain-address-alias')
+    if (chains?.['Do-Chain']) {
+      const doAddress = portfolioDoAddressFromCandidate(address)
+      if (doAddress) portfolioAddPair(pairs, seen, chains, 'Do-Chain', doAddress, 'do-chain-address-alias')
+    }
+    const terraAddress = portfolioBech32AddressWithPrefix(address, 'terra')
+    if (/^terra1[ac-hj-np-z02-9]{20,110}$/i.test(terraAddress)) {
+      portfolioAddPair(pairs, seen, chains, 'columbus-5', terraAddress, 'terra-classic-address-alias')
+      portfolioAddPair(pairs, seen, chains, 'phoenix-1', terraAddress, 'terra-address-alias')
+    }
   })
 }
 
@@ -4283,6 +4324,7 @@ const portfolioCollectPairs = (body, chains) => {
   const pairs = []
   const seen = new Set()
   portfolioCollectFromWalletObject(pairs, seen, chains, { addressMap: body?.addressMap }, 'active-address-map')
+  portfolioCollectFromWalletObject(pairs, seen, chains, { addressesByChain: body?.addressesByChain, allAddresses: body?.allAddresses }, 'active-address-list')
   portfolioCollectFromWalletObject(pairs, seen, chains, body?.wallet, 'active-wallet')
   ;(Array.isArray(body?.wallets) ? body.wallets : []).forEach((wallet, index) => {
     portfolioCollectFromWalletObject(pairs, seen, chains, wallet, `wallet-${index}`)

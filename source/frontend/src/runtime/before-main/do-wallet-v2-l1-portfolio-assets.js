@@ -1,12 +1,12 @@
 (function () {
   "use strict";
 
-  if (window.__doWalletL1PortfolioAssetsRewrite20260625) return;
-  window.__doWalletL1PortfolioAssetsRewrite20260625 = true;
+  if (window.__doWalletL1PortfolioAssetsRewrite20260628) return;
+  window.__doWalletL1PortfolioAssetsRewrite20260628 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioRewrite4";
-  var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
+  var VERSION = "20260628L1PortfolioAddressMerge1";
+  var PORTFOLIO_SCHEMA_VERSION = "20260628FullWalletPortfolio8";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var PORTFOLIO_ADDRESS_HINTS_KEY = "do-wallet-portfolio-address-hints.v1";
@@ -303,6 +303,11 @@
     return null;
   }
 
+  function walletName(wallet) {
+    wallet = walletFromPayload(wallet) || wallet;
+    return isObject(wallet) ? clean(wallet.name || wallet.walletName || wallet.label || wallet.accountName || wallet.id) : "";
+  }
+
   function walletIdentityKeys(wallet) {
     wallet = walletFromPayload(wallet) || wallet;
     var keys = [];
@@ -315,6 +320,7 @@
     add(wallet.name);
     add(wallet.walletName);
     add(wallet.label);
+    add(wallet.accountName);
     add(wallet.address);
     [wallet.addresses, wallet.addressMap, wallet.activeAddresses, wallet.allAddresses].forEach(function (map) {
       if (!isObject(map)) return;
@@ -341,6 +347,14 @@
     return walletKeys.some(function (key) {
       return keys.indexOf(key) >= 0;
     });
+  }
+
+  function walletMatchesActiveContext(wallet, activeKeys, activeName) {
+    wallet = walletFromPayload(wallet) || wallet;
+    if (!isObject(wallet)) return false;
+    if (walletMatchesKeys(wallet, activeKeys)) return true;
+    var name = lower(walletName(wallet));
+    return Boolean(activeName && name && activeName === name);
   }
 
   function snapshotMatchesActiveWallet(snapshot, activeKeys) {
@@ -407,6 +421,31 @@
     return chains;
   }
 
+  function addressStore(addressMap) {
+    if (!addressMap.__allAddresses) {
+      try {
+        Object.defineProperty(addressMap, "__allAddresses", {
+          value: {},
+          enumerable: false,
+          configurable: true
+        });
+      } catch (error) {
+        addressMap.__allAddresses = {};
+      }
+    }
+    return addressMap.__allAddresses;
+  }
+
+  function rememberAddress(addressMap, chainID, address) {
+    var key = canonicalAddressHint(chainID);
+    var value = clean(address);
+    if (!key || !value) return;
+    var store = addressStore(addressMap);
+    var list = store[key] || (store[key] = []);
+    var identity = lower(value);
+    if (!list.some(function (item) { return lower(item) === identity; })) list.push(value);
+  }
+
   function addAddress(addressMap, chainID, address) {
     var value = clean(address);
     if (!value) return;
@@ -415,6 +454,7 @@
       addressChainIDs(value, "").forEach(function (candidate) { addAddress(addressMap, candidate, value); });
       return;
     }
+    rememberAddress(addressMap, key, value);
     if (!addressMap[key]) addressMap[key] = value;
   }
 
@@ -480,10 +520,78 @@
     });
   }
 
+  function addressMapEntries(addressMap) {
+    var out = [];
+    var seen = {};
+    var store = addressStore(addressMap || {});
+    Object.keys(addressMap || {}).forEach(function (chainID) {
+      if (chainID.indexOf("__") === 0) return;
+      rememberAddress(addressMap, chainID, addressMap[chainID]);
+    });
+    Object.keys(store || {}).forEach(function (chainID) {
+      (store[chainID] || []).forEach(function (address) {
+        var key = chainID + ":" + lower(address);
+        if (seen[key]) return;
+        seen[key] = true;
+        out.push({ chainID: chainID, address: clean(address) });
+      });
+    });
+    return out.sort(function (left, right) {
+      var leftMeta = CHAIN_META[left.chainID] || ["", "", "", 9999];
+      var rightMeta = CHAIN_META[right.chainID] || ["", "", "", 9999];
+      return (leftMeta[3] - rightMeta[3]) || left.chainID.localeCompare(right.chainID) || left.address.localeCompare(right.address);
+    });
+  }
+
+  function collectStoredSnapshots() {
+    var snapshots = [];
+    var seen = {};
+    function add(snapshot) {
+      if (!isObject(snapshot)) return;
+      var key = clean(snapshot.schemaVersion || "") + ":" + clean(snapshot.updatedAt || "") + ":" + snapshotKeys(snapshot).join("|");
+      if (seen[key]) return;
+      seen[key] = true;
+      snapshots.push(snapshot);
+    }
+    add(readJSON(SNAPSHOT_KEY, null));
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) {
+      Object.keys(byWallet).forEach(function (key) {
+        add(byWallet[key]);
+      });
+    }
+    return snapshots;
+  }
+
+  function scanRelatedLocalStorageAddresses(addressMap, activeKeys, activeName) {
+    try {
+      var strongKeys = (activeKeys || []).filter(function (key) { return clean(key).length >= 16; });
+      for (var index = 0; window.localStorage && index < window.localStorage.length; index += 1) {
+        var key = window.localStorage.key(index) || "";
+        if (/seed|mnemonic|phrase|private|password|secret|cipher|encrypted|entropy/i.test(key)) continue;
+        var raw = window.localStorage.getItem(key) || "";
+        if (!raw || raw.length > 250000) continue;
+        if (!/(do|terra|osmo|mars|cosmos|juno|akash|archway|axelar|swth|cheqd|chihuahua|cre|decentr|dungeon|kujira|migaloo|sei|secret|stride|stafi|bc1)1|0x[a-f0-9]{40}|addr1|T[1-9A-HJ-NP-Za-km-z]{33}|r[1-9A-HJ-NP-Za-km-z]{24,34}/i.test(raw)) continue;
+        var keyText = lower(key);
+        var rawText = lower(raw);
+        var related = Boolean(activeName && (keyText.indexOf(activeName) >= 0 || rawText.indexOf(activeName) >= 0));
+        if (!related && strongKeys.length) {
+          related = strongKeys.some(function (identity) { return rawText.indexOf(identity) >= 0; });
+        }
+        if (!related && /^do-wallet-(portfolio|selected|recovered|bridge|extension)/i.test(key)) related = true;
+        if (!related) continue;
+        var parsed;
+        try { parsed = JSON.parse(raw); } catch (error) { parsed = raw; }
+        scanObjectForAddresses(parsed, addressMap, 0);
+      }
+    } catch (error) {}
+  }
+
   function collectAddressMap() {
     var addressMap = {};
     var activeWallet = activeWalletFromStorage();
     var activeKeys = walletIdentityKeys(activeWallet);
+    var activeName = lower(walletName(activeWallet));
     [
       activeWallet,
       readJSON(SELECTED_WALLET_KEY, null),
@@ -491,47 +599,78 @@
       readJSON(BRIDGE_KEY, null),
       readJSON(AUTH_KEY, null)
     ].forEach(function (item) {
-      if (!walletMatchesKeys(item, activeKeys)) return;
+      if (!walletMatchesActiveContext(item, activeKeys, activeName)) return;
       scanObjectForAddresses(item, addressMap, 0);
     });
-    if (!Object.keys(addressMap).length) {
-      collectSnapshots().forEach(function (snapshot) {
+
+    var recovered = readJSON(RECOVERED_WALLETS_KEY, []);
+    if (Array.isArray(recovered)) {
+      recovered.forEach(function (item) {
+        item = walletFromPayload(item) || item;
+        if (!walletMatchesActiveContext(item, activeKeys, activeName)) return;
+        scanObjectForAddresses(item, addressMap, 0);
+      });
+    }
+
+    collectSnapshots().forEach(function (snapshot) {
+      scanObjectForAddresses(snapshot, addressMap, 0);
+    });
+    scanObjectForAddresses(readJSON(PORTFOLIO_ADDRESS_HINTS_KEY, null), addressMap, 0);
+    scanRelatedLocalStorageAddresses(addressMap, activeKeys, activeName);
+
+    if (!addressMap["columbus-5"] && !addressMap["osmosis-1"]) {
+      collectStoredSnapshots().forEach(function (snapshot) {
+        if (!snapshotContainsAssetRows(snapshot)) return;
         scanObjectForAddresses(snapshot, addressMap, 0);
       });
-      scanObjectForAddresses(readJSON(PORTFOLIO_ADDRESS_HINTS_KEY, null), addressMap, 0);
     }
+
     if (addressMap["Do-Chain"]) {
-      var terra = reencodeBech32Address(addressMap["Do-Chain"], "terra");
-      if (terra) {
-        addAddress(addressMap, "columbus-5", terra);
-        addAddress(addressMap, "phoenix-1", terra);
-      }
+      addressMapEntries(addressMap).filter(function (entry) { return entry.chainID === "Do-Chain"; }).forEach(function (entry) {
+        var terra = reencodeBech32Address(entry.address, "terra");
+        if (terra) {
+          addAddress(addressMap, "columbus-5", terra);
+          addAddress(addressMap, "phoenix-1", terra);
+        }
+      });
     }
     if (addressMap["columbus-5"]) {
-      var doAddress = reencodeBech32Address(addressMap["columbus-5"], "do");
-      if (doAddress) addAddress(addressMap, "Do-Chain", doAddress);
+      addressMapEntries(addressMap).filter(function (entry) { return entry.chainID === "columbus-5"; }).forEach(function (entry) {
+        var doAddress = reencodeBech32Address(entry.address, "do");
+        if (doAddress) addAddress(addressMap, "Do-Chain", doAddress);
+      });
     }
     return addressMap;
   }
 
   function addressMapSignature(addressMap) {
-    return Object.keys(addressMap || {}).sort().map(function (key) {
-      return key + ":" + addressMap[key];
+    return addressMapEntries(addressMap || {}).map(function (entry) {
+      return entry.chainID + ":" + entry.address;
     }).join("|");
   }
 
   function backendWalletPayload(addressMap) {
     var active = activeWalletFromStorage() || {};
     var wallet = Object.assign({}, active);
+    var allAddresses = addressMapEntries(addressMap);
+    var addressesByChain = {};
+    allAddresses.forEach(function (entry) {
+      if (!addressesByChain[entry.chainID]) addressesByChain[entry.chainID] = [];
+      addressesByChain[entry.chainID].push(entry.address);
+    });
     wallet.addresses = Object.assign({}, addressMap);
     wallet.addressMap = Object.assign({}, addressMap);
+    wallet.addressesByChain = addressesByChain;
+    wallet.allAddresses = allAddresses;
     wallet.address = wallet.address || addressMap["Do-Chain"] || addressMap["columbus-5"] || Object.keys(addressMap).map(function (key) { return addressMap[key]; })[0] || "";
     wallet.name = clean(wallet.name || wallet.walletName || wallet.label || wallet.id || "Do Wallet");
     return {
       version: VERSION,
       wallet: wallet,
       wallets: [wallet],
-      addressMap: Object.assign({}, addressMap)
+      addressMap: Object.assign({}, addressMap),
+      addressesByChain: addressesByChain,
+      allAddresses: allAddresses
     };
   }
 
@@ -892,12 +1031,20 @@
     add(wallet.id);
     add(wallet.name);
     add(wallet.walletName);
+    add(wallet.label);
+    add(wallet.accountName);
     add(wallet.address);
     [snapshot.addresses, snapshot.activeAddresses, snapshot.allAddresses, wallet.addresses, wallet.addressMap].forEach(function (map) {
       if (!isObject(map)) return;
       Object.keys(map).forEach(function (key) { add(key + ":" + map[key]); add(map[key]); });
     });
     return keys;
+  }
+
+  function snapshotWalletName(snapshot) {
+    if (!isObject(snapshot)) return "";
+    var wallet = isObject(snapshot.wallet) ? snapshot.wallet : {};
+    return clean(wallet.name || wallet.walletName || wallet.label || wallet.accountName || snapshot.walletName || snapshot.name || snapshot.label);
   }
 
   function snapshotsRelated(left, right) {
@@ -915,26 +1062,20 @@
   }
 
   function collectSnapshots() {
-    var current = readJSON(SNAPSHOT_KEY, null);
-    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
     var snapshots = [];
     var seen = {};
     var activeKeys = activeWalletKeys();
+    var activeName = lower(walletName(activeWalletFromStorage()));
     function add(snapshot) {
       if (!isObject(snapshot)) return;
-      if (!snapshotMatchesActiveWallet(snapshot, activeKeys)) return;
+      var name = lower(snapshotWalletName(snapshot));
+      if (!snapshotMatchesActiveWallet(snapshot, activeKeys) && !(activeName && name && activeName === name)) return;
       var key = clean(snapshot.schemaVersion || "") + ":" + clean(snapshot.updatedAt || "") + ":" + snapshotKeys(snapshot).join("|");
       if (seen[key]) return;
       seen[key] = true;
       snapshots.push(snapshot);
     }
-    add(current);
-    if (isObject(byWallet)) {
-      Object.keys(byWallet).forEach(function (key) {
-        var snapshot = byWallet[key];
-        add(snapshot);
-      });
-    }
+    collectStoredSnapshots().forEach(add);
     return snapshots;
   }
 
