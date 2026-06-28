@@ -13351,7 +13351,7 @@ runModule("do-wallet-v2-staking-area.js", function(){
   if (window.__doWalletStakingArea20260627Rewrite) return;
   window.__doWalletStakingArea20260627Rewrite = true;
 
-  var VERSION = "20260627-staking-area-stable-4";
+  var VERSION = "20260628-staking-area-stable-5";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-staking-area-style";
@@ -14480,6 +14480,21 @@ runModule("do-wallet-v2-staking-area.js", function(){
     ].join("");
   }
 
+  function portfolioActionIconHTML(type) {
+    var attrs = 'viewBox="0 0 24 24" aria-hidden="true" focusable="false"';
+    var icons = {
+      send: '<svg ' + attrs + '><path d="M22 2 11 13"></path><path d="m22 2-7 20-4-9-9-4 20-7z"></path></svg>',
+      receive: '<svg ' + attrs + '><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>',
+      buy: '<svg ' + attrs + '><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18"></path><path d="M7 15h3"></path></svg>',
+      burn: '<svg ' + attrs + '><path d="M8.5 14.5A3.5 3.5 0 0 0 12 20a3.5 3.5 0 0 0 3.5-5.5c-.7-1.1-1.9-1.9-1.9-3.5-1.7 1-2.2 2.4-2 4-1.4-.6-2.3-1.7-2.5-3.4-.9.8-1.4 1.8-1.4 3"></path><path d="M12 2c.6 2.7 2.6 4 4.1 5.6 1.4 1.5 2.4 3.2 2.4 5.4A6.5 6.5 0 0 1 12 19.5 6.5 6.5 0 0 1 5.5 13c0-2.2 1.1-4.1 2.7-5.7"></path></svg>'
+    };
+    return icons[type] || "";
+  }
+
+  function portfolioActionHTML(type, href, label, primary) {
+    return '<a class="do-wallet-staking-portfolio-action' + (primary ? ' is-primary' : '') + '" href="' + escapeHTML(href) + '" aria-label="' + escapeHTML(label) + '"><span>' + portfolioActionIconHTML(type) + '</span><small>' + escapeHTML(label) + '</small></a>';
+  }
+
   function portfolioRailHTML(groups) {
     groups = Array.isArray(groups) ? groups : portfolioGroups();
     var total = groups.reduce(function (sum, group) { return sum + (Number(group.totalValue) || 0); }, 0);
@@ -14489,10 +14504,10 @@ runModule("do-wallet-v2-staking-area.js", function(){
           '<span>Portfolio value</span>',
           '<strong>' + escapeHTML(formatUSD(total)) + '</strong>',
           '<div class="do-wallet-staking-portfolio-actions">',
-            '<a class="is-primary" href="/send" aria-label="Send"><small>Send</small></a>',
-            '<a href="/receive" aria-label="Receive"><small>Receive</small></a>',
-            '<a href="/buy-sell" aria-label="Buy or Sell"><small>Buy / Sell</small></a>',
-            '<a href="/burn" aria-label="Burn DO"><small>Burn DO</small></a>',
+            portfolioActionHTML("send", "/send", "Send", true),
+            portfolioActionHTML("receive", "/receive", "Receive", false),
+            portfolioActionHTML("buy", "/buy-sell", "Buy / Sell", false),
+            portfolioActionHTML("burn", "/burn", "Burn DO", false),
           '</div>',
         '</section>',
         '<section class="do-wallet-staking-portfolio-assets">',
@@ -14908,13 +14923,13 @@ runModule("do-wallet-v2-staking-area.js", function(){
       "[" + ROOT_ATTR + "],[" + ROOT_ATTR + "] *{box-sizing:border-box;}",
       "[" + ROOT_ATTR + "]{color:#fff;display:block;}",
       ".do-wallet-staking-page{container-type:inline-size;display:block;min-height:calc(100vh - 80px);padding:18px clamp(16px,2vw,32px) 48px;width:100%;}",
-      ".do-wallet-staking-layout{align-items:stretch;display:grid;gap:20px;grid-template-columns:minmax(0,1fr) minmax(360px,420px);width:100%;}",
+      ".do-wallet-staking-layout{align-items:stretch;display:grid;gap:0;grid-template-columns:minmax(0,1fr) minmax(360px,var(--wallet-width,420px));width:100%;}",
       ".do-wallet-staking-main{display:grid;gap:22px;min-width:0;}",
       ".do-wallet-staking-page-head{align-items:center;display:flex;gap:18px;justify-content:space-between;min-width:0;}",
       ".do-wallet-staking-page-head h1{font-size:36px;font-weight:var(--bold,500);letter-spacing:0;line-height:1.1;margin:0;}",
       ".do-wallet-staking-page-head p{color:#c9bbef;font-size:13px;font-weight:var(--bold,500);line-height:1.35;margin:7px 0 0;}",
       ".do-wallet-staking-withdraw,.do-wallet-staking-actions a{align-items:center;background:var(--button-primary-bg,#9b3dff);border:0;border-radius:999px;color:#fff;cursor:pointer;display:inline-flex;font-size:13px;font-weight:var(--bold,500);height:42px;justify-content:center;line-height:1;min-width:142px;padding:0 20px;text-decoration:none;white-space:nowrap;}",
-      ".do-wallet-staking-card,.do-wallet-staking-actions,.do-wallet-staking-portfolio{background:#181323;border:1px solid rgba(159,70,255,.38);border-radius:8px;overflow:hidden;}",
+      ".do-wallet-staking-card,.do-wallet-staking-actions{background:#181323;border:1px solid rgba(159,70,255,.38);border-radius:8px;overflow:hidden;}",
       ".do-wallet-staking-card-head{align-items:flex-start;border-bottom:1px solid rgba(159,70,255,.28);display:flex;gap:20px;justify-content:space-between;padding:24px 30px;}",
       ".do-wallet-staking-card-head h2,.do-wallet-staking-actions h2{font-size:22px;font-weight:var(--bold,500);letter-spacing:0;line-height:1.12;margin:0 0 6px;}",
       ".do-wallet-staking-card-head p,.do-wallet-staking-actions p{color:#c9bbef;font-size:13px;font-weight:var(--bold,500);line-height:1.35;margin:0;}",
@@ -14952,20 +14967,18 @@ runModule("do-wallet-v2-staking-area.js", function(){
       ".do-wallet-staking-empty strong{color:#fff;font-size:16px;font-weight:var(--bold,500);}",
       ".do-wallet-staking-empty small{max-width:420px;}",
       ".do-wallet-staking-actions{align-items:center;display:flex;gap:20px;justify-content:space-between;padding:22px 30px;}",
-      ".do-wallet-staking-portfolio{align-self:stretch;background:#1f1731;display:flex;flex-direction:column;min-height:calc(100vh - 136px);min-width:0;overflow:visible;position:relative;}",
-      ".do-wallet-staking-portfolio-top{border-bottom:1px solid rgba(159,70,255,.28);padding:26px 22px 22px;text-align:center;}",
+      ".do-wallet-staking-portfolio{align-self:stretch;background:#1f1731;border-left:1px solid rgba(159,70,255,.28);display:flex;flex-direction:column;min-height:calc(100vh - 136px);min-width:0;overflow:hidden;position:relative;}",
+      ".do-wallet-staking-portfolio-top{border-bottom:1px solid rgba(159,70,255,.28);padding:26px 20px 22px;text-align:center;}",
       ".do-wallet-staking-portfolio-top>span{color:#c9bbef;display:block;font-size:13px;font-weight:var(--bold,500);margin-bottom:8px;}",
       ".do-wallet-staking-portfolio-top>strong{display:block;font-size:34px;font-weight:var(--bold,500);line-height:1.05;margin-bottom:22px;}",
-      ".do-wallet-staking-portfolio-actions{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));}",
-      ".do-wallet-staking-portfolio-actions a{align-items:center;color:#fff;display:flex;flex-direction:column;font-size:0;font-weight:var(--bold,500);gap:8px;min-width:0;text-decoration:none;}",
-      ".do-wallet-staking-portfolio-actions a:before{align-items:center;background:#2e2541;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);display:flex;font-size:18px;height:54px;justify-content:center;line-height:1;width:54px;}",
-      ".do-wallet-staking-portfolio-actions a:nth-child(1):before{content:'S';}",
-      ".do-wallet-staking-portfolio-actions a:nth-child(2):before{content:'R';}",
-      ".do-wallet-staking-portfolio-actions a:nth-child(3):before{content:'B';}",
-      ".do-wallet-staking-portfolio-actions a:nth-child(4):before{content:'D';}",
-      ".do-wallet-staking-portfolio-actions a.is-primary:before{background:#9b3dff;box-shadow:0 10px 26px rgba(155,61,255,.22);}",
-      ".do-wallet-staking-portfolio-actions small{display:block;font-size:12px;font-weight:var(--bold,500);line-height:1.12;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;}",
-      ".do-wallet-staking-portfolio-assets{display:flex;flex:1;flex-direction:column;min-height:0;overflow:visible;padding:18px 12px 16px;}",
+      ".do-wallet-staking-portfolio-actions{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));}",
+      ".do-wallet-staking-portfolio-action{align-items:center;color:#fff;display:flex;flex-direction:column;font-size:12px;font-weight:var(--bold,500);gap:9px;min-width:0;text-decoration:none;}",
+      ".do-wallet-staking-portfolio-action:hover{text-decoration:none;}",
+      ".do-wallet-staking-portfolio-action>span{align-items:center;background:#2e2541;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);display:flex;height:60px;justify-content:center;line-height:1;width:60px;}",
+      ".do-wallet-staking-portfolio-action.is-primary>span{background:#9b3dff;box-shadow:0 12px 30px rgba(155,61,255,.25);}",
+      ".do-wallet-staking-portfolio-action svg{fill:none;height:25px;stroke:#fff;stroke-linecap:round;stroke-linejoin:round;stroke-width:2.35;width:25px;}",
+      ".do-wallet-staking-portfolio-action small{display:block;font-size:12px;font-weight:var(--bold,500);line-height:1.12;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;}",
+      ".do-wallet-staking-portfolio-assets{display:flex;flex:1;flex-direction:column;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:18px 12px 16px;}",
       ".do-wallet-staking-portfolio-assets-head{align-items:center;display:flex;gap:12px;justify-content:space-between;margin:0 0 12px;padding:0 6px;}",
       ".do-wallet-staking-portfolio-assets-head h2{font-size:15px;font-weight:var(--bold,500);line-height:1;margin:0;}",
       ".do-wallet-staking-portfolio-assets-head a{color:#a13fff;font-size:13px;font-weight:var(--bold,500);text-decoration:none;}",
@@ -14984,9 +14997,9 @@ runModule("do-wallet-v2-staking-area.js", function(){
       ".do-wallet-staking-portfolio-empty{color:#c9bbef;font-size:13px;font-weight:var(--bold,500);padding:18px 6px;}",
       "[data-do-wallet-staking-balance-hidden='1']{display:none!important;}",
       "[" + BALANCE_ATTR + "] button[disabled]{pointer-events:auto;}",
-      "@container (max-width:1020px){.do-wallet-staking-layout{grid-template-columns:1fr}.do-wallet-staking-portfolio{min-height:0}.do-wallet-staking-body{grid-template-columns:1fr}.do-wallet-staking-summaries{grid-template-columns:repeat(3,minmax(0,1fr))}}",
-      "@media(max-width:1180px){.do-wallet-staking-layout{grid-template-columns:1fr}.do-wallet-staking-portfolio{min-height:0}.do-wallet-staking-body{grid-template-columns:1fr}.do-wallet-staking-summaries{grid-template-columns:repeat(3,minmax(0,1fr))}}",
-      "@media(max-width:720px){.do-wallet-staking-page{padding:16px 14px 32px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-actions{align-items:stretch;flex-direction:column}.do-wallet-staking-page-head h1{font-size:32px}.do-wallet-staking-withdraw,.do-wallet-staking-actions a{width:100%}.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-body,.do-wallet-staking-positions-head,.do-wallet-staking-position,.do-wallet-staking-actions{padding-left:18px;padding-right:18px}.do-wallet-staking-filter span{min-width:0;width:100%}.do-wallet-staking-body{gap:16px;min-height:0;padding-bottom:16px;padding-top:16px}.do-wallet-staking-chart-wrap{min-height:120px}.do-wallet-staking-chart{width:104px}.do-wallet-staking-summaries{grid-template-columns:1fr}.do-wallet-staking-position{gap:10px}.do-wallet-staking-position-value{min-width:118px}.do-wallet-staking-position-main strong,.do-wallet-staking-position-value strong{font-size:14px}.do-wallet-staking-portfolio-actions{gap:8px}.do-wallet-staking-portfolio-actions a:before{height:48px;width:48px}.do-wallet-staking-portfolio-right{min-width:96px}}"
+      "@container (max-width:1020px){.do-wallet-staking-layout{grid-template-columns:1fr}.do-wallet-staking-portfolio{border-left:0;min-height:0}.do-wallet-staking-body{grid-template-columns:1fr}.do-wallet-staking-summaries{grid-template-columns:repeat(3,minmax(0,1fr))}}",
+      "@media(max-width:1180px){.do-wallet-staking-layout{grid-template-columns:1fr}.do-wallet-staking-portfolio{border-left:0;min-height:0}.do-wallet-staking-body{grid-template-columns:1fr}.do-wallet-staking-summaries{grid-template-columns:repeat(3,minmax(0,1fr))}}",
+      "@media(max-width:720px){.do-wallet-staking-page{padding:16px 14px 32px}.do-wallet-staking-page-head,.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-actions{align-items:stretch;flex-direction:column}.do-wallet-staking-page-head h1{font-size:32px}.do-wallet-staking-withdraw,.do-wallet-staking-actions a{width:100%}.do-wallet-staking-card-head,.do-wallet-staking-filter,.do-wallet-staking-body,.do-wallet-staking-positions-head,.do-wallet-staking-position,.do-wallet-staking-actions{padding-left:18px;padding-right:18px}.do-wallet-staking-filter span{min-width:0;width:100%}.do-wallet-staking-body{gap:16px;min-height:0;padding-bottom:16px;padding-top:16px}.do-wallet-staking-chart-wrap{min-height:120px}.do-wallet-staking-chart{width:104px}.do-wallet-staking-summaries{grid-template-columns:1fr}.do-wallet-staking-position{gap:10px}.do-wallet-staking-position-value{min-width:118px}.do-wallet-staking-position-main strong,.do-wallet-staking-position-value strong{font-size:14px}.do-wallet-staking-portfolio-top{padding:22px 16px 18px}.do-wallet-staking-portfolio-actions{gap:8px}.do-wallet-staking-portfolio-action>span{height:48px;width:48px}.do-wallet-staking-portfolio-action svg{height:21px;width:21px}.do-wallet-staking-portfolio-right{min-width:96px}}"
     ].join("\n");
     (document.head || document.documentElement).appendChild(style);
   }
