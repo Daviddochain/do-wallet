@@ -15660,8 +15660,17 @@ runModule("do-wallet-v2-quarantine-permissions.js", function(){
   }
   function applyVisibilityFilters(){
     Array.prototype.forEach.call(document.querySelectorAll('[data-doq-asset-visibility-hidden="1"]'),function(el){el.classList.remove('doq-hidden'); el.removeAttribute('data-doq-asset-visibility-hidden');});
+    if(isQuarantineRoute()){
+      clearLowBalanceFilter();
+      return;
+    }
     var q=getQuarantine().concat(getHidden()).map(tokenFromKey).filter(Boolean);
-    if(q.length)Array.prototype.forEach.call(document.querySelectorAll('*'),function(el){if(el.children.length>3||el.closest('#doq-page'))return; var text=norm(el.textContent); if(text && q.some(function(v){return v.length>3 && text.indexOf(v)>=0;})){el.setAttribute('data-doq-asset-visibility-hidden','1'); el.classList.add('doq-hidden');}});
+    if(q.length)Array.prototype.forEach.call(document.querySelectorAll('*'),function(el){
+      if(el.children.length>3||el.closest('#doq-page')||el.closest('.doq-asset-modal'))return;
+      if(el===document.documentElement||el===document.body||el.tagName==='MAIN'||el.id==='station'||el.id==='do-wallet')return;
+      var text=norm(el.textContent);
+      if(text && q.some(function(v){return v.length>3 && text.indexOf(v)>=0;})){el.setAttribute('data-doq-asset-visibility-hidden','1'); el.classList.add('doq-hidden');}
+    });
     applyLowBalanceFilter();
   }
   document.addEventListener('click',function(e){var side=e.target.closest&&e.target.closest('#doq-side'); var inPage=e.target.closest&&e.target.closest('#doq-page'); if(!side&&!inPage){var nav=e.target.closest&&e.target.closest('a,button'); if(nav&&!isQuarantineRoute())showPortfolio();} var b=e.target.closest&&e.target.closest('button'); if(!b)return; if(b.id==='doq-add'){var chain=document.getElementById('doq-chain'), value=document.getElementById('doq-value'); var raw=norm(value&&value.value); var type=raw.indexOf(':')>0?null:(raw.indexOf('0x')===0||raw.indexOf('1')>0?'contract':'symbol'); if(raw)setDecision(type?[type,chain&&chain.value||'global',raw].join(':'):raw,'declined'); if(value)value.value='';} if(b.id==='doq-back')showPortfolio(); if(b.dataset.approve)setDecision(decodeURIComponent(b.dataset.approve),'approved'); if(b.dataset.restore){removeHidden(decodeURIComponent(b.dataset.restore)); renderQuarantinePage(); applyVisibilityFilters();} if(b.dataset.decline)setDecision(decodeURIComponent(b.dataset.decline),'declined');},true);
