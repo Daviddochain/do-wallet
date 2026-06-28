@@ -5,7 +5,7 @@
   window.__doWalletL1PortfolioAssetsRewrite20260625 = true;
   window.__doWalletL1PortfolioOwnsAssets = true;
 
-  var VERSION = "20260625L1PortfolioRewrite4";
+  var VERSION = "20260628L1PortfolioRewrite5";
   var PORTFOLIO_SCHEMA_VERSION = "20260625FullWalletPortfolio7";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
@@ -1091,6 +1091,53 @@
     }).join("||");
   }
 
+  function textNodes(root) {
+    var out = [];
+    if (!root) return out;
+    try {
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: function (node) {
+          return clean(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+      });
+      while (walker.nextNode()) out.push(walker.currentNode);
+    } catch (error) {}
+    return out;
+  }
+
+  function isMoneyText(value) {
+    value = clean(value);
+    return /^\$-?$/.test(value) || /^\$\s?-?[\d,]+(?:\.\d+)?$/.test(value);
+  }
+
+  function isDecimalTail(value) {
+    return /^\.\d+$/.test(clean(value));
+  }
+
+  function updatePortfolioValueAmount(groups) {
+    var pane = findRightWalletPane();
+    if (!pane || !groups || !groups.length) return;
+    var total = groups.reduce(function (sum, group) {
+      return sum + (Number(group.totalValue) || 0);
+    }, 0);
+    var amount = formatUSD(total);
+    var nodes = textNodes(pane);
+    var labelIndex = -1;
+    for (var index = 0; index < nodes.length; index += 1) {
+      if (/^Portfolio value\b/i.test(clean(nodes[index].nodeValue))) {
+        labelIndex = index;
+        break;
+      }
+    }
+    if (labelIndex < 0) return;
+    for (var next = labelIndex + 1; next < Math.min(nodes.length, labelIndex + 12); next += 1) {
+      if (!isMoneyText(nodes[next].nodeValue)) continue;
+      nodes[next].nodeValue = amount;
+      if (nodes[next + 1] && isDecimalTail(nodes[next + 1].nodeValue)) nodes[next + 1].nodeValue = "";
+      return;
+    }
+  }
+
   function fallbackIcon(label, className, hidden) {
     return '<span class="' + className + ' do-wallet-l1-portfolio-fallback" aria-hidden="true"' + (hidden ? ' hidden style="display:none!important"' : "") + ">" + escapeHTML((label || "?").slice(0, 3).toUpperCase()) + "</span>";
   }
@@ -1434,6 +1481,7 @@
         setDebug("no-groups", { reason: reason, restored: restored });
         return;
       }
+      updatePortfolioValueAmount(groups);
       var lists = findAssetLists();
       if (!lists.length) {
         setDebug("no-assets-list", { reason: reason });
