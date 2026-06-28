@@ -192,32 +192,6 @@
     },
     "channels": {}
   },
-  "sentinelhub-2": {
-    "chainID": "sentinelhub-2",
-    "name": "DVPN",
-    "networkType": "mainnet",
-    "lcd": "https://lcd-sentinel.tfl.foundation",
-    "api": "https://lcd-sentinel.tfl.foundation",
-    "rpc": "https://sentinel-rpc.publicnode.com",
-    "gasAdjustment": 1.75,
-    "gasPrices": {
-      "udvpn": 0.1
-    },
-    "prefix": "sent",
-    "coinType": 118,
-    "baseAsset": "udvpn",
-    "icon": "/station-assets/img/coins/unknown.svg",
-    "channels": {
-      "cosmoshub-4": "channel-0",
-      "osmosis-1": "channel-2"
-    },
-    "explorer": {
-      "address": "https://www.mintscan.io/sentinel/account/{}",
-      "tx": "https://www.mintscan.io/sentinel/txs/{}",
-      "validator": "https://www.mintscan.io/sentinel/validators/{}",
-      "block": "https://www.mintscan.io/sentinel/blocks/id/{}"
-    }
-  },
   "pacific-1": {
     "chainID": "pacific-1",
     "name": "Sei",
@@ -595,35 +569,6 @@
       "block": "https://www.mintscan.io/juno/blocks/id/{}"
     }
   },
-  "kava_2222-10": {
-    "chainID": "kava_2222-10",
-    "name": "Kava",
-    "networkType": "mainnet",
-    "lcd": "https://lcd-kava.tfl.foundation",
-    "api": "https://lcd-kava.tfl.foundation",
-    "rpc": "https://kava-rpc.publicnode.com",
-    "gasAdjustment": 1.75,
-    "gasPrices": {
-      "ukava": 0.25
-    },
-    "prefix": "kava",
-    "coinType": 459,
-    "baseAsset": "ukava",
-    "icon": "/station-assets/img/coins/unknown.svg",
-    "channels": {
-      "cosmoshub-4": "channel-0",
-      "osmosis-1": "channel-1",
-      "akashnet-2": "channel-117",
-      "axelar-dojo-1": "channel-114",
-      "dydx-mainnet-1": "channel-95"
-    },
-    "explorer": {
-      "address": "https://www.mintscan.io/kava/account/{}",
-      "tx": "https://www.mintscan.io/kava/txs/{}",
-      "validator": "https://www.mintscan.io/kava/validators/{}",
-      "block": "https://www.mintscan.io/kava/blocks/id/{}"
-    }
-  },
   "ethereum-mainnet": {
     "chainID": "ethereum-mainnet",
     "name": "Ethereum",
@@ -652,35 +597,6 @@
       "block": "https://etherscan.io/block/{}"
     },
     "channels": {}
-  },
-  "dydx-mainnet-1": {
-    "chainID": "dydx-mainnet-1",
-    "name": "dYdX Protocol",
-    "networkType": "mainnet",
-    "lcd": "https://lcd-dydx.tfl.foundation",
-    "api": "https://lcd-dydx.tfl.foundation",
-    "rpc": "https://rpc-dydx.tfl.foundation",
-    "gasAdjustment": 1.75,
-    "gasPrices": {
-      "adydx": 12500000000
-    },
-    "prefix": "dydx",
-    "coinType": 118,
-    "baseAsset": "adydx",
-    "icon": "/station-assets/img/chains/dydx.svg",
-    "channels": {
-      "kaiyo-1": "channel-5",
-      "noble-1": "channel-0",
-      "osmosis-1": "channel-3",
-      "stride-1": "channel-1",
-      "kava_2222-10": "channel-7"
-    },
-    "explorer": {
-      "address": "https://www.mintscan.io/dydx/account/{}",
-      "tx": "https://www.mintscan.io/dydx/txs/{}",
-      "validator": "https://www.mintscan.io/dydx/validators/{}",
-      "block": "https://www.mintscan.io/dydx/blocks/id/{}"
-    }
   },
   "dungeon-1": {
     "chainID": "dungeon-1",

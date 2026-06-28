@@ -5,7 +5,6 @@
   var STYLE_ID = "do-wallet-mobile-connect-style";
   var MODAL_ID = "do-wallet-mobile-connect-modal";
   var PENDING_SEED_KEY = "do-wallet-mobile-connect-seed.v1";
-  var PENDING_PAYLOAD_KEY = "do-wallet-mobile-connect-payload.v1";
   var HASH_PREFIX = "#m=";
   var QR_EXPIRES_MS = 2 * 60 * 1000;
   var qrExpireTimer = 0;
@@ -72,19 +71,8 @@
     return text(value).replace(/\./g, " ").replace(/\s+/g, " ");
   }
 
-  function encodeHashValue(value) {
-    return encodeURIComponent(text(value)).replace(/%20/g, "+");
-  }
-
-  function decodeHashValue(value) {
-    return decodeURIComponent(text(value).replace(/\+/g, "%20"));
-  }
-
-  function buildMobileLink(phrase, wallet) {
-    var walletName = text(wallet && (wallet.walletName || wallet.name || wallet.label));
-    var hash = HASH_PREFIX + packMnemonic(phrase);
-    if (walletName) hash += "&w=" + encodeHashValue(walletName);
-    return mobileOrigin() + "/" + hash;
+  function buildMobileLink(phrase) {
+    return mobileOrigin() + "/" + HASH_PREFIX + packMnemonic(phrase);
   }
 
   function qrToBytes(value) {
@@ -318,20 +306,13 @@
       ".do-mobile-connect-qr{display:flex;gap:16px;align-items:center;border:1px solid #4d2a6b;border-radius:8px;background:#080411;padding:14px}",
       ".do-mobile-connect-qr img{width:180px;height:180px;flex:0 0 auto;border-radius:8px;background:#fff;padding:8px;box-sizing:border-box}",
       ".do-mobile-connect-link{word-break:break-all;color:#cdbff0;font-size:12px;line-height:1.45}",
-      ".do-mobile-import-panel{position:fixed;left:16px;right:16px;bottom:16px;z-index:2147482500;margin:auto;max-width:560px;max-height:min(62vh,520px);overflow:auto;border:1px solid #66308b;border-radius:10px;background:#171020;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.5);padding:14px 16px}",
-      ".do-mobile-import-panel__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}",
+      ".do-mobile-import-panel{position:fixed;left:16px;right:16px;bottom:16px;z-index:2147482500;margin:auto;max-width:560px;border:1px solid #66308b;border-radius:10px;background:#171020;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.5);padding:14px 16px}",
       ".do-mobile-import-panel strong{display:block;margin-bottom:5px;font-size:15px}",
       ".do-mobile-import-panel p{margin:0 0 10px;color:#cdbff0;font-size:13px;line-height:1.45}",
-      ".do-mobile-import-panel label{display:grid;gap:6px;margin:8px 0;color:#d9cff1;font-size:12px;font-weight:700}",
-      ".do-mobile-import-panel input{box-sizing:border-box;width:100%;height:40px;border:1px solid #56307a;border-radius:8px;background:#0c0615;color:#fff;font:600 14px/1.2 Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0 11px}",
       ".do-mobile-import-panel__actions{display:flex;gap:8px;flex-wrap:wrap}",
       ".do-mobile-import-panel button{appearance:none;border:1px solid #56307a;background:#241835;color:#fff;border-radius:8px;font:700 13px/1 Inter,system-ui,sans-serif;padding:10px 12px;cursor:pointer}",
       ".do-mobile-import-panel button.primary{background:#9d3cf5;border-color:#a340ff}",
-      ".do-mobile-import-panel--compact{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;max-height:none;overflow:visible;padding:10px 12px}",
-      ".do-mobile-import-panel--compact strong{margin:0;font-size:13px}",
-      ".do-mobile-import-panel--compact p{margin:2px 0 0;font-size:12px;line-height:1.25}",
-      ".do-mobile-import-panel--compact button{padding:8px 10px}",
-      "@media (max-width:760px){.do-mobile-connect-button{display:none}.do-mobile-connect-card{width:calc(100vw - 24px);max-height:calc(100vh - 24px)}.do-mobile-connect-head,.do-mobile-connect-body{padding:16px}.do-mobile-connect-qr{align-items:flex-start;flex-direction:column}.do-mobile-connect-qr img{width:164px;height:164px}.do-mobile-connect-actions{display:grid;grid-template-columns:1fr}.do-mobile-connect-primary,.do-mobile-connect-secondary{width:100%}.do-mobile-import-panel{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-height:min(42vh,340px);padding:12px}.do-mobile-import-panel__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.do-mobile-import-panel button{min-width:0}.do-mobile-import-panel--compact{grid-template-columns:minmax(0,1fr) auto;max-height:none}.do-mobile-import-panel--compact [data-role='show']{display:none}}"
+      "@media (max-width:760px){.do-mobile-connect-button{display:none}.do-mobile-connect-card{width:calc(100vw - 24px);max-height:calc(100vh - 24px)}.do-mobile-connect-head,.do-mobile-connect-body{padding:16px}.do-mobile-connect-qr{align-items:flex-start;flex-direction:column}.do-mobile-connect-qr img{width:164px;height:164px}.do-mobile-connect-actions{display:grid;grid-template-columns:1fr}.do-mobile-connect-primary,.do-mobile-connect-secondary{width:100%}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -429,7 +410,7 @@
           }));
           var phrase = text(revealed && revealed.mnemonic);
           if (phrase.split(/\s+/).length < 12) throw new Error("The stored seed phrase could not be read.");
-          var link = buildMobileLink(phrase, wallet);
+          var link = buildMobileLink(phrase);
           var qr = createQrDataUri(link);
           if (!qr) throw new Error("This seed phrase is too long for the QR payload.");
           result.innerHTML = [
@@ -548,58 +529,18 @@
     }
   }
 
-  function pendingPayload() {
-    try {
-      var raw = window.sessionStorage.getItem(PENDING_PAYLOAD_KEY);
-      var parsed = raw ? JSON.parse(raw) : null;
-      if (parsed && text(parsed.mnemonic).split(/\s+/).length >= 12) {
-        return {
-          mnemonic: unpackMnemonic(parsed.mnemonic),
-          walletName: text(parsed.walletName) || "Do-Wallet"
-        };
-      }
-    } catch (error) {}
-    var phrase = pendingSeed();
-    return phrase ? { mnemonic: phrase, walletName: "Do-Wallet" } : null;
-  }
-
-  function writePendingPayload(payload) {
-    var phrase = unpackMnemonic(payload && payload.mnemonic);
-    if (phrase.split(/\s+/).length < 12) return false;
-    var normalized = {
-      mnemonic: phrase,
-      walletName: text(payload && payload.walletName) || "Do-Wallet",
-      updatedAt: Date.now()
-    };
-    try {
-      window.sessionStorage.setItem(PENDING_PAYLOAD_KEY, JSON.stringify(normalized));
-      window.sessionStorage.setItem(PENDING_SEED_KEY, phrase);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
   function readSeedFromHash() {
     var hash = "";
     try {
       hash = window.location.hash || "";
     } catch (error) {}
     if (hash.indexOf(HASH_PREFIX) !== 0) return "";
-    var params = hash.slice(HASH_PREFIX.length).split("&");
-    var packed = params.shift() || "";
-    var extras = {};
-    params.forEach(function (part) {
-      var split = part.indexOf("=");
-      if (split <= 0) return;
-      extras[part.slice(0, split)] = part.slice(split + 1);
-    });
-    var phrase = unpackMnemonic(decodeHashValue(packed));
+    var packed = hash.slice(HASH_PREFIX.length);
+    var phrase = unpackMnemonic(decodeURIComponent(packed));
     if (phrase.split(/\s+/).length < 12) return "";
-    writePendingPayload({
-      mnemonic: phrase,
-      walletName: decodeHashValue(extras.w || extras.wallet || extras.name || "")
-    });
+    try {
+      window.sessionStorage.setItem(PENDING_SEED_KEY, phrase);
+    } catch (error) {}
     try {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } catch (error) {}
@@ -615,106 +556,25 @@
     field.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function fieldText(field) {
-    if (!field) return "";
-    var parts = [
-      field.getAttribute("name"),
-      field.getAttribute("id"),
-      field.getAttribute("placeholder"),
-      field.getAttribute("aria-label"),
-      field.getAttribute("autocomplete")
-    ];
-    var label = field.closest && field.closest("label");
-    if (label) parts.push(label.textContent);
-    if (field.id) {
-      var forLabel = document.querySelector("label[for='" + String(field.id).replace(/'/g, "\\'") + "']");
-      if (forLabel) parts.push(forLabel.textContent);
-    }
-    var parent = field.parentElement;
-    if (parent) parts.push(parent.textContent);
-    return text(parts.filter(Boolean).join(" ")).toLowerCase();
-  }
-
-  function visibleInputs() {
-    return Array.prototype.slice.call(document.querySelectorAll("input")).filter(function (input) {
-      return isVisible(input) && !input.disabled && !input.readOnly;
-    });
-  }
-
-  function fillWalletName(walletName) {
-    walletName = text(walletName);
-    if (!walletName) return false;
-    var fields = visibleInputs().filter(function (input) {
-      var type = text(input.getAttribute("type") || "text").toLowerCase();
-      if (["password", "search", "submit", "button", "checkbox", "radio", "hidden"].indexOf(type) >= 0) return false;
-      var label = fieldText(input);
-      return /wallet.*name|name.*wallet|account.*name|name.*account|wallet label|label/.test(label);
-    });
-    if (!fields.length) {
-      fields = visibleInputs().filter(function (input) {
-        var type = text(input.getAttribute("type") || "text").toLowerCase();
-        return (type === "text" || type === "") && !text(input.value);
-      });
-      if (fields.length > 1) fields = [];
-    }
-    var field = fields[0];
-    if (!field) return false;
-    setNativeValue(field, walletName);
-    return true;
-  }
-
-  function fillPasswordFields(password) {
-    password = String(password || "");
-    if (!password) return false;
-    var fields = visibleInputs().filter(function (input) {
-      return text(input.getAttribute("type") || "").toLowerCase() === "password";
-    });
-    fields.slice(0, 2).forEach(function (field) {
-      setNativeValue(field, password);
-    });
-    return fields.length > 0;
-  }
-
-  function clickImportSubmit() {
-    var buttons = Array.prototype.slice.call(document.querySelectorAll("button,input[type='submit']")).filter(isVisible);
-    var submit = buttons.filter(function (button) {
-      return /submit|import|recover|restore|continue|create/i.test(text(button.textContent || button.value || button.getAttribute("aria-label")));
-    })[0] || buttons.filter(function (button) {
-      return !button.disabled && /submit/i.test(text(button.type));
-    })[0];
-    if (!submit || submit.disabled) return false;
-    submit.click();
-    return true;
-  }
-
-  function fillImportForm(payload, options) {
-    payload = typeof payload === "string" ? { mnemonic: payload } : (payload || {});
-    options = options || {};
-    var words = text(payload.mnemonic).split(/\s+/).filter(Boolean);
+  function fillImportForm(phrase) {
+    var words = text(phrase).split(/\s+/).filter(Boolean);
     if (words.length < 12) return false;
-    var filledName = fillWalletName(payload.walletName);
-    var filledSeed = false;
     var textareas = Array.prototype.slice.call(document.querySelectorAll("textarea")).filter(isVisible);
     if (textareas.length) {
       setNativeValue(textareas[0], words.join(" "));
-      filledSeed = true;
-    } else {
-      var inputs = visibleInputs().filter(function (input) {
-        var type = text(input.getAttribute("type") || "text").toLowerCase();
-        var label = fieldText(input);
-        if (/wallet.*name|name.*wallet|account.*name|name.*account|wallet label|label/.test(label)) return false;
-        return !input.disabled && !input.readOnly && (type === "text" || type === "search" || type === "");
-      });
-      if (inputs.length >= words.length) {
-        words.forEach(function (word, index) {
-          setNativeValue(inputs[index], word);
-        });
-        filledSeed = true;
-      }
+      return true;
     }
-    if (options.password) fillPasswordFields(options.password);
-    if (options.submit) clickImportSubmit();
-    return filledSeed || filledName;
+    var inputs = Array.prototype.slice.call(document.querySelectorAll("input")).filter(function (input) {
+      var type = text(input.getAttribute("type") || "text").toLowerCase();
+      return isVisible(input) && !input.disabled && !input.readOnly && (type === "text" || type === "search" || type === "");
+    });
+    if (inputs.length >= words.length) {
+      words.forEach(function (word, index) {
+        setNativeValue(inputs[index], word);
+      });
+      return true;
+    }
+    return false;
   }
 
   function pendingSeed() {
@@ -728,147 +588,61 @@
   function clearPendingSeed() {
     try {
       window.sessionStorage.removeItem(PENDING_SEED_KEY);
-      window.sessionStorage.removeItem(PENDING_PAYLOAD_KEY);
     } catch (error) {}
-    hideImportPanel();
-  }
-
-  function hideImportPanel() {
     var panel = document.querySelector(".do-mobile-import-panel");
     if (panel) panel.remove();
   }
 
-  function renderCompactImportPanel(message, options) {
-    options = options || {};
+  function renderImportPanel(message) {
     ensureStyles();
-    var existing = document.querySelector(".do-mobile-import-panel");
-    if (existing) existing.remove();
-    var panel = document.createElement("div");
-    panel.className = "do-mobile-import-panel do-mobile-import-panel--compact";
-    panel.innerHTML = [
-      "<div>",
-      "<strong>Wallet details filled</strong>",
-      "<p>" + escapeHtml(message || "Continue in the import form.") + "</p>",
-      "</div>",
-      "<button type=\"button\" data-role=\"show\">Show</button>",
-      "<button type=\"button\" data-role=\"hide\">Hide</button>"
-    ].join("");
-    document.body.appendChild(panel);
-    var show = panel.querySelector("[data-role='show']");
-    var hide = panel.querySelector("[data-role='hide']");
-    if (show) {
-      show.addEventListener("click", function () {
-        renderImportPanel("Wallet details are still ready if you need to fill the form again.");
-      });
-    }
-    if (hide) hide.addEventListener("click", hideImportPanel);
-    if (options.autoHideMs) {
-      window.setTimeout(function () {
-        if (panel && panel.parentNode) panel.remove();
-      }, options.autoHideMs);
-    }
-  }
-
-  function renderImportPanel(message, options) {
-    options = options || {};
-    if (options.compact) {
-      renderCompactImportPanel(message, options);
-      return;
-    }
-    ensureStyles();
-    var payload = pendingPayload();
-    if (!payload || !payload.mnemonic) return;
+    var phrase = pendingSeed();
+    if (!phrase) return;
     var existing = document.querySelector(".do-mobile-import-panel");
     if (existing) existing.remove();
     var panel = document.createElement("div");
     panel.className = "do-mobile-import-panel";
     panel.innerHTML = [
-      "<div class=\"do-mobile-import-panel__head\">",
       "<strong>Mobile wallet seed ready</strong>",
-      "<button type=\"button\" data-role=\"hide\">Hide</button>",
-      "</div>",
-      "<p>" + escapeHtml(message || "Open the seed import form, confirm the mobile wallet password, then import.") + "</p>",
-      "<label>Wallet name<input data-role=\"wallet-name\" autocomplete=\"username\" value=\"" + escapeHtml(payload.walletName || "Do-Wallet") + "\"></label>",
-      "<label>Mobile wallet password<input data-role=\"mobile-password\" type=\"password\" autocomplete=\"new-password\" placeholder=\"Password for this phone\"></label>",
+      "<p>" + escapeHtml(message || "Open the seed import form, complete wallet name/password, then submit.") + "</p>",
       "<div class=\"do-mobile-import-panel__actions\">",
-      "<button type=\"button\" class=\"primary\" data-role=\"fill\">Fill form</button>",
-      "<button type=\"button\" class=\"primary\" data-role=\"import\">Fill and import</button>",
+      "<button type=\"button\" class=\"primary\" data-role=\"fill\">Fill import form</button>",
       "<button type=\"button\" data-role=\"copy\">Copy phrase</button>",
-      "<button type=\"button\" data-role=\"hide\">Hide</button>",
       "<button type=\"button\" data-role=\"clear\">Clear</button>",
       "</div>"
     ].join("");
     document.body.appendChild(panel);
     var fill = panel.querySelector("[data-role='fill']");
-    var importButton = panel.querySelector("[data-role='import']");
     var copy = panel.querySelector("[data-role='copy']");
     var clear = panel.querySelector("[data-role='clear']");
-    var hideButtons = Array.prototype.slice.call(panel.querySelectorAll("[data-role='hide']"));
-    var walletName = panel.querySelector("[data-role='wallet-name']");
-    var mobilePassword = panel.querySelector("[data-role='mobile-password']");
-    function latestPayload() {
-      return {
-        mnemonic: payload.mnemonic,
-        walletName: text(walletName && walletName.value) || payload.walletName || "Do-Wallet"
-      };
-    }
     if (fill) {
       fill.addEventListener("click", function () {
         if (window.location.pathname.indexOf("/auth/recover") === -1) {
           window.location.href = "/auth/recover";
           return;
         }
-        var ok = fillImportForm(latestPayload(), { password: mobilePassword && mobilePassword.value });
-        if (ok) {
-          renderImportPanel("Seed phrase and wallet name filled. Continue in the import form.", { compact: true, autoHideMs: 2600 });
-        } else {
-          setText(panel.querySelector("p"), "The seed is ready, but the import fields are not visible yet.");
-        }
-      });
-    }
-    if (importButton) {
-      importButton.addEventListener("click", function () {
-        if (window.location.pathname.indexOf("/auth/recover") === -1) {
-          window.location.href = "/auth/recover";
-          return;
-        }
-        var pass = mobilePassword && mobilePassword.value;
-        if (!pass) {
-          setText(panel.querySelector("p"), "Enter a mobile wallet password first.");
-          if (mobilePassword) mobilePassword.focus();
-          return;
-        }
-        var ok = fillImportForm(latestPayload(), { password: pass, submit: true });
-        if (ok) {
-          renderImportPanel("Wallet details sent to the import form.", { compact: true, autoHideMs: 2200 });
-        } else {
-          setText(panel.querySelector("p"), "The seed is ready, but the import fields are not visible yet.");
-        }
+        var ok = fillImportForm(phrase);
+        setText(panel.querySelector("p"), ok ? "Seed phrase filled. Complete wallet name/password, then submit." : "The seed is ready, but the import fields are not visible yet.");
       });
     }
     if (copy) {
       copy.addEventListener("click", function () {
         try {
-          navigator.clipboard.writeText(payload.mnemonic);
+          navigator.clipboard.writeText(phrase);
           copy.textContent = "Copied";
         } catch (error) {}
       });
     }
-    hideButtons.forEach(function (button) {
-      button.addEventListener("click", hideImportPanel);
-    });
     if (clear) clear.addEventListener("click", clearPendingSeed);
   }
 
   function handlePendingMobileSeed() {
     var fresh = readSeedFromHash();
-    var payload = pendingPayload();
-    var phrase = fresh || (payload && payload.mnemonic);
-    if (!phrase || !payload) return;
+    var phrase = fresh || pendingSeed();
+    if (!phrase) return;
     if (window.location.pathname.indexOf("/auth/recover") === -1) {
-      renderImportPanel("Seed and wallet name received. Opening import form.", { compact: true, autoHideMs: 1800 });
+      renderImportPanel("Seed received. Continue to the import page on this phone.");
       window.setTimeout(function () {
-        if (pendingPayload()) window.location.href = "/auth/recover";
+        if (pendingSeed()) window.location.href = "/auth/recover";
       }, 650);
       return;
     }
@@ -876,11 +650,11 @@
     var attempts = 0;
     var tryFill = function () {
       attempts += 1;
-      if (fillImportForm(payload)) {
-        renderImportPanel("Seed phrase and wallet name filled. Continue in the import form.", { compact: true, autoHideMs: 2600 });
+      if (fillImportForm(phrase)) {
+        renderImportPanel("Seed phrase filled. Complete wallet name/password, then submit.");
         return true;
       }
-      if (attempts === 1) renderImportPanel("Waiting for the import fields to appear.", { compact: true });
+      if (attempts === 1) renderImportPanel("Waiting for the import fields to appear.");
       return false;
     };
     if (tryFill()) return;

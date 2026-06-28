@@ -1368,6 +1368,833 @@ runModule("do-wallet-v2-validator-continuity.js", function(){
 })();
 });
 
+runModule("do-wallet-v2-stake-chain-dropdown.js", function(){
+(function () {
+  "use strict";
+
+  if (window.__doWalletStakeChainDropdown20260626) return;
+  window.__doWalletStakeChainDropdown20260626 = true;
+
+  var WRAP_ATTR = "data-do-wallet-stake-chain-dropdown";
+  var ROW_HIDDEN_ATTR = "data-do-wallet-stake-chain-chip-row-hidden";
+  var APPLIED_ATTR = "data-do-wallet-stake-chain-row";
+  var STYLE_ID = "do-wallet-stake-chain-dropdown-style";
+  var UPDATE_DELAY_MS = 120;
+  var updateTimer = 0;
+
+  var KNOWN_CHAIN_RE = /\b(Do Chain|Terra Classic|Osmosis|BNB Smart Chain|Bnb Smart Chain|Solana|Cardano|Ethereum|Bitcoin|Avalanche|Base|Polygon|Arbitrum|Optimism|Cosmos|Mars|Kujira|Juno|Akash|Tron|Xrp|XRP|Terra|LUNC|Luna)\b/i;
+  var BLOCKED_TEXT_RE = /\b(Delegations|Undelegations|Staking rewards|Staked funds|Quick Stake|Manual Stake|Withdraw all rewards|Positions|Select staking asset)\b/i;
+
+  function clean(value) {
+    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  }
+
+  function visible(node) {
+    if (!node || !node.getBoundingClientRect) return false;
+    var style = window.getComputedStyle ? window.getComputedStyle(node) : null;
+    if (style && (style.display === "none" || style.visibility === "hidden")) return false;
+    var rect = node.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  function isStakeRoute() {
+    return /\/stake(?:\/|$|\?)/i.test(window.location.pathname + window.location.search);
+  }
+
+  function installStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    var style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = [
+      "[" + ROW_HIDDEN_ATTR + "='1']{display:none!important}",
+      ".do-wallet-stake-chain-dropdown-wrap{display:flex;align-items:center;gap:12px;padding:12px 28px;border-bottom:1px solid rgba(159,70,255,.26)}",
+      ".do-wallet-stake-chain-dropdown-label{color:#c7b9ef;font-size:13px;font-weight:600;line-height:1}",
+      ".do-wallet-stake-chain-dropdown-shell{position:relative;display:inline-flex;min-width:260px}",
+      ".do-wallet-stake-chain-dropdown{appearance:none;-webkit-appearance:none;width:100%;min-height:38px;padding:0 42px 0 16px;border:1px solid rgba(159,70,255,.52);border-radius:999px;background:#251b39;color:#fff;font:inherit;font-size:13px;font-weight:600;line-height:38px;outline:none;cursor:pointer}",
+      ".do-wallet-stake-chain-dropdown-shell:after{content:'';position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid #c7b9ef;border-bottom:2px solid #c7b9ef;transform:translateY(-65%) rotate(45deg);pointer-events:none}",
+      ".do-wallet-stake-chain-dropdown:focus{border-color:#a33fff;box-shadow:0 0 0 2px rgba(163,63,255,.18)}",
+      "@media (max-width:720px){.do-wallet-stake-chain-dropdown-wrap{align-items:stretch;flex-direction:column;padding:12px 18px}.do-wallet-stake-chain-dropdown-shell{min-width:0;width:100%}}"
+    ].join("\n");
+    document.head.appendChild(style);
+  }
+
+  function findStakeCard() {
+    if (!isStakeRoute()) return null;
+    var nodes = Array.prototype.slice.call(document.querySelectorAll("main section,main article,main div,section,article,div"));
+    var best = null;
+    var bestArea = Infinity;
+
+    nodes.forEach(function (node) {
+      if (!visible(node)) return;
+      var text = clean(node.innerText || node.textContent);
+      if (!/\bStaked funds\b/i.test(text)) return;
+      if (!/\bDelegations\b/i.test(text) || !/\bUndelegations\b/i.test(text)) return;
+      if (/\bNo staked assets\b/i.test(text)) return;
+      var rect = node.getBoundingClientRect();
+      if (rect.width < 320 || rect.height < 150) return;
+      if (rect.height > Math.max(900, window.innerHeight * 1.25)) return;
+      var area = rect.width * rect.height;
+      if (area < bestArea) {
+        best = node;
+        bestArea = area;
+      }
+    });
+
+    return best;
+  }
+
+  function looksLikeChipRow(node) {
+    if (!visible(node)) return false;
+    var text = clean(node.innerText || node.textContent);
+    if (!/\bAll\b/i.test(text)) return false;
+    if (BLOCKED_TEXT_RE.test(text.replace(/\bAll\b/i, ""))) return false;
+    if (!KNOWN_CHAIN_RE.test(text) && !/\+\s*\d+/.test(text)) return false;
+    var rect = node.getBoundingClientRect();
+    if (rect.width < 180 || rect.height < 24 || rect.height > 92) return false;
+    return true;
+  }
+
+  function findChipRow(card) {
+    var candidates = Array.prototype.slice.call(card.querySelectorAll("div,section,nav"));
+    var best = null;
+    var bestScore = -1;
+
+    candidates.forEach(function (node) {
+      if (node.getAttribute(WRAP_ATTR) === "1") return;
+      if (!looksLikeChipRow(node)) return;
+      var text = clean(node.innerText || node.textContent);
+      var rect = node.getBoundingClientRect();
+      var score = 100 - Math.min(60, Math.round(rect.height));
+      if (KNOWN_CHAIN_RE.test(text)) score += 20;
+      if (/\+\s*\d+/.test(text)) score += 5;
+      if ((node.children || []).length > 1) score += 10;
+      if (score > bestScore) {
+        best = node;
+        bestScore = score;
+      }
+    });
+
+    return best;
+  }
+
+  function chipText(node) {
+    return clean(node.innerText || node.textContent);
+  }
+
+  function findClickable(node, row) {
+    var target = node.closest && node.closest("button,[role='button'],[tabindex]");
+    return target && row.contains(target) ? target : node;
+  }
+
+  function collectChipOptions(row) {
+    var selector = "button,[role='button'],[tabindex]";
+    var nodes = Array.prototype.slice.call(row.querySelectorAll(selector)).filter(visible);
+    if (nodes.length < 2) {
+      nodes = Array.prototype.slice.call(row.children || []).filter(visible);
+    }
+
+    var seen = Object.create(null);
+    var options = [];
+
+    nodes.forEach(function (node) {
+      var label = chipText(node);
+      if (!label || label.length > 42) return;
+      if (/^\+\s*\d+/.test(label)) return;
+      if (BLOCKED_TEXT_RE.test(label)) return;
+      if (!/^All$/i.test(label) && !KNOWN_CHAIN_RE.test(label) && !/^[A-Z][A-Za-z0-9 .()/-]{1,40}$/.test(label)) return;
+      var key = label.toLowerCase();
+      if (seen[key]) return;
+      seen[key] = true;
+      options.push({ label: label, node: findClickable(node, row) });
+    });
+
+    if (!options.some(function (option) { return /^All$/i.test(option.label); })) {
+      options.unshift({ label: "All", node: row });
+    }
+
+    return options;
+  }
+
+  function optionSignature(options) {
+    return options.map(function (option) { return option.label; }).join("|");
+  }
+
+  function clickOption(option) {
+    if (!option || !option.node) return;
+    option.node.dispatchEvent(new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    }));
+  }
+
+  function renderDropdown(row, options) {
+    var signature = optionSignature(options);
+    var existing = row.previousElementSibling;
+    if (existing && existing.getAttribute && existing.getAttribute(WRAP_ATTR) === "1") {
+      if (existing.getAttribute("data-options") === signature) return;
+      existing.remove();
+    }
+
+    var wrap = document.createElement("div");
+    wrap.className = "do-wallet-stake-chain-dropdown-wrap";
+    wrap.setAttribute(WRAP_ATTR, "1");
+    wrap.setAttribute("data-options", signature);
+
+    var label = document.createElement("span");
+    label.className = "do-wallet-stake-chain-dropdown-label";
+    label.textContent = "Network";
+
+    var shell = document.createElement("span");
+    shell.className = "do-wallet-stake-chain-dropdown-shell";
+
+    var select = document.createElement("select");
+    select.className = "do-wallet-stake-chain-dropdown";
+    select.setAttribute("aria-label", "Stake network");
+
+    options.forEach(function (option, index) {
+      var item = document.createElement("option");
+      item.value = String(index);
+      item.textContent = option.label;
+      select.appendChild(item);
+    });
+
+    select.addEventListener("change", function () {
+      clickOption(options[Number(select.value)]);
+    });
+
+    shell.appendChild(select);
+    wrap.appendChild(label);
+    wrap.appendChild(shell);
+    row.parentNode.insertBefore(wrap, row);
+  }
+
+  function cleanupInactiveRoute() {
+    Array.prototype.slice.call(document.querySelectorAll("[" + WRAP_ATTR + "='1']")).forEach(function (node) {
+      node.remove();
+    });
+    Array.prototype.slice.call(document.querySelectorAll("[" + ROW_HIDDEN_ATTR + "='1']")).forEach(function (node) {
+      node.removeAttribute(ROW_HIDDEN_ATTR);
+      node.removeAttribute(APPLIED_ATTR);
+    });
+  }
+
+  function update() {
+    installStyles();
+    if (!isStakeRoute()) {
+      cleanupInactiveRoute();
+      return;
+    }
+
+    var card = findStakeCard();
+    if (!card) return;
+
+    var row = findChipRow(card);
+    if (!row) return;
+
+    var options = collectChipOptions(row);
+    if (options.length < 2) return;
+
+    row.setAttribute(ROW_HIDDEN_ATTR, "1");
+    row.setAttribute(APPLIED_ATTR, "1");
+    renderDropdown(row, options);
+  }
+
+  function schedule() {
+    window.clearTimeout(updateTimer);
+    updateTimer = window.setTimeout(update, UPDATE_DELAY_MS);
+  }
+
+  var lastURL = window.location.href;
+  function watchURL() {
+    if (window.location.href !== lastURL) {
+      lastURL = window.location.href;
+      schedule();
+    }
+    window.setTimeout(watchURL, 500);
+  }
+
+  document.addEventListener("DOMContentLoaded", schedule);
+  window.addEventListener("load", schedule);
+  window.addEventListener("popstate", schedule);
+  window.addEventListener("hashchange", schedule);
+  document.addEventListener("click", function () {
+    window.setTimeout(schedule, 80);
+  }, true);
+
+  if (window.MutationObserver) {
+    new MutationObserver(schedule).observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  schedule();
+  watchURL();
+})();
+});
+
+runModule("do-wallet-v2-stake-balance-bridge.js", function(){
+(function () {
+  "use strict";
+
+  if (window.__doWalletStakeBalanceBridge20260626) return;
+  window.__doWalletStakeBalanceBridge20260626 = true;
+
+  var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
+  var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
+  var STYLE_ID = "do-wallet-stake-balance-bridge-style";
+  var VERSION = "20260626-stake-balance-bridge-2";
+  var APPLY_DELAY_MS = 80;
+  var applyTimer = 0;
+
+  var TOKEN_META = {
+    DO: { chainID: "Do-Chain", denom: "udo", decimals: 6 },
+    LUNC: { chainID: "columbus-5", denom: "uluna", decimals: 6 },
+    UST: { chainID: "columbus-5", denom: "uusd", decimals: 6 },
+    USTC: { chainID: "columbus-5", denom: "uusd", decimals: 6 },
+    KRT: { chainID: "columbus-5", denom: "ukrw", decimals: 6 },
+    IDT: { chainID: "columbus-5", denom: "uidr", decimals: 6 },
+    MYT: { chainID: "columbus-5", denom: "umyr", decimals: 6 },
+    THT: { chainID: "columbus-5", denom: "uthb", decimals: 6 },
+    JPT: { chainID: "columbus-5", denom: "ujpy", decimals: 6 },
+    OSMO: { chainID: "osmosis-1", denom: "uosmo", decimals: 6 },
+    LUNA: { chainID: "phoenix-1", denom: "uluna", decimals: 6 },
+    ATOM: { chainID: "cosmoshub-4", denom: "uatom", decimals: 6 },
+    JUNO: { chainID: "juno-1", denom: "ujuno", decimals: 6 },
+    AKT: { chainID: "akashnet-2", denom: "uakt", decimals: 6 },
+    SCRT: { chainID: "secret-4", denom: "uscrt", decimals: 6 },
+    DGN: { chainID: "dungeon-1", denom: "udgn", decimals: 6 }
+  };
+
+  function clean(value) {
+    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  }
+
+  function lower(value) {
+    return clean(value).toLowerCase();
+  }
+
+  function upper(value) {
+    return clean(value).toUpperCase();
+  }
+
+  function isObject(value) {
+    return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  }
+
+  function readJSON(key, fallback) {
+    try {
+      var raw = window.localStorage && window.localStorage.getItem(key);
+      if (!raw) return fallback;
+      var parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : fallback;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function visible(node) {
+    try {
+      var rect = node && node.getBoundingClientRect && node.getBoundingClientRect();
+      var style = window.getComputedStyle ? window.getComputedStyle(node) : {};
+      return Boolean(rect && rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden");
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function numberFrom(value) {
+    if (value == null || value === "") return 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    if (typeof value === "object") {
+      if (value.amount != null) return numberFrom(value.amount);
+      if (value.value != null) return numberFrom(value.value);
+      if (value.quantity != null) return numberFrom(value.quantity);
+      return 0;
+    }
+    var match = clean(value).replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) || 0 : 0;
+  }
+
+  function decimalString(raw, decimals) {
+    var value = clean(raw).replace(/,/g, "");
+    var negative = value.charAt(0) === "-";
+    if (negative) value = value.slice(1);
+    if (/^\d+\.\d+$/.test(value)) value = value.split(".")[0];
+    if (!/^\d+$/.test(value)) return "0";
+    decimals = Math.max(0, Number(decimals) || 0);
+    if (decimals <= 0) return (negative ? "-" : "") + value;
+    if (value.length <= decimals) value = "0".repeat(decimals - value.length + 1) + value;
+    var whole = value.slice(0, -decimals) || "0";
+    var fraction = value.slice(-decimals).replace(/0+$/, "");
+    return (negative ? "-" : "") + (fraction ? whole + "." + fraction : whole);
+  }
+
+  function amountFromRow(row) {
+    var directKeys = ["amount", "quantity", "balance", "displayAmount", "tokenAmount", "amountValue"];
+    for (var index = 0; index < directKeys.length; index += 1) {
+      var value = row && row[directKeys[index]];
+      if (value == null || value === "") continue;
+      if (typeof value === "object" && value.amount != null) continue;
+      var direct = numberFrom(value);
+      if (direct > 0) return direct;
+    }
+    if (row && row.balance && typeof row.balance === "object" && row.balance.amount != null) {
+      var balanceCoin = amountFromCoin(row.balance, decimalsOf(row));
+      if (balanceCoin > 0) return balanceCoin;
+    }
+    if (row && row.amount && typeof row.amount === "object" && row.amount.amount != null) {
+      var amountCoin = amountFromCoin(row.amount, decimalsOf(row));
+      if (amountCoin > 0) return amountCoin;
+    }
+    if (row && row.rawAmount != null) {
+      var rawAmount = Number(decimalString(row.rawAmount, decimalsOf(row)));
+      if (Number.isFinite(rawAmount) && rawAmount > 0) return rawAmount;
+    }
+    return 0;
+  }
+
+  function amountFromCoin(coin, decimals) {
+    if (!coin) return 0;
+    if (String(coin.amount || "").indexOf(".") >= 0) return numberFrom(coin.amount);
+    var amount = Number(decimalString(coin.amount, decimals));
+    return Number.isFinite(amount) ? amount : 0;
+  }
+
+  function decimalsOf(row) {
+    var symbol = symbolOf(row);
+    var meta = TOKEN_META[symbol];
+    var decimals = Number(row && row.decimals);
+    if (Number.isFinite(decimals)) return decimals;
+    if (meta) return meta.decimals;
+    return 6;
+  }
+
+  function symbolOf(row) {
+    var symbol = upper(row && (row.symbol || row.tokenSymbol || row.ticker || ""));
+    if (symbol === "TERRA CLASSIC USD") return "UST";
+    if (symbol === "TERRA CLASSIC (LUNC)") return "LUNC";
+    if (symbol) return symbol;
+    var name = upper(row && row.name);
+    if (/TERRA CLASSIC \(LUNC\)|\bLUNC\b/.test(name)) return "LUNC";
+    if (/TERRA CLASSIC USD|\bUSTC?\b/.test(name)) return "UST";
+    var denom = lower(row && (row.denom || row.token || row.baseDenom || row.contract));
+    if (denom === "uluna" && chainIdOf(row) === "columbus-5") return "LUNC";
+    if (denom === "uusd") return "UST";
+    if (denom === "ukrw") return "KRT";
+    if (denom === "uidr") return "IDT";
+    if (denom === "umyr") return "MYT";
+    if (denom === "uthb") return "THT";
+    if (denom === "ujpy") return "JPT";
+    return upper(denom);
+  }
+
+  function chainIdOf(row) {
+    return clean(row && (row.chainID || row.chainId || row.network || row.chain || row.chainKey));
+  }
+
+  function denomOf(row) {
+    return lower(row && (row.denom || row.token || row.baseDenom || row.contract || row.id));
+  }
+
+  function categoryOf(row) {
+    return lower(row && (row.category || row.type || row.assetType || "wallet")) || "wallet";
+  }
+
+  function flattenRows(source, out) {
+    out = out || [];
+    if (!source) return out;
+    if (Array.isArray(source)) {
+      source.forEach(function (entry) {
+        flattenRows(entry, out);
+      });
+      return out;
+    }
+    if (!isObject(source)) return out;
+    out.push(source);
+    ["assets", "childAssets", "children", "coins", "tokens", "rows", "expandedAssets", "groupedAssets"].forEach(function (key) {
+      if (Array.isArray(source[key])) flattenRows(source[key], out);
+    });
+    return out;
+  }
+
+  function allSnapshots() {
+    var out = [];
+    var seen = {};
+    function add(snapshot) {
+      if (!isObject(snapshot)) return;
+      var key = [
+        snapshot.updatedAt || "",
+        snapshot.walletKey || "",
+        snapshot.source || "",
+        Object.keys(snapshot.addresses || {}).join(",")
+      ].join("|");
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(snapshot);
+    }
+    add(readJSON(SNAPSHOT_KEY, null));
+    var byWallet = readJSON(SNAPSHOTS_BY_WALLET_KEY, {});
+    if (isObject(byWallet)) Object.keys(byWallet).forEach(function (key) { add(byWallet[key]); });
+    out.sort(function (a, b) { return Number(b.updatedAt || 0) - Number(a.updatedAt || 0); });
+    return out;
+  }
+
+  function snapshotRows(snapshot, keys) {
+    var rows = [];
+    keys.forEach(function (key) {
+      if (Array.isArray(snapshot && snapshot[key])) flattenRows(snapshot[key], rows);
+    });
+    return rows;
+  }
+
+  function rowMatches(row, symbol) {
+    symbol = upper(symbol);
+    if (!symbol) return false;
+    var meta = TOKEN_META[symbol] || {};
+    var rowSymbol = symbolOf(row);
+    var rowChain = chainIdOf(row);
+    var rowDenom = denomOf(row);
+    if (symbol === "LUNC") {
+      return (rowChain === "columbus-5" || /terra classic|lunc/i.test(clean(row && (row.chainName || row.networkName || row.name)))) &&
+        (rowDenom === "uluna" || rowSymbol === "LUNC");
+    }
+    if (meta.chainID && rowChain && rowChain !== meta.chainID) return false;
+    if (meta.denom && rowDenom && rowDenom !== meta.denom && rowSymbol !== symbol) return false;
+    return rowSymbol === symbol || rowDenom === lower(meta.denom || symbol);
+  }
+
+  function spendableRow(row) {
+    var category = categoryOf(row);
+    if (/staking|staked|reward|rewards|unbonding|delegation/.test(category)) return false;
+    if (/^(staked|rewards|unbonding)\b/i.test(clean(row && row.name))) return false;
+    return true;
+  }
+
+  function snapshotSpendableBalance(snapshot, symbol) {
+    var keys = [
+      "flatSpendableAssets",
+      "unGroupedSpendableAssets",
+      "rawSpendableAssets",
+      "sourceSpendableAssets",
+      "rawTokenSpendableAssets",
+      "spendableAssets",
+      "portfolioPanelAssets",
+      "assets",
+      "flatPortfolioAssets",
+      "rawPortfolioAssets",
+      "sourcePortfolioAssets"
+    ];
+    var seen = {};
+    var total = 0;
+    snapshotRows(snapshot, keys).forEach(function (row) {
+      if (!rowMatches(row, symbol) || !spendableRow(row)) return;
+      var amount = amountFromRow(row);
+      if (!(amount > 0)) return;
+      var key = [
+        chainIdOf(row),
+        denomOf(row) || symbolOf(row),
+        lower(row.walletAddress || row.address || ""),
+        categoryOf(row)
+      ].join("|");
+      if (seen[key]) return;
+      seen[key] = true;
+      total += amount;
+    });
+    return total;
+  }
+
+  function spendableBalance(symbol) {
+    var snapshots = allSnapshots();
+    for (var index = 0; index < snapshots.length; index += 1) {
+      var amount = snapshotSpendableBalance(snapshots[index], symbol);
+      if (amount > 0) {
+        return {
+          amount: amount,
+          symbol: upper(symbol),
+          snapshotAt: snapshots[index].updatedAt || 0,
+          source: snapshots[index].source || ""
+        };
+      }
+    }
+    return { amount: 0, symbol: upper(symbol), snapshotAt: 0, source: "" };
+  }
+
+  function routeLooksLikeStakeAction() {
+    var route = clean((window.location && (window.location.pathname + window.location.search + window.location.hash)) || "");
+    if (/stake|delegat|validator/i.test(route)) return true;
+    return /\b(Delegate|Redelegate|Undelegate|Balance after tx|Leave coins to pay fees)\b/i.test(clean(document.body && document.body.innerText));
+  }
+
+  function selectedSymbol(root) {
+    var body = clean(root && root.innerText || root && root.textContent);
+    var amountLineSymbol = body.match(/\bAmount\b[\s\S]{0,160}\b([A-Z][A-Z0-9]{1,11})\b/i);
+    if (amountLineSymbol && TOKEN_META[upper(amountLineSymbol[1])]) return upper(amountLineSymbol[1]);
+    var symbols = Object.keys(TOKEN_META).sort(function (a, b) { return b.length - a.length; });
+    for (var index = 0; index < symbols.length; index += 1) {
+      if (new RegExp("\\b" + symbols[index].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(body)) return symbols[index];
+    }
+    return "";
+  }
+
+  function nearestFormRoot(node) {
+    var current = node;
+    var best = null;
+    for (var depth = 0; current && current !== document.body && depth < 18; depth += 1) {
+      var body = clean(current.innerText || current.textContent);
+      if (/\bAmount\b/i.test(body) && /\b(Delegate|Redelegate|Undelegate|Stake)\b/i.test(body) && current.querySelector && current.querySelector("input")) {
+        best = current;
+        if (/\bBalance after tx\b/i.test(body) && /\bFee\b/i.test(body)) return current;
+      }
+      current = current.parentElement;
+    }
+    return best;
+  }
+
+  function stakeFormRoots() {
+    var roots = [];
+    var seen = [];
+    Array.prototype.slice.call(document.querySelectorAll("input")).forEach(function (input) {
+      if (!visible(input)) return;
+      var type = lower(input.getAttribute("type"));
+      if (type && type !== "text" && type !== "number") return;
+      var root = nearestFormRoot(input);
+      if (!root || seen.indexOf(root) >= 0) return;
+      var body = clean(root.innerText || root.textContent);
+      if (!/\bBalance\b/i.test(body) || !/\bAmount\b/i.test(body)) return;
+      seen.push(root);
+      roots.push(root);
+    });
+    return roots;
+  }
+
+  function amountInput(root, symbol) {
+    var inputs = Array.prototype.slice.call(root.querySelectorAll("input")).filter(visible);
+    return inputs.find(function (input) {
+      var around = clean((input.closest && input.closest("label,div,section,article,form") || {}).innerText || "");
+      return /\bAmount\b/i.test(around) || new RegExp("\\b" + symbol + "\\b", "i").test(around);
+    }) || inputs[0] || null;
+  }
+
+  function amountValue(root, symbol) {
+    var input = amountInput(root, symbol);
+    return input ? numberFrom(input.value) : 0;
+  }
+
+  function feeForSymbol(root, symbol) {
+    var body = clean(root && root.innerText || root && root.textContent);
+    var match = body.match(/\bFee\b[\s\S]{0,120}?(-?\d[\d,]*(?:\.\d+)?)\s+([A-Za-z][A-Za-z0-9]{1,11})\b/i);
+    if (!match) return 0;
+    return upper(match[2]) === upper(symbol) ? numberFrom(match[1]) : 0;
+  }
+
+  function formatAmount(value) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) number = 0;
+    if (Math.abs(number) < 0.0000005) number = 0;
+    var digits = Math.abs(number) >= 1 ? 2 : 6;
+    return number.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: digits
+    });
+  }
+
+  function visibleTextElements(root) {
+    return Array.prototype.slice.call((root || document).querySelectorAll("div,span,strong,small,p,button"))
+      .filter(visible);
+  }
+
+  function hasVisibleElementChildren(node) {
+    return Array.prototype.slice.call((node && node.children) || []).some(visible);
+  }
+
+  function setElementText(node, value) {
+    if (!node || clean(node.textContent) === value) return false;
+    node.textContent = value;
+    return true;
+  }
+
+  function patchStandaloneBalanceText(root, symbol, balance) {
+    var amountText = formatAmount(balance) + " " + symbol;
+    var changed = false;
+    visibleTextElements(root).forEach(function (node) {
+      if (hasVisibleElementChildren(node)) return;
+      var value = clean(node.textContent);
+      if (!new RegExp("^0(?:\\.0+)?\\s+" + symbol + "$", "i").test(value)) return;
+      changed = setElementText(node, amountText) || changed;
+    });
+    return changed;
+  }
+
+  function findRowWithLabel(root, label) {
+    var exactLabelPattern = label === "Balance"
+      ? /^Balance$/i
+      : new RegExp("^" + label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i");
+    var rowLabelPattern = label === "Balance"
+      ? /\bBalance\b(?!\s+after)/i
+      : new RegExp("\\b" + label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+    var otherSummaryLabels = label === "Balance"
+      ? /\b(Fee|Balance after tx)\b/i
+      : /\b(Fee|Balance\b(?!\s+after))\b/i;
+    var candidates = visibleTextElements(root);
+    for (var index = 0; index < candidates.length; index += 1) {
+      var node = candidates[index];
+      var body = clean(node.innerText || node.textContent);
+      if (!exactLabelPattern.test(body)) continue;
+      var current = node;
+      for (var depth = 0; current && current !== root && depth < 6; depth += 1) {
+        var currentText = clean(current.innerText || current.textContent);
+        if (rowLabelPattern.test(currentText) && /\d/.test(currentText) && !otherSummaryLabels.test(currentText.replace(body, ""))) {
+          return current;
+        }
+        current = current.parentElement;
+      }
+    }
+    return null;
+  }
+
+  function amountValueContainer(row, symbol) {
+    if (!row) return null;
+    var leaves = visibleTextElements(row).filter(function (node) {
+      if (hasVisibleElementChildren(node)) return false;
+      var value = clean(node.textContent);
+      if (!value || !/\d/.test(value)) return false;
+      if (/\b(Balance|Fee|Amount|Password)\b/i.test(value)) return false;
+      return new RegExp("-?\\d[\\d,]*(?:\\.\\d+)?(?:\\s+" + symbol + ")?", "i").test(value);
+    });
+    if (!leaves.length) return null;
+    var node = leaves[leaves.length - 1];
+    for (var depth = 0; node.parentElement && node.parentElement !== row && depth < 3; depth += 1) {
+      var parent = node.parentElement;
+      var body = clean(parent.innerText || parent.textContent);
+      if (!body || /\b(Balance|Fee|Amount|Password)\b/i.test(body)) break;
+      if (!new RegExp("^-?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s+" + symbol + ")?$", "i").test(body)) break;
+      node = parent;
+    }
+    return node;
+  }
+
+  function patchRowValue(row, symbol, nextAmount) {
+    if (!row) return false;
+    var nextText = formatAmount(nextAmount) + " " + symbol;
+    return setElementText(amountValueContainer(row, symbol), nextText);
+  }
+
+  function patchInsufficientState(root, symbol, balance, fee) {
+    var amount = amountValue(root, symbol);
+    var canCover = balance >= amount + (Number(fee) || 0);
+    var canSubmit = amount > 0 && canCover;
+    var changed = false;
+    Array.prototype.slice.call(root.querySelectorAll("div,span,p,small")).forEach(function (node) {
+      if (!visible(node)) return;
+      var body = clean(node.innerText || node.textContent);
+      if (!/\bInsufficient balance\b/i.test(body)) return;
+      if (canCover) {
+        if (node.getAttribute("data-do-wallet-stake-balance-hidden") !== "1") changed = true;
+        node.setAttribute("data-do-wallet-stake-balance-hidden", "1");
+      } else {
+        if (node.hasAttribute("data-do-wallet-stake-balance-hidden")) changed = true;
+        node.removeAttribute("data-do-wallet-stake-balance-hidden");
+      }
+    });
+    if (canSubmit) {
+      Array.prototype.slice.call(root.querySelectorAll("button")).forEach(function (button) {
+        if (!/\bSubmit\b/i.test(clean(button.innerText || button.textContent))) return;
+        if (button.disabled || button.getAttribute("aria-disabled") === "true") changed = true;
+        button.disabled = false;
+        button.removeAttribute("disabled");
+        button.removeAttribute("aria-disabled");
+        button.style.opacity = "";
+        button.style.pointerEvents = "";
+      });
+    }
+    return changed;
+  }
+
+  function patchForm(root) {
+    var symbol = selectedSymbol(root);
+    if (!symbol) return false;
+    var balance = spendableBalance(symbol);
+    if (!(balance.amount > 0)) return false;
+    var amount = amountValue(root, symbol);
+    var fee = feeForSymbol(root, symbol);
+    var after = balance.amount - amount - fee;
+    var changed = false;
+    root.setAttribute("data-do-wallet-stake-balance-bridge", VERSION);
+    changed = patchStandaloneBalanceText(root, symbol, balance.amount) || changed;
+    changed = patchRowValue(findRowWithLabel(root, "Balance after tx"), symbol, after) || changed;
+    changed = patchRowValue(findRowWithLabel(root, "Balance"), symbol, balance.amount) || changed;
+    changed = patchInsufficientState(root, symbol, balance.amount, fee) || changed;
+    window.__doWalletStakeBalanceBridgeDebug = {
+      version: VERSION,
+      symbol: symbol,
+      balance: balance.amount,
+      amount: amount,
+      fee: fee,
+      after: after,
+      snapshotAt: balance.snapshotAt,
+      source: balance.source
+    };
+    return changed;
+  }
+
+  function installStyle() {
+    if (document.getElementById(STYLE_ID)) return;
+    var style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = [
+      "[data-do-wallet-stake-balance-hidden='1']{display:none!important;}",
+      "[data-do-wallet-stake-balance-bridge] button[disabled]{pointer-events:auto;}"
+    ].join("\n");
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function apply() {
+    applyTimer = 0;
+    if (!document.body || !routeLooksLikeStakeAction()) return;
+    installStyle();
+    stakeFormRoots().forEach(patchForm);
+  }
+
+  function scheduleApply(delay) {
+    window.clearTimeout(applyTimer);
+    applyTimer = window.setTimeout(apply, delay == null ? APPLY_DELAY_MS : delay);
+  }
+
+  document.addEventListener("input", function () { scheduleApply(0); }, true);
+  document.addEventListener("change", function () { scheduleApply(0); }, true);
+  document.addEventListener("click", function () {
+    scheduleApply(0);
+    window.setTimeout(scheduleApply, 100);
+    window.setTimeout(scheduleApply, 400);
+  }, true);
+
+  ["DOMContentLoaded", "load", "focus", "popstate", "hashchange", "do_wallet_portfolio_snapshot"].forEach(function (eventName) {
+    window.addEventListener(eventName, function () { scheduleApply(0); });
+  });
+  window.addEventListener("storage", function (event) {
+    if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY) scheduleApply(0);
+  });
+
+  try {
+    var observer = new MutationObserver(function () { scheduleApply(); });
+    function observe() {
+      if (!document.body) return;
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      window.setTimeout(function () { observer.disconnect(); }, 15000);
+    }
+    if (document.body) observe();
+    else window.addEventListener("DOMContentLoaded", observe);
+  } catch (error) {}
+
+  scheduleApply(0);
+  window.setTimeout(scheduleApply, 500);
+  window.setTimeout(scheduleApply, 1500);
+  window.setTimeout(scheduleApply, 3000);
+})();
+});
+
 runModule("do-wallet-v2-markets-insights.js", function(){
 (function () {
   "use strict";
@@ -1893,7 +2720,7 @@ runModule("do-wallet-v2-dashboard-overview-assets.js", function(){
   if (window.__doWalletDashboardOverviewAssets20260626) return;
   window.__doWalletDashboardOverviewAssets20260626 = true;
 
-  var VERSION = "20260628DashboardOverviewAssets3";
+  var VERSION = "20260626DashboardOverviewAssets2";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-dashboard-overview-assets-style";
@@ -2119,8 +2946,6 @@ runModule("do-wallet-v2-dashboard-overview-assets.js", function(){
       chainName: chainNameOf(asset) || clean(asset && asset.network) || chainID || symbol,
       denom: lower(asset && (asset.denom || asset.baseDenom || asset.token || symbol)),
       validator: lower(asset && (asset.validator || asset.validatorAddress || asset.validator_address || "")),
-      validatorCount: numberFrom(asset && (asset.validatorCount || asset.validatorsCount || asset.validator_count || 0)),
-      validators: Array.isArray(asset && asset.validators) ? asset.validators.map(lower).filter(Boolean) : [],
       icon: iconOf(asset, chainID),
       amount: amount,
       amountText: amountText,
@@ -2223,132 +3048,6 @@ runModule("do-wallet-v2-dashboard-overview-assets.js", function(){
     });
   }
 
-  function rewardRows() {
-    return rawRowsFromSnapshots("staking").filter(function (row) {
-      return row.category === "reward" || row.category === "rewards";
-    });
-  }
-
-  function sumRows(rows) {
-    return (Array.isArray(rows) ? rows : []).reduce(function (sum, row) {
-      return sum + (Number(row && row.value) || 0);
-    }, 0);
-  }
-
-  function addAddressValues(source, out) {
-    if (!isObject(source)) return;
-    Object.keys(source).forEach(function (key) {
-      var value = clean(source[key]);
-      if (value) out[value.toLowerCase()] = true;
-    });
-  }
-
-  function walletCountFromSnapshots() {
-    var count = 0;
-    collectSnapshots().forEach(function (snapshot) {
-      var addresses = {};
-      addAddressValues(snapshot.addresses, addresses);
-      addAddressValues(snapshot.activeAddresses, addresses);
-      addAddressValues(snapshot.allAddresses, addresses);
-      addAddressValues(snapshot.addressMap, addresses);
-      count = Math.max(count, Object.keys(addresses).length);
-      count = Math.max(count, Number(snapshot.walletCount || snapshot.addressCount || 0) || 0);
-    });
-    return count;
-  }
-
-  function existingWalletCount() {
-    var match = bodyText(document.body).match(/(\d+)\s+wallets?,\s*\d+\s+assets?,\s*\d+\s+validators?/i);
-    return match ? Number(match[1]) || 0 : 0;
-  }
-
-  function addValidator(value, seen) {
-    value = lower(value);
-    if (value) seen[value] = true;
-  }
-
-  function addValidatorsFromRaw(raw, seen) {
-    if (!isObject(raw)) return;
-    addValidator(raw.validator, seen);
-    addValidator(raw.validatorAddress, seen);
-    addValidator(raw.validator_address, seen);
-    if (Array.isArray(raw.validators)) raw.validators.forEach(function (validator) { addValidator(validator, seen); });
-    if (isObject(raw.validatorBreakdown)) {
-      ["delegations", "delegationsByAddress", "unbondings", "unbondingsByAddress", "rewards", "rewardsByAddress"].forEach(function (key) {
-        var value = raw.validatorBreakdown[key];
-        if (Array.isArray(value)) value.forEach(function (entry) { addValidatorsFromRaw(entry, seen); });
-        else if (isObject(value)) Object.keys(value).forEach(function (subKey) {
-          addValidator(subKey, seen);
-          addValidatorsFromRaw(value[subKey], seen);
-        });
-      });
-    }
-  }
-
-  function validatorCount(rows) {
-    var seen = {};
-    var fallback = 0;
-    (Array.isArray(rows) ? rows : []).forEach(function (row) {
-      addValidator(row && row.validator, seen);
-      if (Array.isArray(row && row.validators)) row.validators.forEach(function (validator) { addValidator(validator, seen); });
-      addValidatorsFromRaw(row && row.raw, seen);
-      fallback = Math.max(fallback, Number(row && row.validatorCount) || 0);
-    });
-    return Math.max(Object.keys(seen).length, fallback);
-  }
-
-  function dashboardMetrics() {
-    var assets = spendableRows();
-    var staked = stakingRows();
-    var rewards = rewardRows();
-    var unbonding = unbondingRows();
-    var stakedValue = sumRows(staked);
-    var rewardsValue = sumRows(rewards);
-    var unbondingValue = sumRows(unbonding);
-    var availableValue = sumRows(assets);
-    return {
-      assets: assets,
-      staked: staked,
-      rewards: rewards,
-      unbonding: unbonding,
-      assetCount: assets.length,
-      walletCount: walletCountFromSnapshots() || existingWalletCount(),
-      validatorCount: validatorCount(staked.concat(rewards).concat(unbonding)),
-      availableValue: availableValue,
-      stakedValue: stakedValue,
-      rewardsValue: rewardsValue,
-      unbondingValue: unbondingValue,
-      totalValue: availableValue + stakedValue + rewardsValue + unbondingValue
-    };
-  }
-
-  function textNodes(root) {
-    var out = [];
-    if (!root) return out;
-    try {
-      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode: function (node) {
-          return clean(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-        }
-      });
-      while (walker.nextNode()) out.push(walker.currentNode);
-    } catch (error) {}
-    return out;
-  }
-
-  function isMoneyText(value) {
-    value = clean(value);
-    return /^\$-?$/.test(value) || /^\$\s?-?[\d,]+(?:\.\d+)?$/.test(value);
-  }
-
-  function isNumberText(value) {
-    return /^\d+(?:,\d{3})*$/.test(clean(value));
-  }
-
-  function isDecimalTail(value) {
-    return /^\.\d+$/.test(clean(value));
-  }
-
   function visible(node) {
     if (!node || !node.getBoundingClientRect) return false;
     var rect = node.getBoundingClientRect();
@@ -2416,119 +3115,6 @@ runModule("do-wallet-v2-dashboard-overview-assets.js", function(){
       var br = b.getBoundingClientRect();
       return (ar.width * ar.height) - (br.width * br.height);
     })[0] || null;
-  }
-
-  function findPortfolioSummaryCard() {
-    if (!isDashboardRoute()) return null;
-    var candidates = [];
-    Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,strong,span,small,div")).forEach(function (node) {
-      if (!textMatches(node, "DO-WALLET OVERVIEW")) return;
-      var parent = node.parentElement;
-      for (var depth = 0; parent && parent !== document.body && depth < 8; depth += 1) {
-        if (visible(parent)) {
-          var text = lower(bodyText(parent));
-          if (text.indexOf("staked") >= 0 && text.indexOf("rewards") >= 0 && text.indexOf("unbonding") >= 0) candidates.push(parent);
-        }
-        parent = parent.parentElement;
-      }
-    });
-    return candidates.filter(function (node, index, list) {
-      return list.indexOf(node) === index;
-    }).sort(function (a, b) {
-      var ar = a.getBoundingClientRect();
-      var br = b.getBoundingClientRect();
-      return (ar.width * ar.height) - (br.width * br.height);
-    })[0] || null;
-  }
-
-  function setFirstTextAfterLabel(root, label, matcher, value) {
-    var nodes = textNodes(root);
-    var labelIndex = -1;
-    for (var index = 0; index < nodes.length; index += 1) {
-      if (lower(nodes[index].nodeValue) === lower(label)) {
-        labelIndex = index;
-        break;
-      }
-    }
-    if (labelIndex < 0) return false;
-    for (var next = labelIndex + 1; next < Math.min(nodes.length, labelIndex + 12); next += 1) {
-      if (!matcher(nodes[next].nodeValue)) continue;
-      nodes[next].nodeValue = value;
-      if (isMoneyText(value) && nodes[next + 1] && isDecimalTail(nodes[next + 1].nodeValue)) nodes[next + 1].nodeValue = "";
-      return true;
-    }
-    return false;
-  }
-
-  function patchPortfolioSummary(metrics) {
-    var card = findPortfolioSummaryCard();
-    if (!card) return false;
-    var nodes = textNodes(card);
-    var changed = false;
-    for (var index = 0; index < nodes.length; index += 1) {
-      var value = clean(nodes[index].nodeValue);
-      if (/^\d+\s+wallets?,\s*\d+\s+assets?,\s*\d+\s+validators?$/i.test(value)) {
-        nodes[index].nodeValue = [
-          metrics.walletCount || 0,
-          (metrics.walletCount || 0) === 1 ? " wallet, " : " wallets, ",
-          metrics.assetCount,
-          metrics.assetCount === 1 ? " asset, " : " assets, ",
-          metrics.validatorCount,
-          metrics.validatorCount === 1 ? " validator" : " validators"
-        ].join("");
-        changed = true;
-        break;
-      }
-    }
-    changed = setFirstTextAfterLabel(card, "DO-WALLET OVERVIEW", isMoneyText, formatUSD(metrics.totalValue)) || changed;
-    changed = setFirstTextAfterLabel(card, "Staked", isMoneyText, formatUSD(metrics.stakedValue)) || changed;
-    changed = setFirstTextAfterLabel(card, "Rewards", isMoneyText, formatUSD(metrics.rewardsValue)) || changed;
-    changed = setFirstTextAfterLabel(card, "Unbonding", isMoneyText, formatUSD(metrics.unbondingValue)) || changed;
-    card.setAttribute("data-do-wallet-dashboard-summary", VERSION);
-    return changed;
-  }
-
-  function findMetricCard(label) {
-    var candidates = [];
-    Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,strong,span,small,div,p")).forEach(function (node) {
-      if (!textMatches(node, label)) return;
-      var parent = node.parentElement;
-      for (var depth = 0; parent && parent !== document.body && depth < 7; depth += 1) {
-        if (visible(parent)) {
-          var rect = parent.getBoundingClientRect();
-          var text = lower(bodyText(parent));
-          if (text.indexOf(lower(label)) >= 0 && rect.width >= 160 && rect.width <= 420 && rect.height >= 80 && rect.height <= 230) candidates.push(parent);
-        }
-        parent = parent.parentElement;
-      }
-    });
-    return candidates.filter(function (node, index, list) {
-      return list.indexOf(node) === index;
-    }).sort(function (a, b) {
-      var ar = a.getBoundingClientRect();
-      var br = b.getBoundingClientRect();
-      return (ar.width * ar.height) - (br.width * br.height);
-    })[0] || null;
-  }
-
-  function patchMetricCard(label, matcher, value) {
-    var card = findMetricCard(label);
-    if (!card) return false;
-    var changed = setFirstTextAfterLabel(card, label, matcher, value);
-    card.setAttribute("data-do-wallet-dashboard-metric", lower(label).replace(/[^a-z0-9]+/g, "-"));
-    return changed;
-  }
-
-  function patchDashboardSummary(metrics) {
-    var changed = patchPortfolioSummary(metrics);
-    changed = patchMetricCard("Total assets", isMoneyText, formatUSD(metrics.totalValue)) || changed;
-    changed = patchMetricCard("Wallets", isNumberText, String(metrics.walletCount || 0)) || changed;
-    changed = patchMetricCard("Available", isMoneyText, formatUSD(metrics.availableValue)) || changed;
-    changed = patchMetricCard("Staked assets", isMoneyText, formatUSD(metrics.stakedValue)) || changed;
-    changed = patchMetricCard("Staking rewards", isMoneyText, formatUSD(metrics.rewardsValue)) || changed;
-    changed = patchMetricCard("Unbonding", isMoneyText, formatUSD(metrics.unbondingValue)) || changed;
-    changed = patchMetricCard("Validators", isNumberText, String(metrics.validatorCount || 0)) || changed;
-    return changed;
   }
 
   function iconHTML(row) {
@@ -2616,12 +3202,10 @@ runModule("do-wallet-v2-dashboard-overview-assets.js", function(){
     if (!document.body) return;
     if (!isDashboardRoute()) return;
     installStyle();
-    var metrics = dashboardMetrics();
-    var assets = metrics.assets;
-    var staked = metrics.staked;
-    var unbonding = metrics.unbonding;
+    var assets = spendableRows();
+    var staked = stakingRows();
+    var unbonding = unbondingRows();
     var changed = false;
-    changed = patchDashboardSummary(metrics) || changed;
     changed = renderCard(findOverviewCard("Assets", "All spendable balances"), "assets", "Assets", "All spendable balances", assets) || changed;
     changed = renderCard(findOverviewCard("Validators staked with", "Delegations across all chains"), "staking", "Validators staked with", "Delegations across all chains", staked) || changed;
     changed = renderCard(findOverviewCard("Unbonding", "Assets currently leaving staking"), "unbonding", "Unbonding", "Assets currently leaving staking", unbonding) || changed;
@@ -2629,13 +3213,9 @@ runModule("do-wallet-v2-dashboard-overview-assets.js", function(){
       window.__doWalletDashboardOverviewAssetsDebug = {
         version: VERSION,
         changed: changed,
-        assets: metrics.assetCount,
+        assets: assets.length,
         staking: staked.length,
-        rewards: metrics.rewards.length,
         unbonding: unbonding.length,
-        walletCount: metrics.walletCount,
-        validatorCount: metrics.validatorCount,
-        totalValue: metrics.totalValue,
         checkedAt: new Date().toISOString()
       };
     } catch (error) {}
@@ -5874,7 +6454,6 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
   var STYLE_ID = "do-wallet-mobile-connect-style";
   var MODAL_ID = "do-wallet-mobile-connect-modal";
   var PENDING_SEED_KEY = "do-wallet-mobile-connect-seed.v1";
-  var PENDING_PAYLOAD_KEY = "do-wallet-mobile-connect-payload.v1";
   var HASH_PREFIX = "#m=";
   var QR_EXPIRES_MS = 2 * 60 * 1000;
   var qrExpireTimer = 0;
@@ -5941,19 +6520,8 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     return text(value).replace(/\./g, " ").replace(/\s+/g, " ");
   }
 
-  function encodeHashValue(value) {
-    return encodeURIComponent(text(value)).replace(/%20/g, "+");
-  }
-
-  function decodeHashValue(value) {
-    return decodeURIComponent(text(value).replace(/\+/g, "%20"));
-  }
-
-  function buildMobileLink(phrase, wallet) {
-    var walletName = text(wallet && (wallet.walletName || wallet.name || wallet.label));
-    var hash = HASH_PREFIX + packMnemonic(phrase);
-    if (walletName) hash += "&w=" + encodeHashValue(walletName);
-    return mobileOrigin() + "/" + hash;
+  function buildMobileLink(phrase) {
+    return mobileOrigin() + "/" + HASH_PREFIX + packMnemonic(phrase);
   }
 
   function qrToBytes(value) {
@@ -6187,20 +6755,13 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
       ".do-mobile-connect-qr{display:flex;gap:16px;align-items:center;border:1px solid #4d2a6b;border-radius:8px;background:#080411;padding:14px}",
       ".do-mobile-connect-qr img{width:180px;height:180px;flex:0 0 auto;border-radius:8px;background:#fff;padding:8px;box-sizing:border-box}",
       ".do-mobile-connect-link{word-break:break-all;color:#cdbff0;font-size:12px;line-height:1.45}",
-      ".do-mobile-import-panel{position:fixed;left:16px;right:16px;bottom:16px;z-index:2147482500;margin:auto;max-width:560px;max-height:min(62vh,520px);overflow:auto;border:1px solid #66308b;border-radius:10px;background:#171020;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.5);padding:14px 16px}",
-      ".do-mobile-import-panel__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}",
+      ".do-mobile-import-panel{position:fixed;left:16px;right:16px;bottom:16px;z-index:2147482500;margin:auto;max-width:560px;border:1px solid #66308b;border-radius:10px;background:#171020;color:#fff;box-shadow:0 16px 50px rgba(0,0,0,.5);padding:14px 16px}",
       ".do-mobile-import-panel strong{display:block;margin-bottom:5px;font-size:15px}",
       ".do-mobile-import-panel p{margin:0 0 10px;color:#cdbff0;font-size:13px;line-height:1.45}",
-      ".do-mobile-import-panel label{display:grid;gap:6px;margin:8px 0;color:#d9cff1;font-size:12px;font-weight:700}",
-      ".do-mobile-import-panel input{box-sizing:border-box;width:100%;height:40px;border:1px solid #56307a;border-radius:8px;background:#0c0615;color:#fff;font:600 14px/1.2 Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0 11px}",
       ".do-mobile-import-panel__actions{display:flex;gap:8px;flex-wrap:wrap}",
       ".do-mobile-import-panel button{appearance:none;border:1px solid #56307a;background:#241835;color:#fff;border-radius:8px;font:700 13px/1 Inter,system-ui,sans-serif;padding:10px 12px;cursor:pointer}",
       ".do-mobile-import-panel button.primary{background:#9d3cf5;border-color:#a340ff}",
-      ".do-mobile-import-panel--compact{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;max-height:none;overflow:visible;padding:10px 12px}",
-      ".do-mobile-import-panel--compact strong{margin:0;font-size:13px}",
-      ".do-mobile-import-panel--compact p{margin:2px 0 0;font-size:12px;line-height:1.25}",
-      ".do-mobile-import-panel--compact button{padding:8px 10px}",
-      "@media (max-width:760px){.do-mobile-connect-button{display:none}.do-mobile-connect-card{width:calc(100vw - 24px);max-height:calc(100vh - 24px)}.do-mobile-connect-head,.do-mobile-connect-body{padding:16px}.do-mobile-connect-qr{align-items:flex-start;flex-direction:column}.do-mobile-connect-qr img{width:164px;height:164px}.do-mobile-connect-actions{display:grid;grid-template-columns:1fr}.do-mobile-connect-primary,.do-mobile-connect-secondary{width:100%}.do-mobile-import-panel{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-height:min(42vh,340px);padding:12px}.do-mobile-import-panel__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.do-mobile-import-panel button{min-width:0}.do-mobile-import-panel--compact{grid-template-columns:minmax(0,1fr) auto;max-height:none}.do-mobile-import-panel--compact [data-role='show']{display:none}}"
+      "@media (max-width:760px){.do-mobile-connect-button{display:none}.do-mobile-connect-card{width:calc(100vw - 24px);max-height:calc(100vh - 24px)}.do-mobile-connect-head,.do-mobile-connect-body{padding:16px}.do-mobile-connect-qr{align-items:flex-start;flex-direction:column}.do-mobile-connect-qr img{width:164px;height:164px}.do-mobile-connect-actions{display:grid;grid-template-columns:1fr}.do-mobile-connect-primary,.do-mobile-connect-secondary{width:100%}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -6298,7 +6859,7 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
           }));
           var phrase = text(revealed && revealed.mnemonic);
           if (phrase.split(/\s+/).length < 12) throw new Error("The stored seed phrase could not be read.");
-          var link = buildMobileLink(phrase, wallet);
+          var link = buildMobileLink(phrase);
           var qr = createQrDataUri(link);
           if (!qr) throw new Error("This seed phrase is too long for the QR payload.");
           result.innerHTML = [
@@ -6417,58 +6978,18 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     }
   }
 
-  function pendingPayload() {
-    try {
-      var raw = window.sessionStorage.getItem(PENDING_PAYLOAD_KEY);
-      var parsed = raw ? JSON.parse(raw) : null;
-      if (parsed && text(parsed.mnemonic).split(/\s+/).length >= 12) {
-        return {
-          mnemonic: unpackMnemonic(parsed.mnemonic),
-          walletName: text(parsed.walletName) || "Do-Wallet"
-        };
-      }
-    } catch (error) {}
-    var phrase = pendingSeed();
-    return phrase ? { mnemonic: phrase, walletName: "Do-Wallet" } : null;
-  }
-
-  function writePendingPayload(payload) {
-    var phrase = unpackMnemonic(payload && payload.mnemonic);
-    if (phrase.split(/\s+/).length < 12) return false;
-    var normalized = {
-      mnemonic: phrase,
-      walletName: text(payload && payload.walletName) || "Do-Wallet",
-      updatedAt: Date.now()
-    };
-    try {
-      window.sessionStorage.setItem(PENDING_PAYLOAD_KEY, JSON.stringify(normalized));
-      window.sessionStorage.setItem(PENDING_SEED_KEY, phrase);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
   function readSeedFromHash() {
     var hash = "";
     try {
       hash = window.location.hash || "";
     } catch (error) {}
     if (hash.indexOf(HASH_PREFIX) !== 0) return "";
-    var params = hash.slice(HASH_PREFIX.length).split("&");
-    var packed = params.shift() || "";
-    var extras = {};
-    params.forEach(function (part) {
-      var split = part.indexOf("=");
-      if (split <= 0) return;
-      extras[part.slice(0, split)] = part.slice(split + 1);
-    });
-    var phrase = unpackMnemonic(decodeHashValue(packed));
+    var packed = hash.slice(HASH_PREFIX.length);
+    var phrase = unpackMnemonic(decodeURIComponent(packed));
     if (phrase.split(/\s+/).length < 12) return "";
-    writePendingPayload({
-      mnemonic: phrase,
-      walletName: decodeHashValue(extras.w || extras.wallet || extras.name || "")
-    });
+    try {
+      window.sessionStorage.setItem(PENDING_SEED_KEY, phrase);
+    } catch (error) {}
     try {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     } catch (error) {}
@@ -6484,106 +7005,25 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     field.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function fieldText(field) {
-    if (!field) return "";
-    var parts = [
-      field.getAttribute("name"),
-      field.getAttribute("id"),
-      field.getAttribute("placeholder"),
-      field.getAttribute("aria-label"),
-      field.getAttribute("autocomplete")
-    ];
-    var label = field.closest && field.closest("label");
-    if (label) parts.push(label.textContent);
-    if (field.id) {
-      var forLabel = document.querySelector("label[for='" + String(field.id).replace(/'/g, "\\'") + "']");
-      if (forLabel) parts.push(forLabel.textContent);
-    }
-    var parent = field.parentElement;
-    if (parent) parts.push(parent.textContent);
-    return text(parts.filter(Boolean).join(" ")).toLowerCase();
-  }
-
-  function visibleInputs() {
-    return Array.prototype.slice.call(document.querySelectorAll("input")).filter(function (input) {
-      return isVisible(input) && !input.disabled && !input.readOnly;
-    });
-  }
-
-  function fillWalletName(walletName) {
-    walletName = text(walletName);
-    if (!walletName) return false;
-    var fields = visibleInputs().filter(function (input) {
-      var type = text(input.getAttribute("type") || "text").toLowerCase();
-      if (["password", "search", "submit", "button", "checkbox", "radio", "hidden"].indexOf(type) >= 0) return false;
-      var label = fieldText(input);
-      return /wallet.*name|name.*wallet|account.*name|name.*account|wallet label|label/.test(label);
-    });
-    if (!fields.length) {
-      fields = visibleInputs().filter(function (input) {
-        var type = text(input.getAttribute("type") || "text").toLowerCase();
-        return (type === "text" || type === "") && !text(input.value);
-      });
-      if (fields.length > 1) fields = [];
-    }
-    var field = fields[0];
-    if (!field) return false;
-    setNativeValue(field, walletName);
-    return true;
-  }
-
-  function fillPasswordFields(password) {
-    password = String(password || "");
-    if (!password) return false;
-    var fields = visibleInputs().filter(function (input) {
-      return text(input.getAttribute("type") || "").toLowerCase() === "password";
-    });
-    fields.slice(0, 2).forEach(function (field) {
-      setNativeValue(field, password);
-    });
-    return fields.length > 0;
-  }
-
-  function clickImportSubmit() {
-    var buttons = Array.prototype.slice.call(document.querySelectorAll("button,input[type='submit']")).filter(isVisible);
-    var submit = buttons.filter(function (button) {
-      return /submit|import|recover|restore|continue|create/i.test(text(button.textContent || button.value || button.getAttribute("aria-label")));
-    })[0] || buttons.filter(function (button) {
-      return !button.disabled && /submit/i.test(text(button.type));
-    })[0];
-    if (!submit || submit.disabled) return false;
-    submit.click();
-    return true;
-  }
-
-  function fillImportForm(payload, options) {
-    payload = typeof payload === "string" ? { mnemonic: payload } : (payload || {});
-    options = options || {};
-    var words = text(payload.mnemonic).split(/\s+/).filter(Boolean);
+  function fillImportForm(phrase) {
+    var words = text(phrase).split(/\s+/).filter(Boolean);
     if (words.length < 12) return false;
-    var filledName = fillWalletName(payload.walletName);
-    var filledSeed = false;
     var textareas = Array.prototype.slice.call(document.querySelectorAll("textarea")).filter(isVisible);
     if (textareas.length) {
       setNativeValue(textareas[0], words.join(" "));
-      filledSeed = true;
-    } else {
-      var inputs = visibleInputs().filter(function (input) {
-        var type = text(input.getAttribute("type") || "text").toLowerCase();
-        var label = fieldText(input);
-        if (/wallet.*name|name.*wallet|account.*name|name.*account|wallet label|label/.test(label)) return false;
-        return !input.disabled && !input.readOnly && (type === "text" || type === "search" || type === "");
-      });
-      if (inputs.length >= words.length) {
-        words.forEach(function (word, index) {
-          setNativeValue(inputs[index], word);
-        });
-        filledSeed = true;
-      }
+      return true;
     }
-    if (options.password) fillPasswordFields(options.password);
-    if (options.submit) clickImportSubmit();
-    return filledSeed || filledName;
+    var inputs = Array.prototype.slice.call(document.querySelectorAll("input")).filter(function (input) {
+      var type = text(input.getAttribute("type") || "text").toLowerCase();
+      return isVisible(input) && !input.disabled && !input.readOnly && (type === "text" || type === "search" || type === "");
+    });
+    if (inputs.length >= words.length) {
+      words.forEach(function (word, index) {
+        setNativeValue(inputs[index], word);
+      });
+      return true;
+    }
+    return false;
   }
 
   function pendingSeed() {
@@ -6597,147 +7037,61 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
   function clearPendingSeed() {
     try {
       window.sessionStorage.removeItem(PENDING_SEED_KEY);
-      window.sessionStorage.removeItem(PENDING_PAYLOAD_KEY);
     } catch (error) {}
-    hideImportPanel();
-  }
-
-  function hideImportPanel() {
     var panel = document.querySelector(".do-mobile-import-panel");
     if (panel) panel.remove();
   }
 
-  function renderCompactImportPanel(message, options) {
-    options = options || {};
+  function renderImportPanel(message) {
     ensureStyles();
-    var existing = document.querySelector(".do-mobile-import-panel");
-    if (existing) existing.remove();
-    var panel = document.createElement("div");
-    panel.className = "do-mobile-import-panel do-mobile-import-panel--compact";
-    panel.innerHTML = [
-      "<div>",
-      "<strong>Wallet details filled</strong>",
-      "<p>" + escapeHtml(message || "Continue in the import form.") + "</p>",
-      "</div>",
-      "<button type=\"button\" data-role=\"show\">Show</button>",
-      "<button type=\"button\" data-role=\"hide\">Hide</button>"
-    ].join("");
-    document.body.appendChild(panel);
-    var show = panel.querySelector("[data-role='show']");
-    var hide = panel.querySelector("[data-role='hide']");
-    if (show) {
-      show.addEventListener("click", function () {
-        renderImportPanel("Wallet details are still ready if you need to fill the form again.");
-      });
-    }
-    if (hide) hide.addEventListener("click", hideImportPanel);
-    if (options.autoHideMs) {
-      window.setTimeout(function () {
-        if (panel && panel.parentNode) panel.remove();
-      }, options.autoHideMs);
-    }
-  }
-
-  function renderImportPanel(message, options) {
-    options = options || {};
-    if (options.compact) {
-      renderCompactImportPanel(message, options);
-      return;
-    }
-    ensureStyles();
-    var payload = pendingPayload();
-    if (!payload || !payload.mnemonic) return;
+    var phrase = pendingSeed();
+    if (!phrase) return;
     var existing = document.querySelector(".do-mobile-import-panel");
     if (existing) existing.remove();
     var panel = document.createElement("div");
     panel.className = "do-mobile-import-panel";
     panel.innerHTML = [
-      "<div class=\"do-mobile-import-panel__head\">",
       "<strong>Mobile wallet seed ready</strong>",
-      "<button type=\"button\" data-role=\"hide\">Hide</button>",
-      "</div>",
-      "<p>" + escapeHtml(message || "Open the seed import form, confirm the mobile wallet password, then import.") + "</p>",
-      "<label>Wallet name<input data-role=\"wallet-name\" autocomplete=\"username\" value=\"" + escapeHtml(payload.walletName || "Do-Wallet") + "\"></label>",
-      "<label>Mobile wallet password<input data-role=\"mobile-password\" type=\"password\" autocomplete=\"new-password\" placeholder=\"Password for this phone\"></label>",
+      "<p>" + escapeHtml(message || "Open the seed import form, complete wallet name/password, then submit.") + "</p>",
       "<div class=\"do-mobile-import-panel__actions\">",
-      "<button type=\"button\" class=\"primary\" data-role=\"fill\">Fill form</button>",
-      "<button type=\"button\" class=\"primary\" data-role=\"import\">Fill and import</button>",
+      "<button type=\"button\" class=\"primary\" data-role=\"fill\">Fill import form</button>",
       "<button type=\"button\" data-role=\"copy\">Copy phrase</button>",
-      "<button type=\"button\" data-role=\"hide\">Hide</button>",
       "<button type=\"button\" data-role=\"clear\">Clear</button>",
       "</div>"
     ].join("");
     document.body.appendChild(panel);
     var fill = panel.querySelector("[data-role='fill']");
-    var importButton = panel.querySelector("[data-role='import']");
     var copy = panel.querySelector("[data-role='copy']");
     var clear = panel.querySelector("[data-role='clear']");
-    var hideButtons = Array.prototype.slice.call(panel.querySelectorAll("[data-role='hide']"));
-    var walletName = panel.querySelector("[data-role='wallet-name']");
-    var mobilePassword = panel.querySelector("[data-role='mobile-password']");
-    function latestPayload() {
-      return {
-        mnemonic: payload.mnemonic,
-        walletName: text(walletName && walletName.value) || payload.walletName || "Do-Wallet"
-      };
-    }
     if (fill) {
       fill.addEventListener("click", function () {
         if (window.location.pathname.indexOf("/auth/recover") === -1) {
           window.location.href = "/auth/recover";
           return;
         }
-        var ok = fillImportForm(latestPayload(), { password: mobilePassword && mobilePassword.value });
-        if (ok) {
-          renderImportPanel("Seed phrase and wallet name filled. Continue in the import form.", { compact: true, autoHideMs: 2600 });
-        } else {
-          setText(panel.querySelector("p"), "The seed is ready, but the import fields are not visible yet.");
-        }
-      });
-    }
-    if (importButton) {
-      importButton.addEventListener("click", function () {
-        if (window.location.pathname.indexOf("/auth/recover") === -1) {
-          window.location.href = "/auth/recover";
-          return;
-        }
-        var pass = mobilePassword && mobilePassword.value;
-        if (!pass) {
-          setText(panel.querySelector("p"), "Enter a mobile wallet password first.");
-          if (mobilePassword) mobilePassword.focus();
-          return;
-        }
-        var ok = fillImportForm(latestPayload(), { password: pass, submit: true });
-        if (ok) {
-          renderImportPanel("Wallet details sent to the import form.", { compact: true, autoHideMs: 2200 });
-        } else {
-          setText(panel.querySelector("p"), "The seed is ready, but the import fields are not visible yet.");
-        }
+        var ok = fillImportForm(phrase);
+        setText(panel.querySelector("p"), ok ? "Seed phrase filled. Complete wallet name/password, then submit." : "The seed is ready, but the import fields are not visible yet.");
       });
     }
     if (copy) {
       copy.addEventListener("click", function () {
         try {
-          navigator.clipboard.writeText(payload.mnemonic);
+          navigator.clipboard.writeText(phrase);
           copy.textContent = "Copied";
         } catch (error) {}
       });
     }
-    hideButtons.forEach(function (button) {
-      button.addEventListener("click", hideImportPanel);
-    });
     if (clear) clear.addEventListener("click", clearPendingSeed);
   }
 
   function handlePendingMobileSeed() {
     var fresh = readSeedFromHash();
-    var payload = pendingPayload();
-    var phrase = fresh || (payload && payload.mnemonic);
-    if (!phrase || !payload) return;
+    var phrase = fresh || pendingSeed();
+    if (!phrase) return;
     if (window.location.pathname.indexOf("/auth/recover") === -1) {
-      renderImportPanel("Seed and wallet name received. Opening import form.", { compact: true, autoHideMs: 1800 });
+      renderImportPanel("Seed received. Continue to the import page on this phone.");
       window.setTimeout(function () {
-        if (pendingPayload()) window.location.href = "/auth/recover";
+        if (pendingSeed()) window.location.href = "/auth/recover";
       }, 650);
       return;
     }
@@ -6745,11 +7099,11 @@ runModule("do-wallet-v2-mobile-connect.js", function(){
     var attempts = 0;
     var tryFill = function () {
       attempts += 1;
-      if (fillImportForm(payload)) {
-        renderImportPanel("Seed phrase and wallet name filled. Continue in the import form.", { compact: true, autoHideMs: 2600 });
+      if (fillImportForm(phrase)) {
+        renderImportPanel("Seed phrase filled. Complete wallet name/password, then submit.");
         return true;
       }
-      if (attempts === 1) renderImportPanel("Waiting for the import fields to appear.", { compact: true });
+      if (attempts === 1) renderImportPanel("Waiting for the import fields to appear.");
       return false;
     };
     if (tryFill()) return;

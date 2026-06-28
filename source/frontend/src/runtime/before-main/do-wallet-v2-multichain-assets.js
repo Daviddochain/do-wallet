@@ -59,11 +59,10 @@
     TRUSTED_PUBLIC_STORAGE_KEYS[key] = true;
     TRUSTED_PUBLIC_STORAGE_KEYS[String(key).toLowerCase()] = true;
   });
-  var REMOVED_NETWORKS = ["dochain-1", "ares-1", "pisco-1", "localterra"];
-  var DISABLED_BROWSER_LCD_CHAINS = {};
+  var REMOVED_NETWORKS = ["dochain-1", "ares-1", "pisco-1", "localterra", "sentinelhub-2"];
   var REMOVED_ADDRESS_ALIASES = REMOVED_NETWORKS.slice();
   var STALE_NETWORK_ALIASES = ["dochain-1", "do-main-1", "dochain", "do", "888", "terra", "330", "lunc", "luna", "terra-classic"];
-  var DISPLAY_ALIAS_KEYS = ["address", "0", "60", "118", "144", "195", "330", "459", "501", "529", "888", "1815", "terra", "lunc", "luna", "terra-classic", "do", "dochain", "cosmos", "osmo", "eth", "evm", "ethereum", "eip155:1", "btc", "bitcoin", "bip122:000000000019d6689c085ae165831e93", "sol", "solana", "secret", "dungeon", "kava", "sent", "dvpn", "ada", "cardano", "trx", "tron", "xrp"];
+  var DISPLAY_ALIAS_KEYS = ["address", "0", "60", "118", "144", "195", "330", "501", "529", "888", "1815", "terra", "lunc", "luna", "terra-classic", "do", "dochain", "cosmos", "osmo", "eth", "evm", "ethereum", "eip155:1", "btc", "bitcoin", "bip122:000000000019d6689c085ae165831e93", "sol", "solana", "secret", "dungeon", "ada", "cardano", "trx", "tron", "xrp"];
   var PRIORITY_NETWORKS = [
     "Do-Chain",
     "columbus-5",
@@ -617,10 +616,7 @@
         host.endsWith(".do-wallet.com") ||
         host === "do-chain.com" ||
         host === "www.do-chain.com" ||
-        host.endsWith(".do-chain.com") ||
-        host === "localhost" ||
-        host === "127.0.0.1" ||
-        host === "::1"
+        host.endsWith(".do-chain.com")
       );
     } catch (error) {
       return false;
@@ -1225,7 +1221,6 @@
 
   function chainSupportsCosmosQueries(chain) {
     if (!isObject(chain)) return false;
-    if (DISABLED_BROWSER_LCD_CHAINS[String(chain.chainID || "")]) return false;
     if (chain.evm || chain.chainNamespace === "eip155" || chain.chainNamespace === "bip122" || chain.chainNamespace === "solana") return false;
     return Boolean(chain.prefix && (chain.lcd || chain.api || chain.rpc || chain.chainID === "Do-Chain"));
   }

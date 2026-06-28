@@ -4,7 +4,7 @@
   if (window.__doWalletDashboardOverviewAssets20260626) return;
   window.__doWalletDashboardOverviewAssets20260626 = true;
 
-  var VERSION = "20260628DashboardOverviewAssets3";
+  var VERSION = "20260626DashboardOverviewAssets2";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-dashboard-overview-assets-style";
@@ -230,8 +230,6 @@
       chainName: chainNameOf(asset) || clean(asset && asset.network) || chainID || symbol,
       denom: lower(asset && (asset.denom || asset.baseDenom || asset.token || symbol)),
       validator: lower(asset && (asset.validator || asset.validatorAddress || asset.validator_address || "")),
-      validatorCount: numberFrom(asset && (asset.validatorCount || asset.validatorsCount || asset.validator_count || 0)),
-      validators: Array.isArray(asset && asset.validators) ? asset.validators.map(lower).filter(Boolean) : [],
       icon: iconOf(asset, chainID),
       amount: amount,
       amountText: amountText,
@@ -334,132 +332,6 @@
     });
   }
 
-  function rewardRows() {
-    return rawRowsFromSnapshots("staking").filter(function (row) {
-      return row.category === "reward" || row.category === "rewards";
-    });
-  }
-
-  function sumRows(rows) {
-    return (Array.isArray(rows) ? rows : []).reduce(function (sum, row) {
-      return sum + (Number(row && row.value) || 0);
-    }, 0);
-  }
-
-  function addAddressValues(source, out) {
-    if (!isObject(source)) return;
-    Object.keys(source).forEach(function (key) {
-      var value = clean(source[key]);
-      if (value) out[value.toLowerCase()] = true;
-    });
-  }
-
-  function walletCountFromSnapshots() {
-    var count = 0;
-    collectSnapshots().forEach(function (snapshot) {
-      var addresses = {};
-      addAddressValues(snapshot.addresses, addresses);
-      addAddressValues(snapshot.activeAddresses, addresses);
-      addAddressValues(snapshot.allAddresses, addresses);
-      addAddressValues(snapshot.addressMap, addresses);
-      count = Math.max(count, Object.keys(addresses).length);
-      count = Math.max(count, Number(snapshot.walletCount || snapshot.addressCount || 0) || 0);
-    });
-    return count;
-  }
-
-  function existingWalletCount() {
-    var match = bodyText(document.body).match(/(\d+)\s+wallets?,\s*\d+\s+assets?,\s*\d+\s+validators?/i);
-    return match ? Number(match[1]) || 0 : 0;
-  }
-
-  function addValidator(value, seen) {
-    value = lower(value);
-    if (value) seen[value] = true;
-  }
-
-  function addValidatorsFromRaw(raw, seen) {
-    if (!isObject(raw)) return;
-    addValidator(raw.validator, seen);
-    addValidator(raw.validatorAddress, seen);
-    addValidator(raw.validator_address, seen);
-    if (Array.isArray(raw.validators)) raw.validators.forEach(function (validator) { addValidator(validator, seen); });
-    if (isObject(raw.validatorBreakdown)) {
-      ["delegations", "delegationsByAddress", "unbondings", "unbondingsByAddress", "rewards", "rewardsByAddress"].forEach(function (key) {
-        var value = raw.validatorBreakdown[key];
-        if (Array.isArray(value)) value.forEach(function (entry) { addValidatorsFromRaw(entry, seen); });
-        else if (isObject(value)) Object.keys(value).forEach(function (subKey) {
-          addValidator(subKey, seen);
-          addValidatorsFromRaw(value[subKey], seen);
-        });
-      });
-    }
-  }
-
-  function validatorCount(rows) {
-    var seen = {};
-    var fallback = 0;
-    (Array.isArray(rows) ? rows : []).forEach(function (row) {
-      addValidator(row && row.validator, seen);
-      if (Array.isArray(row && row.validators)) row.validators.forEach(function (validator) { addValidator(validator, seen); });
-      addValidatorsFromRaw(row && row.raw, seen);
-      fallback = Math.max(fallback, Number(row && row.validatorCount) || 0);
-    });
-    return Math.max(Object.keys(seen).length, fallback);
-  }
-
-  function dashboardMetrics() {
-    var assets = spendableRows();
-    var staked = stakingRows();
-    var rewards = rewardRows();
-    var unbonding = unbondingRows();
-    var stakedValue = sumRows(staked);
-    var rewardsValue = sumRows(rewards);
-    var unbondingValue = sumRows(unbonding);
-    var availableValue = sumRows(assets);
-    return {
-      assets: assets,
-      staked: staked,
-      rewards: rewards,
-      unbonding: unbonding,
-      assetCount: assets.length,
-      walletCount: walletCountFromSnapshots() || existingWalletCount(),
-      validatorCount: validatorCount(staked.concat(rewards).concat(unbonding)),
-      availableValue: availableValue,
-      stakedValue: stakedValue,
-      rewardsValue: rewardsValue,
-      unbondingValue: unbondingValue,
-      totalValue: availableValue + stakedValue + rewardsValue + unbondingValue
-    };
-  }
-
-  function textNodes(root) {
-    var out = [];
-    if (!root) return out;
-    try {
-      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode: function (node) {
-          return clean(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-        }
-      });
-      while (walker.nextNode()) out.push(walker.currentNode);
-    } catch (error) {}
-    return out;
-  }
-
-  function isMoneyText(value) {
-    value = clean(value);
-    return /^\$-?$/.test(value) || /^\$\s?-?[\d,]+(?:\.\d+)?$/.test(value);
-  }
-
-  function isNumberText(value) {
-    return /^\d+(?:,\d{3})*$/.test(clean(value));
-  }
-
-  function isDecimalTail(value) {
-    return /^\.\d+$/.test(clean(value));
-  }
-
   function visible(node) {
     if (!node || !node.getBoundingClientRect) return false;
     var rect = node.getBoundingClientRect();
@@ -527,119 +399,6 @@
       var br = b.getBoundingClientRect();
       return (ar.width * ar.height) - (br.width * br.height);
     })[0] || null;
-  }
-
-  function findPortfolioSummaryCard() {
-    if (!isDashboardRoute()) return null;
-    var candidates = [];
-    Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,strong,span,small,div")).forEach(function (node) {
-      if (!textMatches(node, "DO-WALLET OVERVIEW")) return;
-      var parent = node.parentElement;
-      for (var depth = 0; parent && parent !== document.body && depth < 8; depth += 1) {
-        if (visible(parent)) {
-          var text = lower(bodyText(parent));
-          if (text.indexOf("staked") >= 0 && text.indexOf("rewards") >= 0 && text.indexOf("unbonding") >= 0) candidates.push(parent);
-        }
-        parent = parent.parentElement;
-      }
-    });
-    return candidates.filter(function (node, index, list) {
-      return list.indexOf(node) === index;
-    }).sort(function (a, b) {
-      var ar = a.getBoundingClientRect();
-      var br = b.getBoundingClientRect();
-      return (ar.width * ar.height) - (br.width * br.height);
-    })[0] || null;
-  }
-
-  function setFirstTextAfterLabel(root, label, matcher, value) {
-    var nodes = textNodes(root);
-    var labelIndex = -1;
-    for (var index = 0; index < nodes.length; index += 1) {
-      if (lower(nodes[index].nodeValue) === lower(label)) {
-        labelIndex = index;
-        break;
-      }
-    }
-    if (labelIndex < 0) return false;
-    for (var next = labelIndex + 1; next < Math.min(nodes.length, labelIndex + 12); next += 1) {
-      if (!matcher(nodes[next].nodeValue)) continue;
-      nodes[next].nodeValue = value;
-      if (isMoneyText(value) && nodes[next + 1] && isDecimalTail(nodes[next + 1].nodeValue)) nodes[next + 1].nodeValue = "";
-      return true;
-    }
-    return false;
-  }
-
-  function patchPortfolioSummary(metrics) {
-    var card = findPortfolioSummaryCard();
-    if (!card) return false;
-    var nodes = textNodes(card);
-    var changed = false;
-    for (var index = 0; index < nodes.length; index += 1) {
-      var value = clean(nodes[index].nodeValue);
-      if (/^\d+\s+wallets?,\s*\d+\s+assets?,\s*\d+\s+validators?$/i.test(value)) {
-        nodes[index].nodeValue = [
-          metrics.walletCount || 0,
-          (metrics.walletCount || 0) === 1 ? " wallet, " : " wallets, ",
-          metrics.assetCount,
-          metrics.assetCount === 1 ? " asset, " : " assets, ",
-          metrics.validatorCount,
-          metrics.validatorCount === 1 ? " validator" : " validators"
-        ].join("");
-        changed = true;
-        break;
-      }
-    }
-    changed = setFirstTextAfterLabel(card, "DO-WALLET OVERVIEW", isMoneyText, formatUSD(metrics.totalValue)) || changed;
-    changed = setFirstTextAfterLabel(card, "Staked", isMoneyText, formatUSD(metrics.stakedValue)) || changed;
-    changed = setFirstTextAfterLabel(card, "Rewards", isMoneyText, formatUSD(metrics.rewardsValue)) || changed;
-    changed = setFirstTextAfterLabel(card, "Unbonding", isMoneyText, formatUSD(metrics.unbondingValue)) || changed;
-    card.setAttribute("data-do-wallet-dashboard-summary", VERSION);
-    return changed;
-  }
-
-  function findMetricCard(label) {
-    var candidates = [];
-    Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,h4,strong,span,small,div,p")).forEach(function (node) {
-      if (!textMatches(node, label)) return;
-      var parent = node.parentElement;
-      for (var depth = 0; parent && parent !== document.body && depth < 7; depth += 1) {
-        if (visible(parent)) {
-          var rect = parent.getBoundingClientRect();
-          var text = lower(bodyText(parent));
-          if (text.indexOf(lower(label)) >= 0 && rect.width >= 160 && rect.width <= 420 && rect.height >= 80 && rect.height <= 230) candidates.push(parent);
-        }
-        parent = parent.parentElement;
-      }
-    });
-    return candidates.filter(function (node, index, list) {
-      return list.indexOf(node) === index;
-    }).sort(function (a, b) {
-      var ar = a.getBoundingClientRect();
-      var br = b.getBoundingClientRect();
-      return (ar.width * ar.height) - (br.width * br.height);
-    })[0] || null;
-  }
-
-  function patchMetricCard(label, matcher, value) {
-    var card = findMetricCard(label);
-    if (!card) return false;
-    var changed = setFirstTextAfterLabel(card, label, matcher, value);
-    card.setAttribute("data-do-wallet-dashboard-metric", lower(label).replace(/[^a-z0-9]+/g, "-"));
-    return changed;
-  }
-
-  function patchDashboardSummary(metrics) {
-    var changed = patchPortfolioSummary(metrics);
-    changed = patchMetricCard("Total assets", isMoneyText, formatUSD(metrics.totalValue)) || changed;
-    changed = patchMetricCard("Wallets", isNumberText, String(metrics.walletCount || 0)) || changed;
-    changed = patchMetricCard("Available", isMoneyText, formatUSD(metrics.availableValue)) || changed;
-    changed = patchMetricCard("Staked assets", isMoneyText, formatUSD(metrics.stakedValue)) || changed;
-    changed = patchMetricCard("Staking rewards", isMoneyText, formatUSD(metrics.rewardsValue)) || changed;
-    changed = patchMetricCard("Unbonding", isMoneyText, formatUSD(metrics.unbondingValue)) || changed;
-    changed = patchMetricCard("Validators", isNumberText, String(metrics.validatorCount || 0)) || changed;
-    return changed;
   }
 
   function iconHTML(row) {
@@ -727,12 +486,10 @@
     if (!document.body) return;
     if (!isDashboardRoute()) return;
     installStyle();
-    var metrics = dashboardMetrics();
-    var assets = metrics.assets;
-    var staked = metrics.staked;
-    var unbonding = metrics.unbonding;
+    var assets = spendableRows();
+    var staked = stakingRows();
+    var unbonding = unbondingRows();
     var changed = false;
-    changed = patchDashboardSummary(metrics) || changed;
     changed = renderCard(findOverviewCard("Assets", "All spendable balances"), "assets", "Assets", "All spendable balances", assets) || changed;
     changed = renderCard(findOverviewCard("Validators staked with", "Delegations across all chains"), "staking", "Validators staked with", "Delegations across all chains", staked) || changed;
     changed = renderCard(findOverviewCard("Unbonding", "Assets currently leaving staking"), "unbonding", "Unbonding", "Assets currently leaving staking", unbonding) || changed;
@@ -740,13 +497,9 @@
       window.__doWalletDashboardOverviewAssetsDebug = {
         version: VERSION,
         changed: changed,
-        assets: metrics.assetCount,
+        assets: assets.length,
         staking: staked.length,
-        rewards: metrics.rewards.length,
         unbonding: unbonding.length,
-        walletCount: metrics.walletCount,
-        validatorCount: metrics.validatorCount,
-        totalValue: metrics.totalValue,
         checkedAt: new Date().toISOString()
       };
     } catch (error) {}

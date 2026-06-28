@@ -252,20 +252,10 @@ const LCD_FALLBACKS = {
     'https://api.chihuahua.wtf',
     'https://rest.lavenderfive.com:443/chihuahua',
   ],
-  'dydx-mainnet-1': [
-    'https://lcd-dydx.tfl.foundation',
-    'https://dydx-rest.publicnode.com',
-    'https://dydx-api.polkachu.com',
-  ],
   'injective-1': [
     'https://injective-rest.publicnode.com',
     'https://injective-api.polkachu.com',
     'https://rest.lavenderfive.com:443/injective',
-  ],
-  'kava_2222-10': [
-    'https://lcd-kava.tfl.foundation',
-    'https://kava-rest.publicnode.com',
-    'https://api.data.kava.io',
   ],
   'migaloo-1': [
     'https://migaloo-rest.publicnode.com',
@@ -293,10 +283,6 @@ const LCD_FALLBACKS = {
   'stafihub-1': [
     'https://public-rest-rpc1.stafihub.io',
     'https://api.stafihub.nodestake.org',
-  ],
-  'sentinelhub-2': [
-    'https://lcd-sentinel.tfl.foundation',
-    'https://sentinel-rest.publicnode.com',
   ],
   'stargaze-1': [
     'https://rest.stargaze-apis.com',
@@ -4222,25 +4208,6 @@ const portfolioCollectFromWalletObject = (pairs, seen, chains, wallet, source) =
   })
 }
 
-const portfolioDoAddressFromCandidate = (address) => {
-  const raw = portfolioPublicAddress(address)
-  if (!raw) return ''
-  const recoded = recodeDoChainBech32Address(raw)
-  return /^do1[ac-hj-np-z02-9]{20,110}$/i.test(recoded) ? recoded : ''
-}
-
-const portfolioCollectDoChainAliasPairs = (pairs, seen, chains) => {
-  if (!chains?.['Do-Chain']) return
-  const candidates = pairs
-    .map((pair) => pair?.address)
-    .filter(Boolean)
-  candidates.forEach((address) => {
-    const doAddress = portfolioDoAddressFromCandidate(address)
-    if (!doAddress) return
-    portfolioAddPair(pairs, seen, chains, 'Do-Chain', doAddress, 'do-chain-address-alias')
-  })
-}
-
 const portfolioCollectPairs = (body, chains) => {
   const pairs = []
   const seen = new Set()
@@ -4249,7 +4216,6 @@ const portfolioCollectPairs = (body, chains) => {
   ;(Array.isArray(body?.wallets) ? body.wallets : []).forEach((wallet, index) => {
     portfolioCollectFromWalletObject(pairs, seen, chains, wallet, `wallet-${index}`)
   })
-  portfolioCollectDoChainAliasPairs(pairs, seen, chains)
   return pairs
 }
 
