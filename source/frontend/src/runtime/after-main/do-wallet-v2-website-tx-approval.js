@@ -243,6 +243,142 @@
     }
   }
 
+  function bytesFromValue(value) {
+    if (value instanceof Uint8Array) return value;
+    if (Array.isArray(value)) return new Uint8Array(value);
+    if (value && typeof value.length === "number" && typeof value !== "string") {
+      try {
+        return new Uint8Array(value);
+      } catch (error) {}
+    }
+    var text = String(value === undefined || value === null ? "" : value);
+    if (window.TextEncoder) return new TextEncoder().encode(text);
+    var bytes = [];
+    text = unescape(encodeURIComponent(text));
+    for (var i = 0; i < text.length; i += 1) bytes.push(text.charCodeAt(i));
+    return new Uint8Array(bytes);
+  }
+
+  function bytesToHex(bytes) {
+    bytes = bytesFromValue(bytes);
+    var output = [];
+    for (var i = 0; i < bytes.length; i += 1) output.push(bytes[i].toString(16).padStart(2, "0"));
+    return output.join("");
+  }
+
+  function openBytesApproval(request, provider, initialPassword, submitter) {
+    ensureStyles();
+    var existing = document.getElementById(MODAL_ID);
+    if (existing) existing.remove();
+    request = isObject(request) ? request : { bytes: request };
+    var bytes = bytesFromValue(request.bytes !== undefined ? request.bytes : request.message);
+    var passwordRequired = needsPassword(provider);
+    var title = request.title || "Approve wallet proof";
+    var purpose = request.purpose || "Wallet ownership proof";
+    var message = request.message || request.display || "";
+    var modal = document.createElement("div");
+    modal.id = MODAL_ID;
+    modal.className = "dochain-webtx-overlay";
+    modal.innerHTML = [
+      "<section class=\"dochain-webtx-panel\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"dochain-webtx-title\">",
+      "<header class=\"dochain-webtx-head\">",
+      "<p class=\"dochain-webtx-origin\">" + escapeHtml(window.location.origin) + "</p>",
+      "<h2 id=\"dochain-webtx-title\" class=\"dochain-webtx-title\">" + escapeHtml(title) + "</h2>",
+      "</header>",
+      "<div class=\"dochain-webtx-body\">",
+      "<div class=\"dochain-webtx-grid\">",
+      "<div class=\"dochain-webtx-label\">Purpose</div><div class=\"dochain-webtx-value\">" + escapeHtml(purpose) + "</div>",
+      request.account ? "<div class=\"dochain-webtx-label\">Account</div><div class=\"dochain-webtx-value\">" + escapeHtml(short(request.account, 12)) + "</div>" : "",
+      "<div class=\"dochain-webtx-label\">Bytes</div><div class=\"dochain-webtx-value\">" + escapeHtml(String(bytes.length)) + "</div>",
+      "</div>",
+      "<details class=\"dochain-webtx-details\" open><summary>Message to sign</summary><pre>" + escapeHtml(message || bytesToHex(bytes)) + "</pre></details>",
+      "<p class=\"dochain-webtx-msg\">This signature proves wallet ownership only. It does not send coins or broadcast a transaction.</p>",
+      passwordRequired ? "<div class=\"dochain-webtx-field\"><label for=\"dochain-webtx-password\">Password</label><input id=\"dochain-webtx-password\" type=\"password\" autocomplete=\"current-password\" /></div>" : "",
+      "<div class=\"dochain-webtx-error\" role=\"alert\"></div>",
+      "<div class=\"dochain-webtx-actions\"><button type=\"button\" class=\"dochain-webtx-deny\">Deny</button><button type=\"button\" class=\"dochain-webtx-post\">Sign</button></div>",
+      "</div>",
+      "</section>",
+    ].join("");
+    document.body.appendChild(modal);
+
+    return new Promise(function (resolve, reject) {
+      var password = modal.querySelector("#dochain-webtx-password");
+      var deny = modal.querySelector(".dochain-webtx-deny");
+      var post = modal.querySelector(".dochain-webtx-post");
+      var error = modal.querySelector(".dochain-webtx-error");
+      var closed = false;
+
+      function close() {
+        closed = true;
+        window.removeEventListener("keydown", onKeydown, true);
+        if (modal.parentNode) modal.parentNode.removeChild(modal);
+      }
+
+      function setBusy(busy) {
+        post.disabled = busy || (passwordRequired && !String(password && password.value || "").trim());
+        deny.disabled = busy;
+        post.textContent = busy ? "Signing..." : "Sign";
+      }
+
+      function setError(message) {
+        error.textContent = message || "";
+      }
+
+      function onInput() {
+        setBusy(false);
+      }
+
+      function onKeydown(event) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+          reject(new Error("Signature declined"));
+        }
+      }
+
+      deny.addEventListener("click", function () {
+        close();
+        reject(new Error("Signature declined"));
+      });
+
+      post.addEventListener("click", function () {
+        if (closed) return;
+        var passwordValue = passwordRequired ? String(password && password.value || "").trim() : String(initialPassword || "");
+        if (passwordRequired && !passwordValue) {
+          setError("Enter your wallet password to sign this proof.");
+          setBusy(false);
+          return;
+        }
+        setError("");
+        setBusy(true);
+        Promise.resolve()
+          .then(function () {
+            if (!getProvider()) throw new Error("Website wallet signer is unavailable. Refresh the wallet and try again.");
+            return submitter(bytes, passwordValue);
+          })
+          .then(function (result) {
+            close();
+            resolve(result);
+          })
+          .catch(function (error) {
+            setError((error && error.message) || "Signature was not created.");
+            setBusy(false);
+            if (password) password.focus();
+          });
+      });
+
+      if (password) {
+        password.value = initialPassword || "";
+        password.addEventListener("input", onInput);
+        window.setTimeout(function () { password.focus(); }, 0);
+      } else {
+        window.setTimeout(function () { post.focus(); }, 0);
+      }
+      window.addEventListener("keydown", onKeydown, true);
+      setBusy(false);
+    });
+  }
+
   function openApproval(tx, provider, initialPassword, submitter) {
     ensureStyles();
     var existing = document.getElementById(MODAL_ID);
@@ -372,6 +508,14 @@
         });
       });
     },
+    signBytes: function (request, password) {
+      return waitForProvider().then(function (provider) {
+        if (typeof provider.signBytes !== "function") throw new Error("Website wallet signer cannot sign this proof.");
+        return openBytesApproval(request, provider, password, function (bytes, passwordValue) {
+          return provider.signBytes(bytes, passwordValue);
+        });
+      });
+    },
   };
 
   window.__doWalletWebsiteApproval = approval;
@@ -384,13 +528,16 @@
   function installFallbackProvider() {
     if (realExtensionProviderExists()) return;
     var current = isObject(window.doWallet) ? window.doWallet : {};
-    if (current[FALLBACK_MARKER] === true && typeof current.post === "function") return;
+    if (current[FALLBACK_MARKER] === true && typeof current.post === "function" && typeof current.signBytes === "function") return;
     current[FALLBACK_MARKER] = true;
     current.post = function (tx, password) {
       return approval.post(tx, password);
     };
     current.sign = function (tx, password) {
       return approval.sign(tx, password);
+    };
+    current.signBytes = function (request, password) {
+      return approval.signBytes(request, password);
     };
     current.isWebsiteFallback = true;
     window.doWallet = current;

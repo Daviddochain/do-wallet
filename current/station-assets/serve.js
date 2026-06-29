@@ -3002,10 +3002,12 @@ try {
 
 const MFA_BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 const MFA_APPROVAL_VERSION = 'dochain-mfa-v1'
+const MFA_CANCEL_VERSION = 'dochain-mfa-cancel-v1'
 const MFA_RATE_LIMIT = new Map()
 const MFA_RECOVERY_CODE_COUNT = 10
 const MFA_RECOVERY_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MFA_PENDING_SETUP_TTL_MS = 10 * 60 * 1000
+const MFA_CANCEL_CHALLENGE_TTL_MS = 5 * 60 * 1000
 const MFA_RECOVERY_REUSE_WINDOW_MS = 10 * 60 * 1000
 const MFA_STORE_CIPHER_PREFIX = 'enc:v1:'
 
@@ -3208,10 +3210,11 @@ const readMfaStore = () => {
     const store = JSON.parse(fs.readFileSync(DOCHAIN_MFA_STORE, 'utf8'))
     store.accounts = store.accounts || {}
     store.pending_setups = store.pending_setups || {}
+    store.cancel_challenges = store.cancel_challenges || {}
     return store
   } catch (err) {
     if (err.code !== 'ENOENT') console.error('MFA store read failed:', err)
-    return { accounts: {}, pending_setups: {} }
+    return { accounts: {}, pending_setups: {}, cancel_challenges: {} }
   }
 }
 
@@ -3247,6 +3250,44 @@ const cleanupPendingSetups = (store) => {
   for (const [setupID, pending] of Object.entries(store.pending_setups || {})) {
     if (!pending?.expires_at || Number(pending.expires_at) <= now) {
       delete store.pending_setups[setupID]
+      changed = true
+    }
+  }
+  return changed
+}
+
+const cleanupMfaCancelChallenges = (store) => {
+  const now = Date.now()
+  store.cancel_challenges = store.cancel_challenges || {}
+  let changed = false
+  for (const [challengeID, challenge] of Object.entries(store.cancel_challenges)) {
+    if (!challenge?.expires_at || Number(challenge.expires_at) <= now) {
+      delete store.cancel_challenges[challengeID]
+      changed = true
+    }
+  }
+  return changed
+}
+
+const pruneMfaCancelChallengesForAccount = (store, account, keep = 3) => {
+  store.cancel_challenges = store.cancel_challenges || {}
+  const entries = Object.entries(store.cancel_challenges)
+    .filter(([, challenge]) => challenge?.account === account)
+    .sort(([, a], [, b]) => Number(b?.expires_at || 0) - Number(a?.expires_at || 0))
+  let changed = false
+  for (const [challengeID] of entries.slice(keep)) {
+    delete store.cancel_challenges[challengeID]
+    changed = true
+  }
+  return changed
+}
+
+const clearMfaCancelChallengesForAccount = (store, account) => {
+  store.cancel_challenges = store.cancel_challenges || {}
+  let changed = false
+  for (const [challengeID, challenge] of Object.entries(store.cancel_challenges)) {
+    if (challenge?.account === account) {
+      delete store.cancel_challenges[challengeID]
       changed = true
     }
   }
@@ -3482,6 +3523,94 @@ const queryOnChainMfaPolicy = async (account) => {
   return {
     active: policy?.enabled !== false && policy?.account === account,
     policy,
+  }
+}
+
+const requirePendingOnlyMfa = async (account) => {
+  let chainPolicy
+  try {
+    chainPolicy = await queryOnChainMfaPolicy(account)
+  } catch (err) {
+    err.statusCode = 503
+    err.publicMessage = 'Unable to confirm on-chain MFA status. Try again in a moment.'
+    throw err
+  }
+  if (chainPolicy.active) {
+    const err = new Error('On-chain MFA is active for this account. Disable MFA with a valid MFA approval instead.')
+    err.statusCode = 409
+    err.publicMessage = err.message
+    throw err
+  }
+  return chainPolicy
+}
+
+const makeMfaCancelChallengeMessage = ({ account, challengeID, expiresAt }) =>
+  [
+    'Do-Wallet pending MFA cancellation',
+    `Version: ${MFA_CANCEL_VERSION}`,
+    `Account: ${account}`,
+    `Challenge: ${challengeID}`,
+    `Expires: ${expiresAt}`,
+    'This signature only removes a pending Do-Wallet service MFA setup when Do Chain MFA is not active on-chain.',
+  ].join('\n')
+
+const decodeMfaProofBytes = (value) => {
+  if (Buffer.isBuffer(value)) return value
+  if (ArrayBuffer.isView(value)) return Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+  if (Array.isArray(value)) return Buffer.from(value)
+  if (value && typeof value === 'object') {
+    for (const key of ['value', 'key', 'bytes', 'data', 'signature', 'public_key', 'publicKey']) {
+      if (value[key] !== undefined) return decodeMfaProofBytes(value[key])
+    }
+  }
+  const raw = String(value || '').trim()
+  if (!raw) return Buffer.alloc(0)
+  const hex = raw.startsWith('0x') ? raw.slice(2) : raw
+  if (/^[a-f0-9]+$/i.test(hex) && hex.length % 2 === 0) return Buffer.from(hex, 'hex')
+  try {
+    const normalized = raw.replace(/-/g, '+').replace(/_/g, '/')
+    return Buffer.from(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '='), 'base64')
+  } catch (_) {
+    return Buffer.from(raw, 'utf8')
+  }
+}
+
+const normalizeMfaWalletSignature = (value) => {
+  if (!secp256k1) throw new Error('MFA signing dependency unavailable')
+  const signature = decodeMfaProofBytes(value)
+  if (signature.length === 64) return signature
+  if (signature.length > 64 && typeof secp256k1.signatureImport === 'function') {
+    return Buffer.from(secp256k1.signatureImport(signature))
+  }
+  throw new Error('Invalid wallet signature')
+}
+
+const normalizeMfaWalletPubKey = (value) => {
+  if (!secp256k1) throw new Error('MFA signing dependency unavailable')
+  const pubKey = decodeMfaProofBytes(value)
+  if (!secp256k1.publicKeyVerify(pubKey)) throw new Error('Invalid wallet public key')
+  return Buffer.from(secp256k1.publicKeyConvert(pubKey, true))
+}
+
+const doAddressFromSecp256k1PubKey = (pubKey) => {
+  if (!cosmjsToBech32) throw new Error('Do Chain address encoder unavailable')
+  const compressed = normalizeMfaWalletPubKey(pubKey)
+  const sha = crypto.createHash('sha256').update(compressed).digest()
+  const rawAddress = crypto.createHash('ripemd160').update(sha).digest()
+  return cosmjsToBech32('do', rawAddress)
+}
+
+const verifyMfaCancelWalletSignature = ({ account, message, signature, publicKey }) => {
+  if (!secp256k1) throw new Error('MFA signing dependency unavailable')
+  const normalizedSignature = normalizeMfaWalletSignature(signature)
+  const normalizedPubKey = normalizeMfaWalletPubKey(publicKey)
+  const signedAddress = doAddressFromSecp256k1PubKey(normalizedPubKey)
+  if (signedAddress.toLowerCase() !== String(account || '').toLowerCase()) {
+    throw new Error('Wallet signature does not match this Do Chain account')
+  }
+  const digest = crypto.createHash('sha256').update(Buffer.from(String(message || ''), 'utf8')).digest()
+  if (!secp256k1.ecdsaVerify(normalizedSignature, digest, normalizedPubKey)) {
+    throw new Error('Invalid wallet signature')
   }
 }
 
@@ -3770,6 +3899,96 @@ app.post('/api/mfa/approval', async (req, res) => {
   } catch (err) {
     console.error('MFA approval failed:', err)
     mfaError(res, 500, 'MFA approval failed')
+  }
+})
+
+app.post('/api/mfa/remove/challenge', async (req, res) => {
+  try {
+    const account = String(req.body?.account || '').trim()
+    if (!isValidMfaAccount(account)) return mfaError(res, 400, 'Invalid account')
+    if (!rateLimitMfa(req, account)) return mfaError(res, 429, 'Too many MFA attempts')
+
+    const store = readMfaStore()
+    cleanupMfaCancelChallenges(store)
+    const record = store.accounts[account]
+    if (!record) {
+      writeMfaStore(store)
+      return mfaError(res, 404, 'MFA is not enrolled for this account')
+    }
+    await requirePendingOnlyMfa(account)
+
+    const challengeID = crypto.randomBytes(24).toString('base64url')
+    const expiresAt = Date.now() + MFA_CANCEL_CHALLENGE_TTL_MS
+    const message = makeMfaCancelChallengeMessage({ account, challengeID, expiresAt })
+    store.cancel_challenges[challengeID] = {
+      account,
+      message,
+      expires_at: expiresAt,
+      created_at: new Date().toISOString(),
+    }
+    pruneMfaCancelChallengesForAccount(store, account)
+    writeMfaStore(store)
+
+    res.json({
+      account,
+      challenge_id: challengeID,
+      expires_at: expiresAt,
+      message,
+      version: MFA_CANCEL_VERSION,
+      encoding: 'utf8',
+    })
+  } catch (err) {
+    console.error('MFA remove challenge failed:', err)
+    mfaError(res, err.statusCode || 500, err.publicMessage || 'MFA remove challenge failed')
+  }
+})
+
+app.post('/api/mfa/remove/wallet-signature', async (req, res) => {
+  try {
+    const account = String(req.body?.account || '').trim()
+    const challengeID = String(req.body?.challenge_id || req.body?.challengeId || '').trim()
+    const signature = req.body?.signature || req.body?.proof?.signature
+    const publicKey =
+      req.body?.public_key ||
+      req.body?.publicKey ||
+      req.body?.pub_key ||
+      req.body?.proof?.public_key ||
+      req.body?.proof?.publicKey ||
+      req.body?.proof?.pub_key
+
+    if (!isValidMfaAccount(account)) return mfaError(res, 400, 'Invalid account')
+    if (!challengeID) return mfaError(res, 400, 'Missing cancellation challenge')
+    if (!signature || !publicKey) return mfaError(res, 400, 'Missing wallet signature proof')
+    if (!rateLimitMfa(req, account)) return mfaError(res, 429, 'Too many MFA attempts')
+
+    const store = readMfaStore()
+    cleanupMfaCancelChallenges(store)
+    const record = store.accounts[account]
+    if (!record) {
+      writeMfaStore(store)
+      return res.json({ account, removed: false })
+    }
+    const challenge = store.cancel_challenges?.[challengeID]
+    if (!challenge || challenge.account !== account || Number(challenge.expires_at) <= Date.now()) {
+      writeMfaStore(store)
+      return mfaError(res, 400, 'MFA cancellation challenge expired. Try again.')
+    }
+
+    await requirePendingOnlyMfa(account)
+    verifyMfaCancelWalletSignature({
+      account,
+      message: challenge.message,
+      signature,
+      publicKey,
+    })
+
+    delete store.accounts[account]
+    clearMfaCancelChallengesForAccount(store, account)
+    writeMfaStore(store)
+    res.json({ account, removed: true, verified_by_wallet: true })
+  } catch (err) {
+    console.error('MFA wallet-signature remove failed:', err)
+    mfaError(res, err.statusCode || 500, err.publicMessage || err.message || 'MFA wallet-signature remove failed')
   }
 })
 

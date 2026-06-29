@@ -308,12 +308,15 @@
     panel.innerHTML =
       '<div class="dochain-mfa-panel dochain-mfa-cancel-panel">' +
       '<h3>Cancel pending MFA setup</h3>' +
-      '<p>MFA exists in the Do-Wallet service for this address, but it is not active on-chain. If you do not want to activate it, remove the pending service setup with your authenticator code or one recovery code.</p>' +
+      '<p>MFA exists in the Do-Wallet service for this address, but it is not active on-chain. Remove the pending service setup with your authenticator code, one recovery code, or a wallet ownership signature.</p>' +
       '<div class="dochain-mfa-grid dochain-mfa-cancel-grid">' +
       '<label class="dochain-mfa-field"><span>Authenticator code</span><input class="dochain-mfa-input" inputmode="numeric" autocomplete="one-time-code" data-role="cancel-code" placeholder="123456"></label>' +
       '<label class="dochain-mfa-field"><span>Recovery code</span><input class="dochain-mfa-input" data-role="cancel-recovery" placeholder="Optional"></label>' +
       '</div>' +
-      '<div class="dochain-mfa-actions"><button class="dochain-mfa-secondary dochain-mfa-danger" type="button" data-action="cancel-service-mfa">Cancel pending setup</button></div>' +
+      '<div class="dochain-mfa-actions">' +
+      '<button class="dochain-mfa-secondary dochain-mfa-danger" type="button" data-action="cancel-service-mfa">Cancel with code</button>' +
+      '<button class="dochain-mfa-secondary" type="button" data-action="cancel-service-mfa-wallet">Cancel with wallet proof</button>' +
+      '</div>' +
       '</div>'
   }
 
@@ -324,6 +327,70 @@
   function getWalletPoster() {
     var wallet = window.doWallet
     return wallet && typeof wallet.post === 'function' ? wallet : null
+  }
+
+  function getWalletByteSigner() {
+    var wallet = window.doWallet
+    return wallet && typeof wallet.signBytes === 'function' ? wallet : null
+  }
+
+  function waitForWalletByteSigner() {
+    return new Promise(function (resolve, reject) {
+      var started = Date.now()
+      ;(function check() {
+        var signer = getWalletByteSigner()
+        if (signer) {
+          resolve(signer)
+          return
+        }
+        if (Date.now() - started > 6500) {
+          reject(new Error('Website wallet proof signer is still loading. Refresh the wallet and try again.'))
+          return
+        }
+        window.setTimeout(check, 100)
+      })()
+    })
+  }
+
+  function bytesFromText(value) {
+    var text = String(value || '')
+    if (window.TextEncoder) return new TextEncoder().encode(text)
+    text = unescape(encodeURIComponent(text))
+    var bytes = []
+    for (var i = 0; i < text.length; i += 1) bytes.push(text.charCodeAt(i))
+    return new Uint8Array(bytes)
+  }
+
+  async function signCancelChallengeWithWallet(account, challenge) {
+    var signer = await waitForWalletByteSigner()
+    var request = {
+      account: account,
+      title: 'Approve pending MFA cancellation',
+      purpose: 'Cancel pending Do-Wallet service MFA',
+      message: challenge.message,
+      bytes: bytesFromText(challenge.message),
+    }
+    requestWalletPopup()
+    var signed
+    try {
+      signed = await Promise.race([
+        signer.signBytes(request),
+        new Promise(function (_, reject) {
+          window.setTimeout(function () {
+            reject(new Error('Wallet proof request did not complete. Check for a hidden wallet prompt, then try again.'))
+          }, 45000)
+        }),
+      ])
+    } catch (firstError) {
+      if (!/bytes|buffer|array|signature/i.test(firstError && firstError.message || '')) throw firstError
+      signed = await signer.signBytes(request.bytes)
+    }
+    if (!signed || !signed.signature) throw new Error('Wallet did not return a signature proof.')
+    return {
+      signature: signed.signature,
+      public_key: signed.public_key || signed.publicKey || signed.pub_key,
+      recid: signed.recid,
+    }
   }
 
   function requestWalletPopup() {
@@ -926,20 +993,7 @@
       if (recovery) body.recovery_code = recovery
       else body.code = code
       var result = await postJson('/remove', body)
-      clearAccountMfaStorage(account)
-      activeSetup = null
-      updateSetupPanel(null)
-      updateWalletApprovalPanel(false)
-      var status = {
-        account: account,
-        enrolled: false,
-        chain_policy_checked: true,
-        chain_policy_active: false,
-        recovery_codes_remaining: 0,
-      }
-      rememberStatus(account, status)
-      applyButtonStatus(document.getElementById(buttonId), account, status, false)
-      updateCancelPanel(account, status)
+      markPendingMfaCancelled(account)
       setStatus(
         result && result.removed
           ? 'Pending MFA setup removed. On-chain MFA was not active, so no chain transaction was needed.'
@@ -948,6 +1002,56 @@
       )
     } catch (error) {
       setStatus(error.message || 'Could not cancel pending MFA setup.', 'error')
+    }
+  }
+
+  function markPendingMfaCancelled(account) {
+    clearAccountMfaStorage(account)
+    activeSetup = null
+    updateSetupPanel(null)
+    updateWalletApprovalPanel(false)
+    var status = {
+      account: account,
+      enrolled: false,
+      chain_policy_checked: true,
+      chain_policy_active: false,
+      recovery_codes_remaining: 0,
+    }
+    rememberStatus(account, status)
+    applyButtonStatus(document.getElementById(buttonId), account, status, false)
+    updateCancelPanel(account, status)
+  }
+
+  async function cancelPendingMfaSetupWithWallet() {
+    var account = currentFormValue('account')
+    if (!account) {
+      setStatus('Enter a Do Chain account first.', 'error')
+      return
+    }
+    setStatus('Creating a wallet ownership proof challenge...')
+    try {
+      var challenge = await postJson('/remove/challenge', { account: account })
+      setStatus('Approve the wallet proof to remove the pending service MFA setup.')
+      var proof = await signCancelChallengeWithWallet(account, challenge)
+      if (!proof.public_key) throw new Error('Wallet proof did not include a public key.')
+      setStatus('Verifying wallet proof...')
+      var result = await postJson('/remove/wallet-signature', {
+        account: account,
+        challenge_id: challenge.challenge_id,
+        signature: proof.signature,
+        public_key: proof.public_key,
+        recid: proof.recid,
+      })
+      markPendingMfaCancelled(account)
+      setStatus(
+        result && result.removed
+          ? 'Pending MFA setup removed. The wallet signature proved ownership; no chain transaction was needed because on-chain MFA was not active.'
+          : 'No pending MFA setup was found for this address.',
+        'success'
+      )
+    } catch (error) {
+      updateWalletApprovalPanel(false)
+      setStatus(error.message || 'Could not cancel pending MFA setup with wallet proof.', 'error')
     }
   }
 
@@ -985,6 +1089,7 @@
       if (action === 'check') checkStatus()
       if (action === 'enable') enableMfa()
       if (action === 'cancel-service-mfa') cancelPendingMfaSetup()
+      if (action === 'cancel-service-mfa-wallet') cancelPendingMfaSetupWithWallet()
       if (action === 'open-wallet') {
         requestWalletPopup()
         setStatus('Opening Do-Wallet. Approve the signing request there.')
