@@ -285,6 +285,38 @@
     return Boolean(status && status.chain_policy_checked && status.chain_policy_active)
   }
 
+  function isPendingServiceMfa(status) {
+    return Boolean(status && status.enrolled && status.chain_policy_checked && !status.chain_policy_active)
+  }
+
+  function clearAccountMfaStorage(account) {
+    if (!account) return
+    try {
+      window.localStorage.removeItem(enabledKey(account))
+      window.localStorage.removeItem(setupKey(account))
+      window.localStorage.removeItem(pendingSetupKey(account))
+    } catch (error) {}
+  }
+
+  function updateCancelPanel(account, status) {
+    var panel = document.querySelector('#' + modalId + ' [data-role="cancel-panel"]')
+    if (!panel) return
+    if (!account || !isPendingServiceMfa(status)) {
+      panel.innerHTML = ''
+      return
+    }
+    panel.innerHTML =
+      '<div class="dochain-mfa-panel dochain-mfa-cancel-panel">' +
+      '<h3>Cancel pending MFA setup</h3>' +
+      '<p>MFA exists in the Do-Wallet service for this address, but it is not active on-chain. If you do not want to activate it, remove the pending service setup with your authenticator code or one recovery code.</p>' +
+      '<div class="dochain-mfa-grid dochain-mfa-cancel-grid">' +
+      '<label class="dochain-mfa-field"><span>Authenticator code</span><input class="dochain-mfa-input" inputmode="numeric" autocomplete="one-time-code" data-role="cancel-code" placeholder="123456"></label>' +
+      '<label class="dochain-mfa-field"><span>Recovery code</span><input class="dochain-mfa-input" data-role="cancel-recovery" placeholder="Optional"></label>' +
+      '</div>' +
+      '<div class="dochain-mfa-actions"><button class="dochain-mfa-secondary dochain-mfa-danger" type="button" data-action="cancel-service-mfa">Cancel pending setup</button></div>' +
+      '</div>'
+  }
+
   function sleep(ms) {
     return new Promise(function (resolve) { window.setTimeout(resolve, ms) })
   }
@@ -643,6 +675,10 @@
       '.dochain-mfa-primary{border:1px solid #f59e0b;background:#f59e0b;color:#130a04}',
       '.dochain-mfa-primary:disabled{opacity:.5;cursor:not-allowed}',
       '.dochain-mfa-secondary{border:1px solid #5f2f95;background:#241936;color:#fff}',
+      '.dochain-mfa-danger{border-color:#ef4444;background:#2a1018;color:#ffd5dc}',
+      '.dochain-mfa-danger:hover{background:#43131f;border-color:#fb7185}',
+      '.dochain-mfa-cancel-panel{margin-top:12px}',
+      '.dochain-mfa-cancel-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin:10px 0}',
       '.dochain-mfa-qr{display:flex;align-items:center;gap:14px;border:1px solid #4b276d;border-radius:8px;background:#080411;padding:12px;margin:8px 0}',
       '.dochain-mfa-qr img{width:164px;height:164px;flex:0 0 auto;border-radius:8px;background:#fff;padding:8px;box-sizing:border-box}',
       '.dochain-mfa-qr p{margin:0;color:#cfbfed;font-size:13px;line-height:1.42}',
@@ -653,7 +689,7 @@
       '.dochain-mfa-success{color:#a7f3d0}',
       '.dochain-mfa-codes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}',
       '.dochain-mfa-code{border:1px solid #3b2454;border-radius:8px;background:#0c0714;padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#fff}',
-      '@media (max-width:760px){.dochain-mfa-grid{grid-template-columns:1fr}.dochain-mfa-head{padding:18px}.dochain-mfa-body{padding:18px}.dochain-mfa-codes{grid-template-columns:1fr}.dochain-mfa-title{font-size:23px}.dochain-mfa-qr{align-items:flex-start;flex-direction:column}.dochain-mfa-identity{padding-right:0}.dochain-mfa-button{position:static;margin-top:10px}.dochain-mfa-title-fallback,.dochain-mfa-chain-pill-fallback{margin-left:0;margin-top:10px}}',
+      '@media (max-width:760px){.dochain-mfa-grid,.dochain-mfa-cancel-grid{grid-template-columns:1fr}.dochain-mfa-head{padding:18px}.dochain-mfa-body{padding:18px}.dochain-mfa-codes{grid-template-columns:1fr}.dochain-mfa-title{font-size:23px}.dochain-mfa-qr{align-items:flex-start;flex-direction:column}.dochain-mfa-identity{padding-right:0}.dochain-mfa-button{position:static;margin-top:10px}.dochain-mfa-title-fallback,.dochain-mfa-chain-pill-fallback{margin-left:0;margin-top:10px}}',
     ].join('')
     document.head.appendChild(style)
   }
@@ -737,6 +773,7 @@
       '<div data-role="setup-panel"></div>' +
       '<div class="dochain-mfa-actions"><button class="dochain-mfa-primary" type="button" data-action="enable" disabled>Activate on-chain MFA</button></div>' +
       '<div class="dochain-mfa-status"></div>' +
+      '<div data-role="cancel-panel"></div>' +
       '<div data-role="wallet-panel"></div>' +
       '<div data-role="recovery-panel"></div>' +
       '</form>' +
@@ -797,10 +834,12 @@
     var status = await getStatus(account)
     if (!status) {
       setStatus('MFA status is unavailable right now.', 'error')
+      updateCancelPanel(account, null)
       return
     }
     rememberStatus(account, status)
     applyButtonStatus(document.getElementById(buttonId), account, status, false)
+    updateCancelPanel(account, status)
     var chainStatus = ''
     if (status.chain_policy_checked) {
       chainStatus = status.chain_policy_active
@@ -849,6 +888,7 @@
       await postEnableTransaction(account, code, setup, guardian, setStatus)
       var active = await waitForChainMfaActive(account, setStatus)
       if (active) {
+        updateCancelPanel(account, { enrolled: true, chain_policy_checked: true, chain_policy_active: true })
         setStatus('Do Chain MFA is active on-chain. Save the recovery codes before closing.', 'success')
       } else {
         setStatus('MFA service setup is complete, but the on-chain policy is not active yet. Press Check status after the transaction confirms.', 'error')
@@ -865,6 +905,49 @@
       activationAwaitingWallet = false
       enableBusy = false
       setEnableDisabled()
+    }
+  }
+
+  async function cancelPendingMfaSetup() {
+    var account = currentFormValue('account')
+    var code = currentFormValue('cancel-code').replace(/\s/g, '')
+    var recovery = currentFormValue('cancel-recovery')
+    if (!account) {
+      setStatus('Enter a Do Chain account first.', 'error')
+      return
+    }
+    if (!/^\d{6}$/.test(code) && !recovery) {
+      setStatus('Enter the current authenticator code or one recovery code to cancel the pending MFA setup.', 'error')
+      return
+    }
+    setStatus('Cancelling pending MFA setup...')
+    try {
+      var body = { account: account }
+      if (recovery) body.recovery_code = recovery
+      else body.code = code
+      var result = await postJson('/remove', body)
+      clearAccountMfaStorage(account)
+      activeSetup = null
+      updateSetupPanel(null)
+      updateWalletApprovalPanel(false)
+      var status = {
+        account: account,
+        enrolled: false,
+        chain_policy_checked: true,
+        chain_policy_active: false,
+        recovery_codes_remaining: 0,
+      }
+      rememberStatus(account, status)
+      applyButtonStatus(document.getElementById(buttonId), account, status, false)
+      updateCancelPanel(account, status)
+      setStatus(
+        result && result.removed
+          ? 'Pending MFA setup removed. On-chain MFA was not active, so no chain transaction was needed.'
+          : 'No pending MFA setup was found for this address.',
+        'success'
+      )
+    } catch (error) {
+      setStatus(error.message || 'Could not cancel pending MFA setup.', 'error')
     }
   }
 
@@ -901,6 +984,7 @@
       if (action === 'begin') beginSetup()
       if (action === 'check') checkStatus()
       if (action === 'enable') enableMfa()
+      if (action === 'cancel-service-mfa') cancelPendingMfaSetup()
       if (action === 'open-wallet') {
         requestWalletPopup()
         setStatus('Opening Do-Wallet. Approve the signing request there.')

@@ -307,7 +307,7 @@
         if (status.chain_policy_checked && !status.chain_policy_active) {
           clearLocalEnrollment(account)
           throw new Error(
-            'MFA is enrolled in the wallet service but is not active on-chain. Open Activate MFA and complete the on-chain activation signing request.',
+            'MFA setup exists in the Do-Wallet service, but it is not active on-chain. Open On-chain MFA to activate it, or choose Cancel pending MFA setup there to remove the service setup.',
           )
         }
         if (!status.chain_policy_checked) {
@@ -581,7 +581,8 @@
     if (document.querySelector('script[src*="do-wallet-v2-mfa-onboarding.js"]')) return
     const script = document.createElement('script')
     script.defer = true
-    script.src = '/static/js/do-wallet-v2-mfa-onboarding.js?v=20260623railStable2'
+    const build = window.__DO_WALLET_BUILD__ || 'latest'
+    script.src = `/static/js/do-wallet-v2-mfa-onboarding.js?v=${encodeURIComponent(build)}`
     document.head.appendChild(script)
   }
 
