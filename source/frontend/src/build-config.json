@@ -2,7 +2,7 @@
   "name": "Do-Wallet",
   "version": "2.0.0",
   "date": "2026-06-29",
-  "build": "20260629SourceRuntime99",
+  "build": "20260629SourceRuntime104",
   "storagePolicy": "preserve-client-local-storage",
   "activeTree": "source/frontend",
   "styles": [
@@ -49,6 +49,7 @@
     "do-wallet-v2-broadcasting-video.js",
     "do-wallet-v2-website-tx-approval.js",
     "do-wallet-v2-validator-header.js",
+    "do-wallet-v2-validator-delegated-column.js",
     "do-wallet-v2-hide-asset-contracts.js",
     "do-wallet-v2-burn-dodx.js",
     "do-wallet-v2-swap-redemption.js",
