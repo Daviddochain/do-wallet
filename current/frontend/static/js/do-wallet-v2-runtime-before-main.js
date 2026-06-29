@@ -13836,7 +13836,7 @@ runModule("do-wallet-v2-history-owned.js", function(){
   if (window.__doWalletHistoryOwned20260629) return;
   window.__doWalletHistoryOwned20260629 = true;
 
-  var VERSION = "20260629HistoryOwned3";
+  var VERSION = "20260629HistoryOwned4";
   var CACHE_KEY = "do-wallet-history-cache.v1";
   var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
   var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
@@ -14578,6 +14578,25 @@ runModule("do-wallet-v2-history-owned.js", function(){
       '<span>' + escapeHTML(chain.label) + "</span></button>";
   }
 
+  function dropdownChains(chains) {
+    var seen = Object.create(null);
+    var doMeta = metaForChain("Do-Chain") || { label: "Do Chain", icon: "" };
+    var ordered = [{ chainID: "Do-Chain", label: doMeta.label || "Do Chain", icon: doMeta.icon || "" }];
+    seen["Do-Chain"] = true;
+    chains.slice().sort(function (left, right) {
+      return clean(left.label).localeCompare(clean(right.label), undefined, { sensitivity: "base" });
+    }).forEach(function (chain) {
+      if (!chain || !chain.chainID || seen[chain.chainID]) return;
+      seen[chain.chainID] = true;
+      ordered.push(chain);
+    });
+    return ordered;
+  }
+
+  function optionHTML(value, label, active) {
+    return '<option value="' + escapeHTML(value) + '"' + (active ? " selected" : "") + ">" + escapeHTML(label) + "</option>";
+  }
+
   function rowHTML(row) {
     var status = row.ok ? "" : '<span class="do-wallet-history-status is-failed">Failed</span>';
     return '<a class="do-wallet-history-row" href="#" data-do-wallet-history-hash="' + escapeHTML(row.hash) + '">' +
@@ -14599,11 +14618,10 @@ runModule("do-wallet-v2-history-owned.js", function(){
   }
 
   function renderPage(host) {
-    var rows = selectedFilter === "all" ? currentRows : currentRows.filter(function (row) { return row.chainID === selectedFilter; });
     var chains = chainsForRows(currentRows);
-    if (selectedFilter !== "all" && !chains.some(function (chain) { return chain.chainID === selectedFilter; })) selectedFilter = "all";
-    var visibleChips = chains.slice(0, 6);
-    var moreCount = Math.max(0, chains.length - visibleChips.length);
+    var filterChains = dropdownChains(chains);
+    if (selectedFilter !== "all" && !filterChains.some(function (chain) { return chain.chainID === selectedFilter; })) selectedFilter = "all";
+    var rows = selectedFilter === "all" ? currentRows : currentRows.filter(function (row) { return row.chainID === selectedFilter; });
     var signature = VERSION + "|" + currentTargetKey + "|" + selectedFilter + "|" + currentLoading + "|" + currentError + "|" + currentRows.map(function (row) { return row.chainID + row.hash; }).join(",");
     if (host.getAttribute(SIGNATURE_ATTR) === signature) return;
     host.setAttribute(PAGE_ATTR, "1");
@@ -14615,9 +14633,13 @@ runModule("do-wallet-v2-history-owned.js", function(){
       '    <button type="button" class="do-wallet-history-refresh" data-do-wallet-history-refresh="1">Refresh</button>',
       '  </div>',
       '  <div class="do-wallet-history-filters">',
-      '    <button type="button" class="do-wallet-history-chip' + (selectedFilter === "all" ? " is-active" : "") + '" data-do-wallet-history-filter="all">All</button>',
-      visibleChips.map(function (chain) { return chipHTML(chain, selectedFilter === chain.chainID); }).join(""),
-      moreCount ? '<span class="do-wallet-history-more">+ ' + moreCount + '</span>' : "",
+      '    <label class="do-wallet-history-select-label" for="do-wallet-history-network-select">Network</label>',
+      '    <span class="do-wallet-history-select-wrap">',
+      '      <select id="do-wallet-history-network-select" class="do-wallet-history-select" data-do-wallet-history-filter-select="1">',
+      optionHTML("all", "All", selectedFilter === "all"),
+      filterChains.map(function (chain) { return optionHTML(chain.chainID, chain.label, selectedFilter === chain.chainID); }).join(""),
+      '      </select>',
+      '    </span>',
       '  </div>',
       '  <div class="do-wallet-history-card">',
       rows.length ? rows.map(rowHTML).join("") : statusHTML(),
@@ -14664,6 +14686,12 @@ runModule("do-wallet-v2-history-owned.js", function(){
       ".do-wallet-history-head h1{margin:0;font-size:36px;line-height:1.1;font-weight:var(--do-wallet-l1-font-weight,700);letter-spacing:0;}",
       ".do-wallet-history-refresh{border:0;border-radius:999px;background:#9d3df8;color:#fff;font:inherit;font-weight:var(--do-wallet-l1-font-weight,700);padding:11px 20px;cursor:pointer;}",
       ".do-wallet-history-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}",
+      ".do-wallet-history-select-label{font-size:13px;color:#c6bbed;font-weight:var(--do-wallet-l1-font-weight,700);}",
+      ".do-wallet-history-select-wrap{position:relative;display:inline-flex;align-items:center;min-width:260px;}",
+      ".do-wallet-history-select-wrap:after{content:'v';position:absolute;right:15px;top:50%;transform:translateY(-50%);color:#fff;pointer-events:none;font-size:13px;}",
+      ".do-wallet-history-select{width:100%;height:42px;appearance:none;-webkit-appearance:none;border:1px solid rgba(140,61,199,.62);border-radius:12px;background:#1e1730;color:#fff;padding:0 42px 0 16px;font:inherit;font-size:14px;font-weight:var(--do-wallet-l1-font-weight,700);outline:0;cursor:pointer;}",
+      ".do-wallet-history-select:focus{border-color:#9d3df8;box-shadow:0 0 0 2px rgba(157,61,248,.18);}",
+      ".do-wallet-history-select option{background:#171120;color:#fff;}",
       ".do-wallet-history-chip{height:30px;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(140,61,199,.5);border-radius:999px;background:transparent;color:#bdb2d1;padding:0 16px;font:inherit;font-size:13px;font-weight:var(--do-wallet-l1-font-weight,700);cursor:pointer;}",
       ".do-wallet-history-chip img{width:18px;height:18px;border-radius:50%;object-fit:cover;}",
       ".do-wallet-history-chip.is-active{background:#9d3df8;border-color:#9d3df8;color:#fff;}",
@@ -14684,7 +14712,7 @@ runModule("do-wallet-v2-history-owned.js", function(){
       ".do-wallet-history-empty{min-height:190px;display:grid;place-items:center;text-align:center;color:#fff;padding:28px;}",
       ".do-wallet-history-empty strong{display:block;font-size:15px;font-weight:var(--do-wallet-l1-font-weight,700);}",
       ".do-wallet-history-empty small{display:block;margin-top:8px;color:#c6bbed;font-size:12px;font-weight:var(--do-wallet-l1-font-weight,700);}",
-      "@media(max-width:760px){[" + PAGE_ATTR + "='1']{padding:26px 18px 80px}.do-wallet-history-head h1{font-size:30px}.do-wallet-history-refresh{padding:9px 14px}.do-wallet-history-row{padding:12px;gap:10px}.do-wallet-history-right{min-width:106px}.do-wallet-history-meta strong,.do-wallet-history-right strong{font-size:14px}.do-wallet-history-meta small,.do-wallet-history-right small{font-size:11px}}"
+      "@media(max-width:760px){[" + PAGE_ATTR + "='1']{padding:26px 18px 80px}.do-wallet-history-head h1{font-size:30px}.do-wallet-history-refresh{padding:9px 14px}.do-wallet-history-filters{align-items:stretch}.do-wallet-history-select-wrap{width:100%;min-width:0}.do-wallet-history-row{padding:12px;gap:10px}.do-wallet-history-right{min-width:106px}.do-wallet-history-meta strong,.do-wallet-history-right strong{font-size:14px}.do-wallet-history-meta small,.do-wallet-history-right small{font-size:11px}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -14749,6 +14777,14 @@ runModule("do-wallet-v2-history-owned.js", function(){
 
   patchHistory("pushState");
   patchHistory("replaceState");
+
+  document.addEventListener("change", function (event) {
+    var filterSelect = event.target && event.target.closest && event.target.closest("[data-do-wallet-history-filter-select]");
+    if (!filterSelect) return;
+    event.preventDefault();
+    selectedFilter = filterSelect.value || "all";
+    scheduleRender(0);
+  }, true);
 
   document.addEventListener("click", function (event) {
     var filterButton = event.target && event.target.closest && event.target.closest("[data-do-wallet-history-filter]");
