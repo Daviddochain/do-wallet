@@ -4,7 +4,7 @@
   if (window.__doWalletStakeOverview20260627) return;
   window.__doWalletStakeOverview20260627 = true;
 
-  var VERSION = "20260628-stake-overview-3";
+  var VERSION = "20260629-stake-overview-scroll-1";
   var SNAPSHOT_KEY = "do-wallet-portfolio-snapshot";
   var SNAPSHOTS_BY_WALLET_KEY = "do-wallet-portfolio-snapshots-by-wallet";
   var STYLE_ID = "do-wallet-stake-overview-style";
@@ -928,6 +928,13 @@
     return /^\/stake\/?$/i.test(path);
   }
 
+  function markStakeRoute() {
+    if (!document.documentElement) return;
+    var active = isStakeOverviewRoute();
+    document.documentElement.classList.toggle("do-wallet-stake-overview-route", active);
+    if (document.body) document.body.classList.toggle("do-wallet-stake-overview-route", active);
+  }
+
   function findExistingStakePage() {
     var existing = document.querySelector("[" + PAGE_ATTR + "]");
     return existing && document.body.contains(existing) ? existing : null;
@@ -1024,9 +1031,12 @@
     var style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = [
+      "html.do-wallet-stake-overview-route,html.do-wallet-stake-overview-route body{height:auto!important;min-height:100%!important;overflow-y:auto!important;}",
+      "html.do-wallet-stake-overview-route #root{height:auto!important;min-height:100vh!important;overflow:visible!important;}",
+      "html.do-wallet-stake-overview-route main,html.do-wallet-stake-overview-route [class*='Page_main__'],html.do-wallet-stake-overview-route [class*='Layout_main__'],html.do-wallet-stake-overview-route [class*='Layout_content__']{height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important;}",
       "[" + PAGE_ATTR + "]{display:block!important;width:100%!important;max-width:none!important;min-height:calc(100vh - 90px)!important;overflow:visible!important;padding:0!important;color:#fff!important;}",
       "[" + PAGE_ATTR + "] *{box-sizing:border-box;}",
-      ".do-wallet-stake-overview-page-shell{width:100%;min-width:0;padding:34px 32px 42px;}",
+      ".do-wallet-stake-overview-page-shell{width:100%;min-width:0;padding:34px 32px 96px;overflow:visible;}",
       ".do-wallet-stake-overview-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px;}",
       ".do-wallet-stake-overview-page-title h1{margin:0 0 8px;font-size:34px;line-height:1.1;font-weight:var(--bold,500);letter-spacing:0;color:#fff;}",
       ".do-wallet-stake-overview-page-title p{margin:0;color:#c9bbef;font-size:13px;line-height:1.4;font-weight:var(--bold,500);}",
@@ -1042,9 +1052,9 @@
       ".do-wallet-stake-overview-select-wrap{position:relative;display:inline-flex;min-width:270px;}",
       ".do-wallet-stake-overview-select{appearance:none;-webkit-appearance:none;width:100%;min-height:38px;padding:0 42px 0 16px;border:1px solid rgba(159,70,255,.52);border-radius:999px;background:#251b39;color:#fff;font:inherit;font-size:13px;font-weight:var(--bold,500);outline:none;cursor:pointer;}",
       ".do-wallet-stake-overview-select-wrap:after{content:'';position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid #c7b9ef;border-bottom:2px solid #c7b9ef;transform:translateY(-65%) rotate(45deg);pointer-events:none;}",
-      ".do-wallet-stake-overview-body{display:grid;grid-template-columns:minmax(260px,1fr) minmax(260px,390px);gap:30px;padding:26px 30px;}",
-      ".do-wallet-stake-overview-chart-wrap{min-height:260px;display:grid;place-items:center;}",
-      ".do-wallet-stake-overview-chart{width:min(230px,52vw);aspect-ratio:1;border-radius:50%;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);}",
+      ".do-wallet-stake-overview-body{display:grid;grid-template-columns:minmax(240px,1fr) minmax(260px,390px);gap:28px;padding:22px 30px;}",
+      ".do-wallet-stake-overview-chart-wrap{min-height:210px;display:grid;place-items:center;}",
+      ".do-wallet-stake-overview-chart{width:min(180px,42vw);aspect-ratio:1;border-radius:50%;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);}",
       ".do-wallet-stake-overview-chart:after{content:'';position:absolute;inset:28%;border-radius:50%;background:#181125;box-shadow:0 0 0 1px rgba(255,255,255,.03);}",
       ".do-wallet-stake-overview-legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:18px;justify-content:center;color:#c9bbef;font-size:13px;}",
       ".do-wallet-stake-overview-legend span{display:inline-flex;align-items:center;gap:7px;}",
@@ -1058,7 +1068,7 @@
       ".do-wallet-stake-overview-positions-head{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 30px;color:#fff;}",
       ".do-wallet-stake-overview-positions-head strong{font-size:16px;font-weight:var(--bold,500);}",
       ".do-wallet-stake-overview-positions-head small{color:#c9bbef;font-size:12px;font-weight:var(--bold,500);}",
-      ".do-wallet-stake-overview-list{max-height:360px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}",
+      ".do-wallet-stake-overview-list{max-height:none;overflow:visible;overscroll-behavior:auto;-webkit-overflow-scrolling:auto;padding-bottom:16px;}",
       ".do-wallet-stake-overview-row{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:76px;padding:14px 30px;border-top:1px solid rgba(159,70,255,.24);}",
       ".do-wallet-stake-overview-row-left{display:flex;align-items:center;gap:14px;min-width:0;}",
       ".do-wallet-stake-overview-row-left span{display:flex;flex-direction:column;gap:5px;min-width:0;}",
@@ -1070,7 +1080,7 @@
       ".do-wallet-stake-overview-icon,.do-wallet-stake-overview-icon-fallback{width:38px;height:38px;min-width:38px;border-radius:50%;object-fit:cover;background:#2c2140;}",
       ".do-wallet-stake-overview-icon-fallback{display:grid;place-items:center;color:#fff;font-size:10px;font-weight:var(--bold,500);}",
       ".do-wallet-stake-overview-empty{padding:26px 30px;border-top:1px solid rgba(159,70,255,.24);color:#c9bbef;font-size:14px;font-weight:var(--bold,500);}",
-      "@media(max-width:900px){.do-wallet-stake-overview-page-shell{padding:26px 20px 34px}.do-wallet-stake-overview-body{grid-template-columns:1fr}.do-wallet-stake-overview-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.do-wallet-stake-overview-chart-wrap{min-height:210px}}",
+      "@media(max-width:900px){.do-wallet-stake-overview-page-shell{padding:26px 20px 90px}.do-wallet-stake-overview-body{grid-template-columns:1fr}.do-wallet-stake-overview-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.do-wallet-stake-overview-chart-wrap{min-height:190px}}",
       "@media(max-width:640px){.do-wallet-stake-overview-page-head{flex-direction:column}.do-wallet-stake-overview-page-title h1{font-size:30px}.do-wallet-stake-overview-refresh{width:100%}.do-wallet-stake-overview-head,.do-wallet-stake-overview-filter,.do-wallet-stake-overview-body,.do-wallet-stake-overview-positions-head,.do-wallet-stake-overview-row{padding-left:18px;padding-right:18px}.do-wallet-stake-overview-head{flex-direction:column}.do-wallet-stake-overview-total{text-align:left}.do-wallet-stake-overview-filter{align-items:stretch;flex-direction:column}.do-wallet-stake-overview-select-wrap{min-width:0;width:100%}.do-wallet-stake-overview-summary{grid-template-columns:1fr}.do-wallet-stake-overview-row{gap:10px}.do-wallet-stake-overview-row-right{min-width:118px}.do-wallet-stake-overview-row-left strong,.do-wallet-stake-overview-row-right strong{font-size:14px}}"
     ].join("\n");
     document.head.appendChild(style);
@@ -1155,6 +1165,7 @@
 
   function update() {
     renderTimer = 0;
+    markStakeRoute();
     if (!document.body || !isStakeOverviewRoute()) return;
     installStyles();
     ensureDirectStakeRows();
@@ -1189,7 +1200,12 @@
     if (!event || event.key === SNAPSHOT_KEY || event.key === SNAPSHOTS_BY_WALLET_KEY) schedule(0);
   });
   if (window.MutationObserver) {
-    new MutationObserver(function () { schedule(); }).observe(document.documentElement, {
+    new MutationObserver(function () {
+      markStakeRoute();
+      if (!isStakeOverviewRoute()) return;
+      if (findExistingStakePage()) return;
+      schedule();
+    }).observe(document.documentElement, {
       childList: true,
       subtree: true
     });
