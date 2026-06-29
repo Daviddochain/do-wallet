@@ -4,7 +4,7 @@
   if (window.__doWalletHistoryOwned20260629) return;
   window.__doWalletHistoryOwned20260629 = true;
 
-  var VERSION = "20260629HistoryOwned2";
+  var VERSION = "20260629HistoryOwned3";
   var CACHE_KEY = "do-wallet-history-cache.v1";
   var SELECTED_WALLET_KEY = "do-wallet-selected-recovered-wallet.v1";
   var RECOVERED_WALLETS_KEY = "do-wallet-recovered-wallets.v1";
@@ -18,6 +18,7 @@
   var MAX_QUERY_TARGETS = 28;
   var MAX_QUERY_TARGETS_PER_CHAIN = 4;
   var renderTimer = 0;
+  var routeObserver = null;
   var requestToken = 0;
   var currentRows = [];
   var currentLoading = false;
@@ -177,6 +178,12 @@
 
   function routeIsHistory() {
     return (window.location.pathname || "").replace(/\/+$/, "").toLowerCase() === "/history";
+  }
+
+  function updateRouteBootFlag() {
+    if (!document.documentElement) return;
+    if (routeIsHistory()) document.documentElement.setAttribute("data-do-wallet-history-route", "1");
+    else document.documentElement.removeAttribute("data-do-wallet-history-route");
   }
 
   function walletFromPayload(payload) {
@@ -790,22 +797,25 @@
   function findPageHost() {
     var owned = document.querySelector("[" + PAGE_ATTR + "='1']");
     if (owned) return owned;
-    var main = document.querySelector("main") || document.querySelector("[role='main']");
-    if (main && !/Portfolio value/i.test(clean(main.textContent))) return main;
     var headings = Array.prototype.slice.call(document.querySelectorAll("h1,h2")).filter(function (heading) {
       return /^History$/i.test(clean(heading.textContent));
     });
     for (var h = 0; h < headings.length; h += 1) {
       var node = headings[h].parentElement;
       var best = null;
-      for (var depth = 0; node && depth < 7; depth += 1, node = node.parentElement) {
+      for (var depth = 0; node && depth < 9; depth += 1, node = node.parentElement) {
         var content = clean(node.textContent);
-        if (!content || /Portfolio value/i.test(content) || /Dashboard\s+Quarantine\s+Swap\s+Burn DO\s+History\s+Markets/i.test(content)) continue;
+        var className = clean(node.className || "");
+        if (!content || /Portfolio value|Connect your wallet/i.test(content) || /Dashboard\s+Quarantine\s+Swap\s+Burn DO\s+History\s+Markets/i.test(content)) continue;
+        if (/Layout_main|Layout_maincontainer|Layout_layout/i.test(className)) continue;
         var rect = node.getBoundingClientRect ? node.getBoundingClientRect() : { width: 0, height: 0 };
-        if (rect.width > 500 || node.tagName === "MAIN") best = node;
+        if (node.tagName === "ARTICLE" || /Page_page/i.test(className)) return node;
+        if (rect.width > 500 && rect.height > 120) best = node;
       }
       if (best) return best;
     }
+    var page = document.querySelector("main article[class*='Page_page__'],[class*='Page_page__']");
+    if (page && !/Portfolio value|Connect your wallet/i.test(clean(page.textContent))) return page;
     return null;
   }
 
@@ -814,6 +824,8 @@
     var style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = [
+      "html[data-do-wallet-history-route='1'] main article[class*='Page_page__']:not([" + PAGE_ATTR + "='1']){opacity:0!important;visibility:hidden!important;pointer-events:none!important;}",
+      "html[data-do-wallet-history-route='1'] [class*='Page_page__']:not([" + PAGE_ATTR + "='1']){opacity:0!important;visibility:hidden!important;pointer-events:none!important;}",
       "[" + PAGE_ATTR + "='1']{box-sizing:border-box;width:100%;min-height:calc(100vh - 90px);padding:46px 6vw 72px;color:#fff;overflow:visible!important;}",
       ".do-wallet-history-page{width:min(1080px,100%);display:flex;flex-direction:column;gap:24px;font-family:inherit;}",
       ".do-wallet-history-head{display:flex;align-items:center;justify-content:space-between;gap:16px;}",
@@ -856,6 +868,22 @@
     }, delay == null ? 120 : delay);
   }
 
+  function watchRouteHost() {
+    if (!routeIsHistory()) {
+      if (routeObserver) {
+        routeObserver.disconnect();
+        routeObserver = null;
+      }
+      return;
+    }
+    if (routeObserver || typeof MutationObserver !== "function" || !document.body) return;
+    routeObserver = new MutationObserver(function () {
+      if (!routeIsHistory()) return watchRouteHost();
+      if (findPageHost()) scheduleRender(0);
+    });
+    routeObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   function refresh(force) {
     if (!routeIsHistory()) return;
     loadHistoryRows(Boolean(force));
@@ -863,10 +891,14 @@
   }
 
   function onRouteMaybeChanged() {
+    updateRouteBootFlag();
     if (routeIsHistory()) {
       installStyles();
+      watchRouteHost();
       refresh(false);
       window.setTimeout(function () { if (routeIsHistory()) scheduleRender(0); }, 220);
+    } else {
+      watchRouteHost();
     }
   }
 
@@ -879,6 +911,9 @@
       return result;
     };
   }
+
+  updateRouteBootFlag();
+  installStyles();
 
   patchHistory("pushState");
   patchHistory("replaceState");
